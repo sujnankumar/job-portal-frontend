@@ -7,7 +7,7 @@ import { MapPin, DollarSign, Clock, Briefcase, Building, Calendar, Share2, Bookm
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Separator } from "@/components/ui/separator"
+import { Card, CardContent } from "@/components/ui/card"
 import MapEmbed from "@/components/map-embed"
 
 // Mock job data
@@ -166,16 +166,147 @@ export default function JobDetail({ jobId }: { jobId: string }) {
         </div>
       </div>
 
-      {/* Job Content */}
-      <Tabs defaultValue="description" className="p-6">
-        <TabsList className="mb-6">
-          <TabsTrigger value="description">Description</TabsTrigger>
-          <TabsTrigger value="company">Company</TabsTrigger>
-          <TabsTrigger value="location">Location</TabsTrigger>
-        </TabsList>
+      {/* Job Content - Mobile (Tabs) */}
+      <div className="md:hidden">
+        <Tabs defaultValue="description" className="p-6">
+          <TabsList className="mb-6">
+            <TabsTrigger value="description">Description</TabsTrigger>
+            <TabsTrigger value="company">Company</TabsTrigger>
+            <TabsTrigger value="location">Location</TabsTrigger>
+          </TabsList>
 
-        <TabsContent value="description" className="space-y-6">
-          <div className="space-y-4">
+          <TabsContent value="description" className="space-y-6">
+            <div className="space-y-4">
+              <div className="prose max-w-none" dangerouslySetInnerHTML={{ __html: job.description }} />
+
+              <div className="mt-6">
+                <h3 className="text-lg font-semibold text-dark-gray mb-3">Required Skills</h3>
+                <div className="flex flex-wrap gap-2">
+                  {job.skills.map((skill) => (
+                    <Badge key={skill} variant="outline" className="bg-light-gray">
+                      {skill}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+
+              <div className="mt-6">
+                <h3 className="text-lg font-semibold text-dark-gray mb-3">Job Details</h3>
+                <div className="grid grid-cols-1 gap-4">
+                  <div className="flex items-start">
+                    <Briefcase className="h-5 w-5 mr-2 text-gray-400 mt-0.5" />
+                    <div>
+                      <div className="font-medium text-dark-gray">Job Type</div>
+                      <div className="text-gray-600">{job.type}</div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start">
+                    <Building className="h-5 w-5 mr-2 text-gray-400 mt-0.5" />
+                    <div>
+                      <div className="font-medium text-dark-gray">Experience</div>
+                      <div className="text-gray-600">{job.experience}</div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start">
+                    <Calendar className="h-5 w-5 mr-2 text-gray-400 mt-0.5" />
+                    <div>
+                      <div className="font-medium text-dark-gray">Application Deadline</div>
+                      <div className="text-gray-600">{job.deadline}</div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start">
+                    <MapPin className="h-5 w-5 mr-2 text-gray-400 mt-0.5" />
+                    <div>
+                      <div className="font-medium text-dark-gray">Location</div>
+                      <div className="text-gray-600">{job.location}</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="company" className="space-y-6">
+            <div className="flex items-start gap-4 mb-6">
+              <div className="w-16 h-16 bg-light-gray flex-shrink-0 rounded-md overflow-hidden border border-gray-200">
+                <Image
+                  src={job.logo || "/placeholder.svg"}
+                  alt={`${job.company} logo`}
+                  width={64}
+                  height={64}
+                  className="object-contain"
+                />
+              </div>
+
+              <div>
+                <h3 className="text-xl font-semibold text-dark-gray mb-1">{job.company}</h3>
+                <Link href={`/companies/${job.companyId}`} className="text-accent hover:underline text-sm">
+                  View Company Profile
+                </Link>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <p className="text-gray-700">{job.companyDescription}</p>
+
+              <div className="mt-6">
+                <h3 className="text-lg font-semibold text-dark-gray mb-3">Benefits & Perks</h3>
+                <ul className="grid grid-cols-1 gap-2">
+                  {job.benefits.map((benefit, index) => (
+                    <li key={index} className="flex items-center text-gray-700">
+                      <span className="h-1.5 w-1.5 rounded-full bg-accent mr-2"></span>
+                      {benefit}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+
+            <div className="mt-6 flex gap-3">
+              <Link href={`/companies/${job.companyId}`}>
+                <Button variant="outline">View All Jobs</Button>
+              </Link>
+
+              <Button variant="outline">Follow Company</Button>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="location">
+            <div className="space-y-4">
+              <div className="flex items-start">
+                <MapPin className="h-5 w-5 mr-2 text-gray-400 mt-0.5" />
+                <div>
+                  <div className="font-medium text-dark-gray">Job Location</div>
+                  <div className="text-gray-600">{job.location}</div>
+                </div>
+              </div>
+
+              <div className="h-80 w-full rounded-lg overflow-hidden border border-gray-200 mt-4">
+                <MapEmbed location={job.location} />
+              </div>
+
+              <div className="mt-4">
+                <p className="text-gray-700">
+                  This position is{" "}
+                  {job.location.includes("Remote")
+                    ? "remote with occasional visits to our office"
+                    : "based in our office at"}{" "}
+                  {job.location.replace(" (Remote)", "")}.
+                </p>
+              </div>
+            </div>
+          </TabsContent>
+        </Tabs>
+      </div>
+
+      {/* Job Content - Desktop (Two-column layout) */}
+      <div className="hidden md:flex p-6">
+        <div className="flex-1 pr-6">
+          {/* Left Column - Job Description */}
+          <div className="space-y-6">
             <div className="prose max-w-none" dangerouslySetInnerHTML={{ __html: job.description }} />
 
             <div className="mt-6">
@@ -188,10 +319,51 @@ export default function JobDetail({ jobId }: { jobId: string }) {
                 ))}
               </div>
             </div>
+          </div>
+        </div>
 
-            <div className="mt-6">
+        <div className="w-80 flex-shrink-0">
+          {/* Right Column - Company Details */}
+          <Card className="mb-6">
+            <CardContent className="p-4">
+              <div className="flex items-start gap-4 mb-4">
+                <div className="w-16 h-16 bg-light-gray flex-shrink-0 rounded-md overflow-hidden border border-gray-200">
+                  <Image
+                    src={job.logo || "/placeholder.svg"}
+                    alt={`${job.company} logo`}
+                    width={64}
+                    height={64}
+                    className="object-contain"
+                  />
+                </div>
+
+                <div>
+                  <h3 className="text-xl font-semibold text-dark-gray mb-1">{job.company}</h3>
+                  <Link href={`/companies/${job.companyId}`} className="text-accent hover:underline text-sm">
+                    View Company Profile
+                  </Link>
+                </div>
+              </div>
+
+              <p className="text-gray-700 mb-4">{job.companyDescription}</p>
+
+              <div className="flex flex-col gap-2">
+                <Link href={`/companies/${job.companyId}`}>
+                  <Button variant="outline" className="w-full">
+                    View All Jobs
+                  </Button>
+                </Link>
+                <Button variant="outline" className="w-full">
+                  Follow Company
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="mb-6">
+            <CardContent className="p-4">
               <h3 className="text-lg font-semibold text-dark-gray mb-3">Job Details</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-3">
                 <div className="flex items-start">
                   <Briefcase className="h-5 w-5 mr-2 text-gray-400 mt-0.5" />
                   <div>
@@ -217,59 +389,20 @@ export default function JobDetail({ jobId }: { jobId: string }) {
                 </div>
 
                 <div className="flex items-start">
-                  <MapPin className="h-5 w-5 mr-2 text-gray-400 mt-0.5" />
+                  <Clock className="h-5 w-5 mr-2 text-gray-400 mt-0.5" />
                   <div>
-                    <div className="font-medium text-dark-gray">Location</div>
-                    <div className="text-gray-600">{job.location}</div>
+                    <div className="font-medium text-dark-gray">Posted</div>
+                    <div className="text-gray-600">{job.posted}</div>
                   </div>
                 </div>
               </div>
-            </div>
-          </div>
+            </CardContent>
+          </Card>
 
-          <Separator />
-
-          <div className="flex justify-between items-center">
-            <div>
-              <p className="text-gray-500 text-sm">
-                Job ID: {jobId} • Posted {job.posted}
-              </p>
-            </div>
-
-            <Link href={`/report-job/${jobId}`}>
-              <Button variant="ghost" size="sm" className="text-gray-500 hover:text-gray-700">
-                Report Job
-              </Button>
-            </Link>
-          </div>
-        </TabsContent>
-
-        <TabsContent value="company" className="space-y-6">
-          <div className="flex items-start gap-4 mb-6">
-            <div className="w-16 h-16 bg-light-gray flex-shrink-0 rounded-md overflow-hidden border border-gray-200">
-              <Image
-                src={job.logo || "/placeholder.svg"}
-                alt={`${job.company} logo`}
-                width={64}
-                height={64}
-                className="object-contain"
-              />
-            </div>
-
-            <div>
-              <h3 className="text-xl font-semibold text-dark-gray mb-1">{job.company}</h3>
-              <Link href={`/companies/${job.companyId}`} className="text-accent hover:underline text-sm">
-                View Company Profile
-              </Link>
-            </div>
-          </div>
-
-          <div className="space-y-4">
-            <p className="text-gray-700">{job.companyDescription}</p>
-
-            <div className="mt-6">
+          <Card className="mb-6">
+            <CardContent className="p-4">
               <h3 className="text-lg font-semibold text-dark-gray mb-3">Benefits & Perks</h3>
-              <ul className="grid grid-cols-1 md:grid-cols-2 gap-2">
+              <ul className="space-y-2">
                 {job.benefits.map((benefit, index) => (
                   <li key={index} className="flex items-center text-gray-700">
                     <span className="h-1.5 w-1.5 rounded-full bg-accent mr-2"></span>
@@ -277,44 +410,48 @@ export default function JobDetail({ jobId }: { jobId: string }) {
                   </li>
                 ))}
               </ul>
-            </div>
-          </div>
+            </CardContent>
+          </Card>
 
-          <div className="mt-6 flex gap-3">
-            <Link href={`/companies/${job.companyId}`}>
-              <Button variant="outline">View All Jobs</Button>
-            </Link>
-
-            <Button variant="outline">Follow Company</Button>
-          </div>
-        </TabsContent>
-
-        <TabsContent value="location">
-          <div className="space-y-4">
-            <div className="flex items-start">
-              <MapPin className="h-5 w-5 mr-2 text-gray-400 mt-0.5" />
-              <div>
-                <div className="font-medium text-dark-gray">Job Location</div>
+          <Card>
+            <CardContent className="p-4">
+              <h3 className="text-lg font-semibold text-dark-gray mb-3">Location</h3>
+              <div className="flex items-start mb-3">
+                <MapPin className="h-5 w-5 mr-2 text-gray-400 mt-0.5" />
                 <div className="text-gray-600">{job.location}</div>
               </div>
-            </div>
 
-            <div className="h-80 w-full rounded-lg overflow-hidden border border-gray-200 mt-4">
-              <MapEmbed location={job.location} />
-            </div>
+              <div className="h-48 w-full rounded-lg overflow-hidden border border-gray-200 mb-3">
+                <MapEmbed location={job.location} />
+              </div>
 
-            <div className="mt-4">
-              <p className="text-gray-700">
+              <p className="text-sm text-gray-700">
                 This position is{" "}
                 {job.location.includes("Remote")
                   ? "remote with occasional visits to our office"
                   : "based in our office at"}{" "}
                 {job.location.replace(" (Remote)", "")}.
               </p>
-            </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+
+      <div className="p-6 border-t border-gray-100">
+        <div className="flex justify-between items-center">
+          <div>
+            <p className="text-gray-500 text-sm">
+              Job ID: {jobId} • Posted {job.posted}
+            </p>
           </div>
-        </TabsContent>
-      </Tabs>
+
+          <Link href={`/report-job/${jobId}`}>
+            <Button variant="ghost" size="sm" className="text-gray-500 hover:text-gray-700">
+              Report Job
+            </Button>
+          </Link>
+        </div>
+      </div>
     </div>
   )
 }

@@ -29,12 +29,14 @@ export default function JobDetailPage({ params }: { params: { id: string } }) {
     <>
       <div className="container mx-auto py-8 px-4">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          <div className="lg:col-span-2">
+          <div className="lg:col-span-3">
             <JobDetail jobId={params.id} />
           </div>
-          <div>
-            <SimilarJobs jobId={params.id} />
-          </div>
+        </div>
+
+        <div className="mt-8">
+          <h2 className="text-xl font-bold mb-4">Similar Jobs</h2>
+          <SimilarJobs jobId={params.id} />
         </div>
       </div>
 
