@@ -33,7 +33,7 @@ const featuredJobs = [
     location: "Austin, TX (Hybrid)",
     salary: "$90,000 - $120,000/year",
     type: "Full-time",
-    logo: "/placeholder.svg?height=64&width=64&query=creative logo",
+    logo: "/abstract-geometric-logo.png",
     posted: "1 day ago",
     tags: ["Figma", "UI Design", "User Testing"],
   },
@@ -44,7 +44,7 @@ const featuredJobs = [
     location: "Remote",
     salary: "$130,000 - $180,000/year",
     type: "Full-time",
-    logo: "/placeholder.svg?height=64&width=64&query=data logo",
+    logo: "/abstract-data-flow.png",
     posted: "5 days ago",
     tags: ["Python", "Machine Learning", "SQL"],
   },
@@ -55,7 +55,7 @@ const featuredJobs = [
     location: "Seattle, WA",
     salary: "$125,000 - $165,000/year",
     type: "Full-time",
-    logo: "/placeholder.svg?height=64&width=64&query=cloud logo",
+    logo: "/abstract-cloud-network.png",
     posted: "6 days ago",
     tags: ["AWS", "Kubernetes", "CI/CD"],
   },
@@ -66,7 +66,7 @@ const featuredJobs = [
     location: "Chicago, IL (Remote)",
     salary: "$75,000 - $95,000/year",
     type: "Full-time",
-    logo: "/placeholder.svg?height=64&width=64&query=brand logo",
+    logo: "/abstract-geometric-logo.png",
     posted: "1 week ago",
     tags: ["Digital Marketing", "SEO", "Content Strategy"],
   },
@@ -74,12 +74,12 @@ const featuredJobs = [
 
 export default function FeaturedJobs() {
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
       {featuredJobs.map((job) => (
         <Link
           href={`/jobs/${job.id}`}
           key={job.id}
-          className="bg-white p-5 rounded-xl shadow-sm hover:shadow-md transition-shadow border border-gray-100"
+          className="bg-white p-4 rounded-xl shadow-sm hover:shadow-md transition-shadow border border-gray-100"
         >
           <div className="flex items-start gap-3">
             <div className="w-12 h-12 bg-light-gray flex-shrink-0 rounded-md overflow-hidden border border-gray-200">
@@ -93,8 +93,8 @@ export default function FeaturedJobs() {
             </div>
 
             <div className="flex-1 min-w-0">
-              <h3 className="font-medium text-dark-gray truncate">{job.title}</h3>
-              <p className="text-sm text-gray-500 truncate">{job.company}</p>
+              <h3 className="font-medium text-dark-gray truncate line-clamp-1">{job.title}</h3>
+              <p className="text-sm text-gray-500 truncate line-clamp-1">{job.company}</p>
 
               <div className="mt-3 flex flex-wrap gap-y-2 gap-x-3 text-xs text-gray-600">
                 <div className="flex items-center">

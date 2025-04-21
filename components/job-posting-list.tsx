@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Search, Edit, Trash2, MoreHorizontal, RefreshCw, Eye } from "lucide-react"
+import { Search, Edit, Trash2, MoreHorizontal, RefreshCw, Eye, Users } from "lucide-react"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -75,7 +75,11 @@ const jobPostings = [
   },
 ]
 
-export default function JobPostingList() {
+interface JobPostingListProps {
+  onSelectJob?: (jobId: string) => void
+}
+
+export default function JobPostingList({ onSelectJob }: JobPostingListProps) {
   const [searchTerm, setSearchTerm] = useState("")
   const [statusFilter, setStatusFilter] = useState("all")
 
@@ -106,6 +110,13 @@ export default function JobPostingList() {
 
   return (
     <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <h2 className="text-xl font-semibold text-dark-gray">Posted Jobs</h2>
+        <Link href="/employer/dashboard/post-job">
+          <Button className="bg-accent hover:bg-accent/90">Post New Job</Button>
+        </Link>
+      </div>
+
       {/* Filters and Search */}
       <div className="flex flex-col md:flex-row gap-4">
         <div className="flex-1">
@@ -131,9 +142,6 @@ export default function JobPostingList() {
             </SelectContent>
           </Select>
         </div>
-        <Link href="/employer/dashboard/post-job">
-          <Button className="w-full md:w-auto bg-accent hover:bg-accent/90">Post New Job</Button>
-        </Link>
       </div>
 
       {/* Job Listings */}
@@ -157,7 +165,12 @@ export default function JobPostingList() {
                 return (
                   <tr key={job.id} className="hover:bg-light-gray">
                     <td className="px-4 py-4 text-sm">
-                      <div className="font-medium text-dark-gray">{job.title}</div>
+                      <button
+                        onClick={() => onSelectJob?.(job.id)}
+                        className="font-medium text-dark-gray hover:text-accent text-left"
+                      >
+                        {job.title}
+                      </button>
                       <div className="text-xs text-gray-500">
                         Posted: {new Date(job.postedDate).toLocaleDateString()}
                       </div>
@@ -175,7 +188,15 @@ export default function JobPostingList() {
                         </Badge>
                       )}
                     </td>
-                    <td className="px-4 py-4 text-sm text-gray-600">{job.applications}</td>
+                    <td className="px-4 py-4 text-sm">
+                      <button
+                        onClick={() => onSelectJob?.(job.id)}
+                        className="flex items-center text-gray-600 hover:text-accent"
+                      >
+                        <Users className="h-4 w-4 mr-1" />
+                        {job.applications}
+                      </button>
+                    </td>
                     <td className="px-4 py-4 text-sm text-gray-600">{job.views}</td>
                     <td className="px-4 py-4 text-sm">
                       <DropdownMenu>

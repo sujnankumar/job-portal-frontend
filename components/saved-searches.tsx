@@ -53,11 +53,11 @@ export default function SavedSearches() {
   }
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
       {savedSearches.map((search) => (
         <div
           key={search.id}
-          className="bg-white p-5 rounded-xl shadow-sm hover:shadow-md transition-shadow border border-gray-100"
+          className="bg-white p-4 rounded-xl shadow-sm hover:shadow-md transition-shadow border border-gray-100"
         >
           <div className="flex items-start justify-between">
             <h3 className="font-medium text-dark-gray">{search.name}</h3>

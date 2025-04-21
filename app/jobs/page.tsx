@@ -9,7 +9,7 @@ export default function JobListingsPage() {
   const { isAuthenticated, user } = useAuthStore()
 
   return (
-    <div className="container mx-auto max-w-6xl py-8 px-4">
+    <div className="container mx-auto max-w-6xl py-10 px-4">
       <h1 className="text-3xl font-bold text-dark-gray mb-6">Browse Jobs</h1>
 
       {/* Search Bar */}
@@ -17,7 +17,7 @@ export default function JobListingsPage() {
         <JobSearch />
       </div>
 
-      <div className="flex flex-col lg:flex-row gap-6">
+      <div className="flex flex-col lg:flex-row gap-8">
         {/* Filters Sidebar */}
         <div className="w-full lg:w-1/4">
           <JobFilters />
