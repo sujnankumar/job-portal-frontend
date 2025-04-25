@@ -36,8 +36,6 @@ export default function Navbar() {
   const navLinks = [
     { name: "Home", path: "/" },
     { name: "Jobs", path: "/jobs" },
-    { name: "Companies", path: "/companies" },
-    { name: "Career Advice", path: "/career-advice" },
     ...(isAuthenticated && user?.role === "applicant" ? [{ name: "Applications", path: "/applications" }] : []),
     ...(isAuthenticated && user?.role === "employer" ? [{ name: "Dashboard", path: "/employer/dashboard" }] : []),
   ]

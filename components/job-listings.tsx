@@ -46,7 +46,7 @@ const jobs = [
     location: "Austin, TX (Hybrid)",
     salary: "$90,000 - $120,000/year",
     type: "Full-time",
-    logo: "/placeholder.svg?height=64&width=64&query=creative logo",
+    logo: "/abstract-geometric-logo.png",
     posted: "1 day ago",
     tags: ["Figma", "UI Design", "User Testing"],
     description:
@@ -60,7 +60,7 @@ const jobs = [
     location: "Remote",
     salary: "$130,000 - $180,000/year",
     type: "Full-time",
-    logo: "/placeholder.svg?height=64&width=64&query=data logo",
+    logo: "/abstract-data-flow.png",
     posted: "5 days ago",
     tags: ["Python", "Machine Learning", "SQL"],
     description:
@@ -74,7 +74,7 @@ const jobs = [
     location: "Seattle, WA",
     salary: "$125,000 - $165,000/year",
     type: "Full-time",
-    logo: "/placeholder.svg?height=64&width=64&query=cloud logo",
+    logo: "/abstract-cloud-network.png",
     posted: "6 days ago",
     tags: ["AWS", "Kubernetes", "CI/CD"],
     description:
@@ -88,7 +88,7 @@ const jobs = [
     location: "Chicago, IL (Remote)",
     salary: "$75,000 - $95,000/year",
     type: "Full-time",
-    logo: "/placeholder.svg?height=64&width=64&query=brand logo",
+    logo: "/abstract-geometric-logo.png",
     posted: "1 week ago",
     tags: ["Digital Marketing", "SEO", "Content Strategy"],
     description:
@@ -102,7 +102,7 @@ const jobs = [
     location: "Boston, MA",
     salary: "$115,000 - $150,000/year",
     type: "Full-time",
-    logo: "/placeholder.svg?height=64&width=64&query=software logo",
+    logo: "/abstract-software-logo.png",
     posted: "1 week ago",
     tags: ["Node.js", "MongoDB", "API Design"],
     description:

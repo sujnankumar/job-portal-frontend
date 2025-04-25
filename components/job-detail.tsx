@@ -14,8 +14,10 @@ import MapEmbed from "@/components/map-embed"
 const job = {
   id: "1",
   title: "Senior Frontend Developer",
-  company: "Tech Innovations Inc.",
-  companyId: "1",
+  company: {
+    id: "1",
+    name: "Tech Innovations Inc.",
+  },
   location: "San Francisco, CA (Remote)",
   salary: "$120,000 - $160,000/year",
   type: "Full-time",
@@ -105,7 +107,7 @@ export default function JobDetail({ jobId }: { jobId: string }) {
           <div className="w-16 h-16 bg-light-gray flex-shrink-0 rounded-md overflow-hidden border border-gray-200">
             <Image
               src={job.logo || "/placeholder.svg"}
-              alt={`${job.company} logo`}
+              alt={`${job.company.name} logo`}
               width={64}
               height={64}
               className="object-contain"
@@ -115,9 +117,7 @@ export default function JobDetail({ jobId }: { jobId: string }) {
           <div className="flex-1 min-w-0">
             <h1 className="text-2xl font-bold text-dark-gray mb-1">{job.title}</h1>
 
-            <Link href={`/companies/${job.companyId}`} className="text-accent hover:underline">
-              {job.company}
-            </Link>
+            <span className="text-accent">{job.company.name}</span>
 
             <div className="mt-3 flex flex-wrap gap-y-2 gap-x-4 text-sm text-gray-600">
               <div className="flex items-center">
@@ -234,7 +234,7 @@ export default function JobDetail({ jobId }: { jobId: string }) {
               <div className="w-16 h-16 bg-light-gray flex-shrink-0 rounded-md overflow-hidden border border-gray-200">
                 <Image
                   src={job.logo || "/placeholder.svg"}
-                  alt={`${job.company} logo`}
+                  alt={`${job.company.name} logo`}
                   width={64}
                   height={64}
                   className="object-contain"
@@ -242,8 +242,8 @@ export default function JobDetail({ jobId }: { jobId: string }) {
               </div>
 
               <div>
-                <h3 className="text-xl font-semibold text-dark-gray mb-1">{job.company}</h3>
-                <Link href={`/companies/${job.companyId}`} className="text-accent hover:underline text-sm">
+                <h3 className="text-xl font-semibold text-dark-gray mb-1">{job.company.name}</h3>
+                <Link href={`/companies/${job.company.id}`} className="text-accent hover:underline text-sm">
                   View Company Profile
                 </Link>
               </div>
@@ -266,7 +266,7 @@ export default function JobDetail({ jobId }: { jobId: string }) {
             </div>
 
             <div className="mt-6 flex gap-3">
-              <Link href={`/companies/${job.companyId}`}>
+              <Link href={`/companies/${job.company.id}`}>
                 <Button variant="outline">View All Jobs</Button>
               </Link>
 
@@ -330,7 +330,7 @@ export default function JobDetail({ jobId }: { jobId: string }) {
                 <div className="w-16 h-16 bg-light-gray flex-shrink-0 rounded-md overflow-hidden border border-gray-200">
                   <Image
                     src={job.logo || "/placeholder.svg"}
-                    alt={`${job.company} logo`}
+                    alt={`${job.company.name} logo`}
                     width={64}
                     height={64}
                     className="object-contain"
@@ -338,8 +338,8 @@ export default function JobDetail({ jobId }: { jobId: string }) {
                 </div>
 
                 <div>
-                  <h3 className="text-xl font-semibold text-dark-gray mb-1">{job.company}</h3>
-                  <Link href={`/companies/${job.companyId}`} className="text-accent hover:underline text-sm">
+                  <h3 className="text-xl font-semibold text-dark-gray mb-1">{job.company.name}</h3>
+                  <Link href={`/companies/${job.company.id}`} className="text-accent hover:underline text-sm">
                     View Company Profile
                   </Link>
                 </div>
@@ -348,7 +348,7 @@ export default function JobDetail({ jobId }: { jobId: string }) {
               <p className="text-gray-700 mb-4">{job.companyDescription}</p>
 
               <div className="flex flex-col gap-2">
-                <Link href={`/companies/${job.companyId}`}>
+                <Link href={`/companies/${job.company.id}`}>
                   <Button variant="outline" className="w-full">
                     View All Jobs
                   </Button>

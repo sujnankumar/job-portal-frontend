@@ -43,16 +43,6 @@ export default function Footer() {
                 </Link>
               </li>
               <li>
-                <Link href="/companies" className="text-gray-600 hover:text-accent">
-                  Browse Companies
-                </Link>
-              </li>
-              <li>
-                <Link href="/career-advice" className="text-gray-600 hover:text-accent">
-                  Career Advice
-                </Link>
-              </li>
-              <li>
                 <Link href="/applications" className="text-gray-600 hover:text-accent">
                   My Applications
                 </Link>

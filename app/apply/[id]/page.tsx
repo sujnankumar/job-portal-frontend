@@ -2,6 +2,7 @@
 
 import { useEffect } from "react"
 import { useRouter } from "next/navigation"
+import { useForm } from "react-hook-form"
 import { useAuthStore } from "@/store/authStore"
 import ProtectedRoute from "@/components/auth/protected-route"
 import { Button } from "@/components/ui/button"
@@ -12,9 +13,24 @@ import { Form, FormControl, FormField, FormItem, FormLabel } from "@/components/
 import ResumeUploader from "@/components/resume-uploader"
 import ResumeBuilder from "@/components/resume-builder"
 
+interface FormValues {
+  coverLetter: string
+  linkedIn: string
+  portfolio: string
+}
+
 export default function ApplyPage({ params }: { params: { id: string } }) {
   const { user, isAuthenticated } = useAuthStore()
   const router = useRouter()
+
+  // Initialize form with react-hook-form
+  const form = useForm<FormValues>({
+    defaultValues: {
+      coverLetter: "",
+      linkedIn: "",
+      portfolio: "",
+    },
+  })
 
   useEffect(() => {
     if (isAuthenticated && user?.role === "employer") {
@@ -25,6 +41,11 @@ export default function ApplyPage({ params }: { params: { id: string } }) {
   }, [isAuthenticated, user, router])
 
   // Note: In a real app, you would fetch the job details based on the id
+
+  const onSubmit = (data: FormValues) => {
+    console.log("Form submitted:", data)
+    // Here you would handle the form submission, e.g., send data to an API
+  }
 
   return (
     <ProtectedRoute allowedRoles={["applicant"]}>
@@ -63,9 +84,10 @@ export default function ApplyPage({ params }: { params: { id: string } }) {
         <div className="bg-white p-6 rounded-xl shadow-md mt-6">
           <h2 className="text-xl font-semibold text-dark-gray mb-4">Additional Information</h2>
 
-          <Form>
-            <div className="space-y-4">
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
               <FormField
+                control={form.control}
                 name="coverLetter"
                 render={({ field }) => (
                   <FormItem>
@@ -74,6 +96,7 @@ export default function ApplyPage({ params }: { params: { id: string } }) {
                       <Textarea
                         placeholder="Tell us why you're a good fit for this position..."
                         className="min-h-[150px]"
+                        {...field}
                       />
                     </FormControl>
                   </FormItem>
@@ -81,33 +104,37 @@ export default function ApplyPage({ params }: { params: { id: string } }) {
               />
 
               <FormField
+                control={form.control}
                 name="linkedIn"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>LinkedIn Profile (Optional)</FormLabel>
                     <FormControl>
-                      <Input placeholder="https://linkedin.com/in/your-profile" />
+                      <Input placeholder="https://linkedin.com/in/your-profile" {...field} />
                     </FormControl>
                   </FormItem>
                 )}
               />
 
               <FormField
+                control={form.control}
                 name="portfolio"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Portfolio or Website (Optional)</FormLabel>
                     <FormControl>
-                      <Input placeholder="https://your-website.com" />
+                      <Input placeholder="https://your-website.com" {...field} />
                     </FormControl>
                   </FormItem>
                 )}
               />
 
               <div className="pt-4">
-                <Button className="w-full bg-accent hover:bg-accent/90">Submit Application</Button>
+                <Button type="submit" className="w-full bg-accent hover:bg-accent/90">
+                  Submit Application
+                </Button>
               </div>
-            </div>
+            </form>
           </Form>
         </div>
       </div>
