@@ -14,6 +14,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Calendar, Upload, Save, Plus, Trash2 } from "lucide-react"
 import { cn } from "@/lib/utils"
+import api from "@/lib/axios"
+import { useAuthStore } from "@/store/authStore"
 
 export default function JobPostingForm() {
   const router = useRouter()
@@ -34,6 +36,10 @@ export default function JobPostingForm() {
     skills: ["", "", ""],
     autoExpire: true,
   })
+  const loginUser = useAuthStore((state) => state.user)
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState("")
+  const [success, setSuccess] = useState("")
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target
@@ -82,12 +88,50 @@ export default function JobPostingForm() {
     })
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    // In a real app, you would submit the form data to your backend
-    console.log(formData)
-    // Redirect to the dashboard
-    router.push("/employer/dashboard")
+    setIsLoading(true)
+    setError("")
+    setSuccess("")
+    try {
+      const token = loginUser?.token
+      if (!token) {
+        setError("You must be logged in as an employer to post a job.")
+        setIsLoading(false)
+        return
+      }
+      const payload = {
+        title: formData.title,
+        department: formData.department,
+        location: formData.location,
+        location_type: formData.locationType,
+        employment_type: formData.employmentType,
+        min_salary: formData.showSalary ? formData.minSalary : undefined,
+        max_salary: formData.showSalary ? formData.maxSalary : undefined,
+        show_salary: formData.showSalary,
+        description: formData.description,
+        requirements: formData.requirements,
+        benefits: formData.benefits,
+        application_deadline: formData.applicationDeadline,
+        skills: formData.skills.filter((s) => s.trim() !== ""),
+        auto_expire: formData.autoExpire,
+        validity_days: formData.autoExpire ? 15 : undefined,
+        // company_logo: formData.companyLogo, // handle file upload separately if needed
+      }
+      const res = await api.post("/job/post_job", payload, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      })
+      setSuccess("Job posted successfully!")
+      setTimeout(() => {
+        router.push("/employer/dashboard")
+      }, 1200)
+    } catch (err: any) {
+      setError(err.response?.data?.detail || "Failed to post job. Please try again.")
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   return (
@@ -383,13 +427,12 @@ export default function JobPostingForm() {
           </div>
         </TabsContent>
       </Tabs>
-
+      {error && <p className="text-red-500 text-sm">{error}</p>}
+      {success && <p className="text-green-600 text-sm">{success}</p>}
       <div className="flex justify-end gap-3 pt-4 border-t">
-        <Button type="button" variant="outline" onClick={() => router.push("/employer/dashboard")}>
-          Cancel
-        </Button>
-        <Button type="submit" className="bg-accent hover:bg-accent/90">
-          <Save className="h-4 w-4 mr-1" /> Post Job
+        <Button type="button" variant="outline" onClick={() => router.push("/employer/dashboard")}>Cancel</Button>
+        <Button type="submit" className="bg-accent hover:bg-accent/90" disabled={isLoading}>
+          <Save className="h-4 w-4 mr-1" /> {isLoading ? "Posting..." : "Post Job"}
         </Button>
       </div>
     </form>
