@@ -9,94 +9,58 @@ import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent } from "@/components/ui/card"
 import MapEmbed from "@/components/map-embed"
+import { useAuthStore } from "@/store/authStore"
+import api from "@/lib/axios"
 
-// Mock job data
-const job = {
-  id: "1",
-  title: "Senior Frontend Developer",
-  company: {
-    id: "1",
-    name: "Tech Innovations Inc.",
-  },
-  location: "San Francisco, CA (Remote)",
-  salary: "$120,000 - $160,000/year",
-  type: "Full-time",
-  experience: "5+ years",
-  education: "Bachelor's degree in Computer Science or related field",
-  logo: "/abstract-circuit-board.png",
-  posted: "2 days ago",
-  deadline: "August 15, 2023",
-  tags: ["React", "TypeScript", "Next.js", "Tailwind CSS", "Redux", "GraphQL"],
-  description: `
-    <p>Tech Innovations Inc. is looking for a Senior Frontend Developer to join our growing team. You'll be responsible for building and maintaining user interfaces for our web applications, working closely with designers, backend developers, and product managers to deliver exceptional user experiences.</p>
-    
-    <h3>Responsibilities:</h3>
-    <ul>
-      <li>Develop and maintain responsive web applications using React, TypeScript, and Next.js</li>
-      <li>Collaborate with designers to implement UI/UX designs with pixel-perfect accuracy</li>
-      <li>Write clean, maintainable, and well-documented code</li>
-      <li>Optimize applications for maximum speed and scalability</li>
-      <li>Participate in code reviews and contribute to technical discussions</li>
-      <li>Mentor junior developers and share knowledge with the team</li>
-      <li>Stay up-to-date with emerging trends and technologies in frontend development</li>
-    </ul>
-    
-    <h3>Requirements:</h3>
-    <ul>
-      <li>5+ years of experience in frontend development</li>
-      <li>Strong proficiency in React, TypeScript, and modern JavaScript</li>
-      <li>Experience with Next.js, Tailwind CSS, and state management libraries (Redux, Zustand, etc.)</li>
-      <li>Solid understanding of responsive design principles and cross-browser compatibility</li>
-      <li>Familiarity with RESTful APIs and GraphQL</li>
-      <li>Experience with version control systems (Git)</li>
-      <li>Strong problem-solving skills and attention to detail</li>
-      <li>Excellent communication and collaboration skills</li>
-      <li>Bachelor's degree in Computer Science or related field (or equivalent experience)</li>
-    </ul>
-    
-    <h3>Benefits:</h3>
-    <ul>
-      <li>Competitive salary and equity package</li>
-      <li>Comprehensive health, dental, and vision insurance</li>
-      <li>401(k) matching</li>
-      <li>Flexible work arrangements (remote with occasional on-site meetings)</li>
-      <li>Professional development budget</li>
-      <li>Generous paid time off</li>
-      <li>Home office stipend</li>
-      <li>Regular team events and retreats</li>
-    </ul>
-    
-    <p>Tech Innovations Inc. is an equal opportunity employer. We celebrate diversity and are committed to creating an inclusive environment for all employees. We do not discriminate on the basis of race, color, religion, gender, sexual orientation, national origin, disability, age, or veteran status.</p>
-  `,
-  companyDescription:
-    "Tech Innovations Inc. is a leading technology company focused on developing cutting-edge software solutions for businesses of all sizes. Founded in 2010, we've grown from a small startup to a global enterprise with offices in major tech hubs around the world.",
-  benefits: [
-    "Competitive salary and equity",
-    "Health, dental, and vision insurance",
-    "401(k) matching",
-    "Flexible work arrangements",
-    "Professional development budget",
-    "Generous paid time off",
-  ],
-  skills: [
-    "React",
-    "TypeScript",
-    "Next.js",
-    "Tailwind CSS",
-    "Redux",
-    "GraphQL",
-    "Responsive Design",
-    "Performance Optimization",
-    "Cross-browser Compatibility",
-    "Git",
-  ],
+
+interface JobDetails {
+  skills: string[];
+  // benefits: string[]; // Explicitly define the type for benefits
+  [key: string]: any; // Add other properties as needed
 }
 
-export default function JobDetail({ jobId }: { jobId: string }) {
-  const [isSaved, setIsSaved] = useState(false)
+export default function JobDetail({ jobId, jobDetails, is_saved }: { jobId: string; jobDetails: any; is_saved: boolean }) {
+  const [isSaved, setIsSaved] = useState(is_saved)
+  const [saveError, setSaveError] = useState("")
+  const [saveSuccess, setSaveSuccess] = useState("")
+  const user = useAuthStore((state) => state.user)
+  const job = jobDetails
 
-  const toggleSave = () => {
-    setIsSaved(!isSaved)
+  const toggleSave = async (e: React.MouseEvent) => {
+    e.stopPropagation && e.stopPropagation()
+    setSaveError("")
+    setSaveSuccess("")
+    if (!user || user.role !== "applicant" || !user.token) {
+      setSaveError("You must be logged in as a job seeker to save jobs.")
+      return
+    }
+    if (isSaved) {
+      // Unsave job
+      try {
+        await api.delete(`/jobs/remove-saved-job/${jobId}`, {
+          headers: {
+            Authorization: `Bearer ${user.token}`,
+          },
+        })
+        setIsSaved(false)
+        setSaveSuccess("Job removed from saved jobs.")
+      } catch (err: any) {
+        setSaveError(err.response?.data?.detail || "Failed to remove saved job.")
+      }
+      return
+    }
+    // Save job
+    try {
+      await api.post(`/jobs/save-job/${jobId}`, {}, {
+        headers: {
+          Authorization: `Bearer ${user.token}`,
+        },
+      })
+      setIsSaved(true)
+      setSaveSuccess("Job saved successfully.")
+    } catch (err: any) {
+      setSaveError(err.response?.data?.detail || "Failed to save job.")
+    }
   }
 
   return (
@@ -107,7 +71,7 @@ export default function JobDetail({ jobId }: { jobId: string }) {
           <div className="w-16 h-16 bg-light-gray flex-shrink-0 rounded-md overflow-hidden border border-gray-200">
             <Image
               src={job.logo || "/placeholder.svg"}
-              alt={`${job.company.name} logo`}
+              alt={`${job.company_details.company_name} logo`}
               width={64}
               height={64}
               className="object-contain"
@@ -117,7 +81,7 @@ export default function JobDetail({ jobId }: { jobId: string }) {
           <div className="flex-1 min-w-0">
             <h1 className="text-2xl font-bold text-dark-gray mb-1">{job.title}</h1>
 
-            <span className="text-accent">{job.company.name}</span>
+            <span className="text-accent">{job.company_details.company_name}</span>
 
             <div className="mt-3 flex flex-wrap gap-y-2 gap-x-4 text-sm text-gray-600">
               <div className="flex items-center">
@@ -126,15 +90,19 @@ export default function JobDetail({ jobId }: { jobId: string }) {
               </div>
               <div className="flex items-center">
                 <DollarSign className="h-4 w-4 mr-1" />
-                {job.salary}
+                {job.min_salary}-{job.max_salary}
               </div>
               <div className="flex items-center">
                 <Briefcase className="h-4 w-4 mr-1" />
-                {job.type}
+                {job.employment_type}
               </div>
               <div className="flex items-center">
                 <Clock className="h-4 w-4 mr-1" />
-                Posted {job.posted}
+                 {new Date(job.posted_at).toLocaleDateString("en-US", {
+                  year: "numeric",
+                  month: "long",
+                  day: "numeric",
+                 })}
               </div>
             </div>
           </div>
@@ -164,6 +132,8 @@ export default function JobDetail({ jobId }: { jobId: string }) {
             Share
           </Button>
         </div>
+        {saveError && <div className="text-red-500 text-sm mt-2">{saveError}</div>}
+        {saveSuccess && <div className="text-green-600 text-sm mt-2">{saveSuccess}</div>}
       </div>
 
       {/* Job Content - Mobile (Tabs) */}
@@ -197,7 +167,7 @@ export default function JobDetail({ jobId }: { jobId: string }) {
                     <Briefcase className="h-5 w-5 mr-2 text-gray-400 mt-0.5" />
                     <div>
                       <div className="font-medium text-dark-gray">Job Type</div>
-                      <div className="text-gray-600">{job.type}</div>
+                      <div className="text-gray-600">{job.employment_type}</div>
                     </div>
                   </div>
 
@@ -213,7 +183,11 @@ export default function JobDetail({ jobId }: { jobId: string }) {
                     <Calendar className="h-5 w-5 mr-2 text-gray-400 mt-0.5" />
                     <div>
                       <div className="font-medium text-dark-gray">Application Deadline</div>
-                      <div className="text-gray-600">{job.deadline}</div>
+                      {new Date(job.expires_at).toLocaleDateString("en-US", {
+                        year: "numeric",
+                        month: "long",
+                        day: "numeric",
+                      })}
                     </div>
                   </div>
 
@@ -234,7 +208,7 @@ export default function JobDetail({ jobId }: { jobId: string }) {
               <div className="w-16 h-16 bg-light-gray flex-shrink-0 rounded-md overflow-hidden border border-gray-200">
                 <Image
                   src={job.logo || "/placeholder.svg"}
-                  alt={`${job.company.name} logo`}
+                  alt={`${job.company_details.company_name} logo`}
                   width={64}
                   height={64}
                   className="object-contain"
@@ -242,8 +216,8 @@ export default function JobDetail({ jobId }: { jobId: string }) {
               </div>
 
               <div>
-                <h3 className="text-xl font-semibold text-dark-gray mb-1">{job.company.name}</h3>
-                <Link href={`/companies/${job.company.id}`} className="text-accent hover:underline text-sm">
+                <h3 className="text-xl font-semibold text-dark-gray mb-1">{job.company_details.company_name}</h3>
+                <Link href={`/companies/${job.company_details.company_id}`} className="text-accent hover:underline text-sm">
                   View Company Profile
                 </Link>
               </div>
@@ -254,19 +228,20 @@ export default function JobDetail({ jobId }: { jobId: string }) {
 
               <div className="mt-6">
                 <h3 className="text-lg font-semibold text-dark-gray mb-3">Benefits & Perks</h3>
-                <ul className="grid grid-cols-1 gap-2">
+                {/* <ul className="grid grid-cols-1 gap-2">
                   {job.benefits.map((benefit, index) => (
                     <li key={index} className="flex items-center text-gray-700">
                       <span className="h-1.5 w-1.5 rounded-full bg-accent mr-2"></span>
                       {benefit}
                     </li>
                   ))}
-                </ul>
+                </ul> */}
+                <p className="text-gray-700">{job.benefits}</p>
               </div>
             </div>
 
             <div className="mt-6 flex gap-3">
-              <Link href={`/companies/${job.company.id}`}>
+              <Link href={`/companies/${job.company_details.company_id}`}>
                 <Button variant="outline">View All Jobs</Button>
               </Link>
 
@@ -330,7 +305,7 @@ export default function JobDetail({ jobId }: { jobId: string }) {
                 <div className="w-16 h-16 bg-light-gray flex-shrink-0 rounded-md overflow-hidden border border-gray-200">
                   <Image
                     src={job.logo || "/placeholder.svg"}
-                    alt={`${job.company.name} logo`}
+                    alt={`${job.company_details.company_name} logo`}
                     width={64}
                     height={64}
                     className="object-contain"
@@ -338,17 +313,17 @@ export default function JobDetail({ jobId }: { jobId: string }) {
                 </div>
 
                 <div>
-                  <h3 className="text-xl font-semibold text-dark-gray mb-1">{job.company.name}</h3>
-                  <Link href={`/companies/${job.company.id}`} className="text-accent hover:underline text-sm">
+                  <h3 className="text-xl font-semibold text-dark-gray mb-1">{job.company_details.company_name}</h3>
+                  <Link href={`/companies/${job.company_details.company_id}`} className="text-accent hover:underline text-sm">
                     View Company Profile
                   </Link>
                 </div>
               </div>
 
-              <p className="text-gray-700 mb-4">{job.companyDescription}</p>
+              <p className="text-gray-700 mb-4">{job.company_details.description}</p>
 
               <div className="flex flex-col gap-2">
-                <Link href={`/companies/${job.company.id}`}>
+                <Link href={`/companies/${job.company_details.company_id}`}>
                   <Button variant="outline" className="w-full">
                     View All Jobs
                   </Button>
@@ -368,7 +343,7 @@ export default function JobDetail({ jobId }: { jobId: string }) {
                   <Briefcase className="h-5 w-5 mr-2 text-gray-400 mt-0.5" />
                   <div>
                     <div className="font-medium text-dark-gray">Job Type</div>
-                    <div className="text-gray-600">{job.type}</div>
+                    <div className="text-gray-600">{job.employment_type}</div>
                   </div>
                 </div>
 
@@ -384,7 +359,11 @@ export default function JobDetail({ jobId }: { jobId: string }) {
                   <Calendar className="h-5 w-5 mr-2 text-gray-400 mt-0.5" />
                   <div>
                     <div className="font-medium text-dark-gray">Application Deadline</div>
-                    <div className="text-gray-600">{job.deadline}</div>
+                    {new Date(job.expires_at).toLocaleDateString("en-US", {
+                      year: "numeric",
+                      month: "long",
+                      day: "numeric",
+                    })}
                   </div>
                 </div>
 
@@ -392,7 +371,13 @@ export default function JobDetail({ jobId }: { jobId: string }) {
                   <Clock className="h-5 w-5 mr-2 text-gray-400 mt-0.5" />
                   <div>
                     <div className="font-medium text-dark-gray">Posted</div>
-                    <div className="text-gray-600">{job.posted}</div>
+                    <div className="text-gray-600">
+                    {new Date(job.posted_at).toLocaleDateString("en-US", {
+                      year: "numeric",
+                      month: "long",
+                      day: "numeric",
+                    })}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -402,14 +387,15 @@ export default function JobDetail({ jobId }: { jobId: string }) {
           <Card className="mb-6">
             <CardContent className="p-4">
               <h3 className="text-lg font-semibold text-dark-gray mb-3">Benefits & Perks</h3>
-              <ul className="space-y-2">
+              {/* <ul className="space-y-2">
                 {job.benefits.map((benefit, index) => (
                   <li key={index} className="flex items-center text-gray-700">
                     <span className="h-1.5 w-1.5 rounded-full bg-accent mr-2"></span>
                     {benefit}
                   </li>
                 ))}
-              </ul>
+              </ul> */}
+              <p className="text-gray-700">{job.benefits}</p>
             </CardContent>
           </Card>
 
@@ -441,7 +427,11 @@ export default function JobDetail({ jobId }: { jobId: string }) {
         <div className="flex justify-between items-center">
           <div>
             <p className="text-gray-500 text-sm">
-              Job ID: {jobId} • Posted {job.posted}
+              Job ID: {jobId} • Posted {new Date(job.posted_at).toLocaleDateString("en-US", {
+                year: "numeric",
+                month: "long",
+                day: "numeric",
+              })}
             </p>
           </div>
 
