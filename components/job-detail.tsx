@@ -15,11 +15,11 @@ import api from "@/lib/axios"
 
 interface JobDetails {
   skills: string[];
-  // benefits: string[]; // Explicitly define the type for benefits
+  // benefits?: string[]; // Explicitly define the type for benefits
   [key: string]: any; // Add other properties as needed
 }
 
-export default function JobDetail({ jobId, jobDetails, is_saved }: { jobId: string; jobDetails: any; is_saved: boolean }) {
+export default function JobDetail({ jobId, jobDetails, is_saved }: { jobId: string; jobDetails: JobDetails; is_saved: boolean }) {
   const [isSaved, setIsSaved] = useState(is_saved)
   const [saveError, setSaveError] = useState("")
   const [saveSuccess, setSaveSuccess] = useState("")
@@ -71,7 +71,7 @@ export default function JobDetail({ jobId, jobDetails, is_saved }: { jobId: stri
           <div className="w-16 h-16 bg-light-gray flex-shrink-0 rounded-md overflow-hidden border border-gray-200">
             <Image
               src={job.logo || "/placeholder.svg"}
-              alt={`${job.company_details.company_name} logo`}
+              alt={job.company_details?.company_name || "Company logo"}
               width={64}
               height={64}
               className="object-contain"
@@ -79,31 +79,35 @@ export default function JobDetail({ jobId, jobDetails, is_saved }: { jobId: stri
           </div>
 
           <div className="flex-1 min-w-0">
-            <h1 className="text-2xl font-bold text-dark-gray mb-1">{job.title}</h1>
-
-            <span className="text-accent">{job.company_details.company_name}</span>
-
+            {job.title && <h1 className="text-2xl font-bold text-dark-gray mb-1">{job.title}</h1>}
+            {job.company_details?.company_name && <span className="text-accent">{job.company_details.company_name}</span>}
             <div className="mt-3 flex flex-wrap gap-y-2 gap-x-4 text-sm text-gray-600">
-              <div className="flex items-center">
-                <MapPin className="h-4 w-4 mr-1" />
-                {job.location}
-              </div>
+              {job.location && (
+                <div className="flex items-center">
+                  <MapPin className="h-4 w-4 mr-1" />
+                  {job.location}
+                </div>
+              )}
               <div className="flex items-center">
                 <DollarSign className="h-4 w-4 mr-1" />
-                {job.min_salary}-{job.max_salary}
+                {job.min_salary && job.max_salary ? `${job.min_salary}-${job.max_salary}` : "NA"}
               </div>
-              <div className="flex items-center">
-                <Briefcase className="h-4 w-4 mr-1" />
-                {job.employment_type}
-              </div>
-              <div className="flex items-center">
-                <Clock className="h-4 w-4 mr-1" />
-                 {new Date(job.posted_at).toLocaleDateString("en-US", {
-                  year: "numeric",
-                  month: "long",
-                  day: "numeric",
-                 })}
-              </div>
+              {job.employment_type && (
+                <div className="flex items-center">
+                  <Briefcase className="h-4 w-4 mr-1" />
+                  {job.employment_type}
+                </div>
+              )}
+              {job.posted_at && (
+                <div className="flex items-center">
+                  <Clock className="h-4 w-4 mr-1" />
+                  {new Date(job.posted_at).toLocaleDateString("en-US", {
+                    year: "numeric",
+                    month: "long",
+                    day: "numeric",
+                  })}
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -147,57 +151,64 @@ export default function JobDetail({ jobId, jobDetails, is_saved }: { jobId: stri
 
           <TabsContent value="description" className="space-y-6">
             <div className="space-y-4">
-              <div className="prose max-w-none" dangerouslySetInnerHTML={{ __html: job.description }} />
-
-              <div className="mt-6">
-                <h3 className="text-lg font-semibold text-dark-gray mb-3">Required Skills</h3>
-                <div className="flex flex-wrap gap-2">
-                  {job.skills.map((skill) => (
-                    <Badge key={skill} variant="outline" className="bg-light-gray">
-                      {skill}
-                    </Badge>
-                  ))}
+              {job.description && (
+                <div className="prose max-w-none" dangerouslySetInnerHTML={{ __html: job.description }} />
+              )}
+              {job.skills && job.skills.length > 0 && (
+                <div className="mt-6">
+                  <h3 className="text-lg font-semibold text-dark-gray mb-3">Required Skills</h3>
+                  <div className="flex flex-wrap gap-2">
+                    {job.skills.map((skill) => (
+                      <Badge key={skill} variant="outline" className="bg-light-gray">
+                        {skill}
+                      </Badge>
+                    ))}
+                  </div>
                 </div>
-              </div>
-
+              )}
               <div className="mt-6">
                 <h3 className="text-lg font-semibold text-dark-gray mb-3">Job Details</h3>
                 <div className="grid grid-cols-1 gap-4">
-                  <div className="flex items-start">
-                    <Briefcase className="h-5 w-5 mr-2 text-gray-400 mt-0.5" />
-                    <div>
-                      <div className="font-medium text-dark-gray">Job Type</div>
-                      <div className="text-gray-600">{job.employment_type}</div>
+                  {job.employment_type && (
+                    <div className="flex items-start">
+                      <Briefcase className="h-5 w-5 mr-2 text-gray-400 mt-0.5" />
+                      <div>
+                        <div className="font-medium text-dark-gray">Job Type</div>
+                        <div className="text-gray-600">{job.employment_type}</div>
+                      </div>
                     </div>
-                  </div>
-
-                  <div className="flex items-start">
-                    <Building className="h-5 w-5 mr-2 text-gray-400 mt-0.5" />
-                    <div>
-                      <div className="font-medium text-dark-gray">Experience</div>
-                      <div className="text-gray-600">{job.experience}</div>
+                  )}
+                  {job.experience && (
+                    <div className="flex items-start">
+                      <Building className="h-5 w-5 mr-2 text-gray-400 mt-0.5" />
+                      <div>
+                        <div className="font-medium text-dark-gray">Experience</div>
+                        <div className="text-gray-600">{job.experience}</div>
+                      </div>
                     </div>
-                  </div>
-
-                  <div className="flex items-start">
-                    <Calendar className="h-5 w-5 mr-2 text-gray-400 mt-0.5" />
-                    <div>
-                      <div className="font-medium text-dark-gray">Application Deadline</div>
-                      {new Date(job.expires_at).toLocaleDateString("en-US", {
-                        year: "numeric",
-                        month: "long",
-                        day: "numeric",
-                      })}
+                  )}
+                  {job.expires_at && (
+                    <div className="flex items-start">
+                      <Calendar className="h-5 w-5 mr-2 text-gray-400 mt-0.5" />
+                      <div>
+                        <div className="font-medium text-dark-gray">Application Deadline</div>
+                        {new Date(job.expires_at).toLocaleDateString("en-US", {
+                          year: "numeric",
+                          month: "long",
+                          day: "numeric",
+                        })}
+                      </div>
                     </div>
-                  </div>
-
-                  <div className="flex items-start">
-                    <MapPin className="h-5 w-5 mr-2 text-gray-400 mt-0.5" />
-                    <div>
-                      <div className="font-medium text-dark-gray">Location</div>
-                      <div className="text-gray-600">{job.location}</div>
+                  )}
+                  {job.location && (
+                    <div className="flex items-start">
+                      <MapPin className="h-5 w-5 mr-2 text-gray-400 mt-0.5" />
+                      <div>
+                        <div className="font-medium text-dark-gray">Location</div>
+                        <div className="text-gray-600">{job.location}</div>
+                      </div>
                     </div>
-                  </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -208,7 +219,7 @@ export default function JobDetail({ jobId, jobDetails, is_saved }: { jobId: stri
               <div className="w-16 h-16 bg-light-gray flex-shrink-0 rounded-md overflow-hidden border border-gray-200">
                 <Image
                   src={job.logo || "/placeholder.svg"}
-                  alt={`${job.company_details.company_name} logo`}
+                  alt={job.company_details?.company_name || "Company logo"}
                   width={64}
                   height={64}
                   className="object-contain"
@@ -216,60 +227,56 @@ export default function JobDetail({ jobId, jobDetails, is_saved }: { jobId: stri
               </div>
 
               <div>
-                <h3 className="text-xl font-semibold text-dark-gray mb-1">{job.company_details.company_name}</h3>
-                <Link href={`/companies/${job.company_details.company_id}`} className="text-accent hover:underline text-sm">
-                  View Company Profile
-                </Link>
+                {job.company_details?.company_name && (
+                  <h3 className="text-xl font-semibold text-dark-gray mb-1">{job.company_details.company_name}</h3>
+                )}
+                {job.company_details?.company_id && (
+                  <Link href={`/companies/${job.company_details.company_id}`} className="text-accent hover:underline text-sm">
+                    View Company Profile
+                  </Link>
+                )}
               </div>
             </div>
 
             <div className="space-y-4">
-              <p className="text-gray-700">{job.companyDescription}</p>
-
-              <div className="mt-6">
-                <h3 className="text-lg font-semibold text-dark-gray mb-3">Benefits & Perks</h3>
-                {/* <ul className="grid grid-cols-1 gap-2">
-                  {job.benefits.map((benefit, index) => (
-                    <li key={index} className="flex items-center text-gray-700">
-                      <span className="h-1.5 w-1.5 rounded-full bg-accent mr-2"></span>
-                      {benefit}
-                    </li>
-                  ))}
-                </ul> */}
-                <p className="text-gray-700">{job.benefits}</p>
-              </div>
+              {job.company_details?.description && <p className="text-gray-700">{job.company_details?.description}</p>}
+              {job.benefits && (
+                <div className="mt-6">
+                  <h3 className="text-lg font-semibold text-dark-gray mb-3">Benefits & Perks</h3>
+                  <p className="text-gray-700">{job.benefits}</p>
+                </div>
+              )}
             </div>
 
             <div className="mt-6 flex gap-3">
-              <Link href={`/companies/${job.company_details.company_id}`}>
-                <Button variant="outline">View All Jobs</Button>
-              </Link>
-
+              {job.company_details?.company_id && (
+                <Link href={`/companies/${job.company_details.company_id}`}>
+                  <Button variant="outline">View All Jobs</Button>
+                </Link>
+              )}
               <Button variant="outline">Follow Company</Button>
             </div>
           </TabsContent>
 
           <TabsContent value="location">
             <div className="space-y-4">
-              <div className="flex items-start">
-                <MapPin className="h-5 w-5 mr-2 text-gray-400 mt-0.5" />
-                <div>
-                  <div className="font-medium text-dark-gray">Job Location</div>
-                  <div className="text-gray-600">{job.location}</div>
+              {job.location && (
+                <div className="flex items-start">
+                  <MapPin className="h-5 w-5 mr-2 text-gray-400 mt-0.5" />
+                  <div>
+                    <div className="font-medium text-dark-gray">Job Location</div>
+                    <div className="text-gray-600">{job.location}</div>
+                  </div>
                 </div>
-              </div>
-
+              )}
               <div className="h-80 w-full rounded-lg overflow-hidden border border-gray-200 mt-4">
-                <MapEmbed location={job.location} />
+                <MapEmbed location={job.location || "NA"} />
               </div>
-
               <div className="mt-4">
                 <p className="text-gray-700">
-                  This position is{" "}
-                  {job.location.includes("Remote")
+                  This position is {job.location && job.location.includes("Remote")
                     ? "remote with occasional visits to our office"
-                    : "based in our office at"}{" "}
-                  {job.location.replace(" (Remote)", "")}.
+                    : "based in our office at"} {job.location ? job.location.replace(" (Remote)", "") : "NA"}.
                 </p>
               </div>
             </div>
@@ -282,18 +289,21 @@ export default function JobDetail({ jobId, jobDetails, is_saved }: { jobId: stri
         <div className="flex-1 pr-6">
           {/* Left Column - Job Description */}
           <div className="space-y-6">
-            <div className="prose max-w-none" dangerouslySetInnerHTML={{ __html: job.description }} />
-
-            <div className="mt-6">
-              <h3 className="text-lg font-semibold text-dark-gray mb-3">Required Skills</h3>
-              <div className="flex flex-wrap gap-2">
-                {job.skills.map((skill) => (
-                  <Badge key={skill} variant="outline" className="bg-light-gray">
-                    {skill}
-                  </Badge>
-                ))}
+            {job.description && (
+              <div className="prose max-w-none" dangerouslySetInnerHTML={{ __html: job.description }} />
+            )}
+            {job.skills && job.skills.length > 0 && (
+              <div className="mt-6">
+                <h3 className="text-lg font-semibold text-dark-gray mb-3">Required Skills</h3>
+                <div className="flex flex-wrap gap-2">
+                  {job.skills.map((skill) => (
+                    <Badge key={skill} variant="outline" className="bg-light-gray">
+                      {skill}
+                    </Badge>
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
           </div>
         </div>
 
@@ -305,7 +315,7 @@ export default function JobDetail({ jobId, jobDetails, is_saved }: { jobId: stri
                 <div className="w-16 h-16 bg-light-gray flex-shrink-0 rounded-md overflow-hidden border border-gray-200">
                   <Image
                     src={job.logo || "/placeholder.svg"}
-                    alt={`${job.company_details.company_name} logo`}
+                    alt={job.company_details?.company_name || "Company logo"}
                     width={64}
                     height={64}
                     className="object-contain"
@@ -313,21 +323,26 @@ export default function JobDetail({ jobId, jobDetails, is_saved }: { jobId: stri
                 </div>
 
                 <div>
-                  <h3 className="text-xl font-semibold text-dark-gray mb-1">{job.company_details.company_name}</h3>
-                  <Link href={`/companies/${job.company_details.company_id}`} className="text-accent hover:underline text-sm">
-                    View Company Profile
-                  </Link>
+                  {job.company_details?.company_name && (
+                    <h3 className="text-xl font-semibold text-dark-gray mb-1">{job.company_details.company_name}</h3>
+                  )}
+                  {job.company_details?.company_id && (
+                    <Link href={`/companies/${job.company_details.company_id}`} className="text-accent hover:underline text-sm">
+                      View Company Profile
+                    </Link>
+                  )}
                 </div>
               </div>
 
-              <p className="text-gray-700 mb-4">{job.company_details.description}</p>
-
+              {job.company_details?.description && <p className="text-gray-700 mb-4">{job.company_details.description}</p>}
               <div className="flex flex-col gap-2">
-                <Link href={`/companies/${job.company_details.company_id}`}>
-                  <Button variant="outline" className="w-full">
-                    View All Jobs
-                  </Button>
-                </Link>
+                {job.company_details?.company_id && (
+                  <Link href={`/companies/${job.company_details.company_id}`}>
+                    <Button variant="outline" className="w-full">
+                      View All Jobs
+                    </Button>
+                  </Link>
+                )}
                 <Button variant="outline" className="w-full">
                   Follow Company
                 </Button>
@@ -339,47 +354,52 @@ export default function JobDetail({ jobId, jobDetails, is_saved }: { jobId: stri
             <CardContent className="p-4">
               <h3 className="text-lg font-semibold text-dark-gray mb-3">Job Details</h3>
               <div className="space-y-3">
-                <div className="flex items-start">
-                  <Briefcase className="h-5 w-5 mr-2 text-gray-400 mt-0.5" />
-                  <div>
-                    <div className="font-medium text-dark-gray">Job Type</div>
-                    <div className="text-gray-600">{job.employment_type}</div>
-                  </div>
-                </div>
-
-                <div className="flex items-start">
-                  <Building className="h-5 w-5 mr-2 text-gray-400 mt-0.5" />
-                  <div>
-                    <div className="font-medium text-dark-gray">Experience</div>
-                    <div className="text-gray-600">{job.experience}</div>
-                  </div>
-                </div>
-
-                <div className="flex items-start">
-                  <Calendar className="h-5 w-5 mr-2 text-gray-400 mt-0.5" />
-                  <div>
-                    <div className="font-medium text-dark-gray">Application Deadline</div>
-                    {new Date(job.expires_at).toLocaleDateString("en-US", {
-                      year: "numeric",
-                      month: "long",
-                      day: "numeric",
-                    })}
-                  </div>
-                </div>
-
-                <div className="flex items-start">
-                  <Clock className="h-5 w-5 mr-2 text-gray-400 mt-0.5" />
-                  <div>
-                    <div className="font-medium text-dark-gray">Posted</div>
-                    <div className="text-gray-600">
-                    {new Date(job.posted_at).toLocaleDateString("en-US", {
-                      year: "numeric",
-                      month: "long",
-                      day: "numeric",
-                    })}
+                {job.employment_type && (
+                  <div className="flex items-start">
+                    <Briefcase className="h-5 w-5 mr-2 text-gray-400 mt-0.5" />
+                    <div>
+                      <div className="font-medium text-dark-gray">Job Type</div>
+                      <div className="text-gray-600">{job.employment_type}</div>
                     </div>
                   </div>
-                </div>
+                )}
+                {job.experience && (
+                  <div className="flex items-start">
+                    <Building className="h-5 w-5 mr-2 text-gray-400 mt-0.5" />
+                    <div>
+                      <div className="font-medium text-dark-gray">Experience</div>
+                      <div className="text-gray-600">{job.experience}</div>
+                    </div>
+                  </div>
+                )}
+                {job.expires_at && (
+                  <div className="flex items-start">
+                    <Calendar className="h-5 w-5 mr-2 text-gray-400 mt-0.5" />
+                    <div>
+                      <div className="font-medium text-dark-gray">Application Deadline</div>
+                      {new Date(job.expires_at).toLocaleDateString("en-US", {
+                        year: "numeric",
+                        month: "long",
+                        day: "numeric",
+                      })}
+                    </div>
+                  </div>
+                )}
+                {job.posted_at && (
+                  <div className="flex items-start">
+                    <Clock className="h-5 w-5 mr-2 text-gray-400 mt-0.5" />
+                    <div>
+                      <div className="font-medium text-dark-gray">Posted</div>
+                      <div className="text-gray-600">
+                        {new Date(job.posted_at).toLocaleDateString("en-US", {
+                          year: "numeric",
+                          month: "long",
+                          day: "numeric",
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -387,36 +407,26 @@ export default function JobDetail({ jobId, jobDetails, is_saved }: { jobId: stri
           <Card className="mb-6">
             <CardContent className="p-4">
               <h3 className="text-lg font-semibold text-dark-gray mb-3">Benefits & Perks</h3>
-              {/* <ul className="space-y-2">
-                {job.benefits.map((benefit, index) => (
-                  <li key={index} className="flex items-center text-gray-700">
-                    <span className="h-1.5 w-1.5 rounded-full bg-accent mr-2"></span>
-                    {benefit}
-                  </li>
-                ))}
-              </ul> */}
-              <p className="text-gray-700">{job.benefits}</p>
+              {job.benefits && <p className="text-gray-700">{job.benefits}</p>}
             </CardContent>
           </Card>
 
           <Card>
             <CardContent className="p-4">
               <h3 className="text-lg font-semibold text-dark-gray mb-3">Location</h3>
-              <div className="flex items-start mb-3">
-                <MapPin className="h-5 w-5 mr-2 text-gray-400 mt-0.5" />
-                <div className="text-gray-600">{job.location}</div>
-              </div>
-
+              {job.location && (
+                <div className="flex items-start mb-3">
+                  <MapPin className="h-5 w-5 mr-2 text-gray-400 mt-0.5" />
+                  <div className="text-gray-600">{job.location}</div>
+                </div>
+              )}
               <div className="h-48 w-full rounded-lg overflow-hidden border border-gray-200 mb-3">
-                <MapEmbed location={job.location} />
+                <MapEmbed location={job.location || "NA"} />
               </div>
-
               <p className="text-sm text-gray-700">
-                This position is{" "}
-                {job.location.includes("Remote")
+                This position is {job.location && job.location.includes("Remote")
                   ? "remote with occasional visits to our office"
-                  : "based in our office at"}{" "}
-                {job.location.replace(" (Remote)", "")}.
+                  : "based in our office at"} {job.location ? job.location.replace(" (Remote)", "") : "NA"}.
               </p>
             </CardContent>
           </Card>
@@ -427,11 +437,11 @@ export default function JobDetail({ jobId, jobDetails, is_saved }: { jobId: stri
         <div className="flex justify-between items-center">
           <div>
             <p className="text-gray-500 text-sm">
-              Job ID: {jobId} • Posted {new Date(job.posted_at).toLocaleDateString("en-US", {
+              Job ID: {jobId} • Posted {job.posted_at ? new Date(job.posted_at).toLocaleDateString("en-US", {
                 year: "numeric",
                 month: "long",
                 day: "numeric",
-              })}
+              }) : "NA"}
             </p>
           </div>
 
