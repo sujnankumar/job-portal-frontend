@@ -9,6 +9,7 @@ interface User {
   email: string
   role: UserRole
   avatar?: string
+  token?: string
 }
 
 interface AuthState {

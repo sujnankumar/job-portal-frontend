@@ -12,6 +12,8 @@ import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
 import { useAuthStore } from "@/store/authStore"
 import type { UserRole } from "@/store/authStore"
+import api from "@/lib/axios"
+import { jwtDecode } from "jwt-decode"
 
 export default function LoginPage() {
   const router = useRouter()
@@ -50,31 +52,39 @@ export default function LoginPage() {
     setError("")
 
     try {
-      // In a real app, you would make an API call to authenticate
-      // For now, we'll simulate a successful login
-      setTimeout(() => {
-        // Mock user data
-        const user = {
-          id: "1",
-          name: role === "applicant" ? "Jane Smith" : "Tech Innovations Inc.",
-          email: formData.email,
-          role: role,
-          avatar: role === "applicant" ? "/mystical-forest-spirit.png" : "/abstract-circuit-board.png",
-        }
-
-        login(user)
-
-        // Redirect based on role
-        if (role === "applicant") {
-          router.push("/dashboard")
-        } else {
-          router.push("/employer/dashboard")
-        }
-
-        setIsLoading(false)
-      }, 1000)
-    } catch (err) {
-      setError("Invalid email or password")
+      const res = await api.post("/auth/login", {
+        email: formData.email,
+        password: formData.password,
+      })
+      const { access_token } = res.data
+      // Decode JWT to get user info
+      const decoded: any = jwtDecode(access_token)
+      console.log("Decoded JWT:", decoded)
+      const userType = decoded.user_type
+      const user = {
+        id: decoded.user_id,
+        name:
+          userType === "employer"
+            ? decoded.first_name + " " + decoded.last_name
+            : decoded.first_name + " " + decoded.last_name,
+        email: decoded.email,
+        role: userType === "employer" ? "employer" : "applicant",
+        avatar:
+          userType === "employer"
+            ? "/abstract-circuit-board.png"
+            : "/mystical-forest-spirit.png",
+        token: access_token,
+      }
+      login(user)
+      // Redirect based on user type
+      if (userType === "employer") {
+        router.push("/employer/dashboard")
+      } else {
+        router.push("/dashboard")
+      }
+    } catch (err: any) {
+      setError(err.response?.data?.detail || "Invalid email or password")
+    } finally {
       setIsLoading(false)
     }
   }

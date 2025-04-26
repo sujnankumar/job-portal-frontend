@@ -13,6 +13,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useAuthStore } from "@/store/authStore"
 import type { UserRole } from "@/store/authStore"
+import api from "@/lib/axios"
 
 export default function RegisterPage() {
   const router = useRouter()
@@ -96,24 +97,26 @@ export default function RegisterPage() {
     }
 
     try {
-      // In a real app, you would make an API call to register
-      // For now, we'll simulate a successful registration
-      setTimeout(() => {
-        // Mock user data
-        const user = {
-          id: "1",
-          name: `${applicantForm.firstName} ${applicantForm.lastName}`,
-          email: applicantForm.email,
-          role: "applicant",
-          avatar: "/mystical-forest-spirit.png",
-        }
-
-        login(user)
-        router.push("/dashboard")
-        setIsLoading(false)
-      }, 1000)
-    } catch (err) {
-      setError("Registration failed. Please try again.")
+      const res = await api.post("/auth/register", {
+        user_type: "job_seeker",
+        first_name: applicantForm.firstName,
+        last_name: applicantForm.lastName,
+        email: applicantForm.email,
+        password: applicantForm.password,
+      })
+      const user = res.data
+      console.log(res.data)
+      login({
+        id: user.user_id,
+        name: user.first_name + " " + user.last_name,
+        email: user.email,
+        role: (user.user_type === "job_seeker") ? "applicant" : "employer",
+        avatar: "/mystical-forest-spirit.png",
+      })
+      router.push("/dashboard")
+    } catch (err: any) {
+      setError(err.response?.data?.detail || "Registration failed. Please try again.")
+    } finally {
       setIsLoading(false)
     }
   }
@@ -130,24 +133,30 @@ export default function RegisterPage() {
     }
 
     try {
-      // In a real app, you would make an API call to register
-      // For now, we'll simulate a successful registration
-      setTimeout(() => {
-        // Mock user data
-        const user = {
-          id: "1",
-          name: employerForm.companyName,
-          email: employerForm.email,
-          role: "employer",
-          avatar: "/abstract-circuit-board.png",
-        }
-
-        login(user)
-        router.push("/employer/dashboard")
-        setIsLoading(false)
-      }, 1000)
-    } catch (err) {
-      setError("Registration failed. Please try again.")
+      const res = await api.post("/auth/register", {
+        user_type: "employer",
+        first_name: employerForm.firstName,
+        last_name: employerForm.lastName,
+        email: employerForm.email,
+        password: employerForm.password,
+        company_name: employerForm.companyName,
+        industry: employerForm.industry,
+        website: employerForm.website,
+        job_title: employerForm.jobTitle,
+      })
+      const user = res.data
+      console.log(res.data)
+      login({
+        id: user.user_id,
+        name: user.company_name,
+        email: user.email,
+        role: "employer",
+        avatar: "/abstract-circuit-board.png",
+      })
+      router.push("/employer/dashboard")
+    } catch (err: any) {
+      setError(err.response?.data?.detail || "Registration failed. Please try again.")
+    } finally {
       setIsLoading(false)
     }
   }
