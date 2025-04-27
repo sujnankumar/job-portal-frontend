@@ -118,14 +118,14 @@ export default function RegisterPage() {
       })
       const user = res.data
       console.log(res.data)
-      login({
-        id: user.user_id,
-        name: user.first_name + " " + user.last_name,
-        email: user.email,
-        role: (user.user_type === "job_seeker") ? "applicant" : "employer",
-        avatar: "/mystical-forest-spirit.png",
-      })
-      router.push("/dashboard")
+      // login({
+      //   id: user.user_id,
+      //   name: user.first_name + " " + user.last_name,
+      //   email: user.email,
+      //   role: (user.user_type === "job_seeker") ? "applicant" : "employer",
+      //   avatar: "/mystical-forest-spirit.png",
+      // })
+      router.push("/auth/login")
     } catch (err: any) {
       setError(err.response?.data?.detail || "Registration failed. Please try again.")
     } finally {
@@ -158,14 +158,14 @@ export default function RegisterPage() {
       })
       const user = res.data
       console.log(res.data)
-      login({
-        id: user.user_id,
-        name: user.company_name,
-        email: user.email,
-        role: "employer",
-        avatar: "/abstract-circuit-board.png",
-      })
-      router.push("/employer/dashboard")
+      // login({
+      //   id: user.user_id,
+      //   name: user.company_name,
+      //   email: user.email,
+      //   role: "employer",
+      //   avatar: "/abstract-circuit-board.png",
+      // })
+      router.push("/auth/login")
     } catch (err: any) {
       setError(err.response?.data?.detail || "Registration failed. Please try again.")
     } finally {
