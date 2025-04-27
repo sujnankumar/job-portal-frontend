@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -17,6 +17,18 @@ import api from "@/lib/axios"
 
 export default function RegisterPage() {
   const router = useRouter()
+  const { isAuthenticated, user } = useAuthStore()
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      if (user?.role === "applicant") {
+        router.push("/dashboard")
+      } else if (user?.role === "employer") {
+        router.push("/employer/dashboard")
+      }
+    }
+  }, [isAuthenticated, user, router])
+
   const login = useAuthStore((state) => state.login)
   const [role, setRole] = useState<UserRole>("applicant")
   const [isLoading, setIsLoading] = useState(false)

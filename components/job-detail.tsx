@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import Image from "next/image"
 import Link from "next/link"
 import { MapPin, DollarSign, Clock, Briefcase, Building, Calendar, Share2, Bookmark, BookmarkCheck } from "lucide-react"
@@ -23,8 +23,24 @@ export default function JobDetail({ jobId, jobDetails, is_saved }: { jobId: stri
   const [isSaved, setIsSaved] = useState(is_saved)
   const [saveError, setSaveError] = useState("")
   const [saveSuccess, setSaveSuccess] = useState("")
+  const [isApplied, setIsApplied] = useState(false)
   const user = useAuthStore((state) => state.user)
   const job = jobDetails
+
+  useEffect(() => {
+    const checkApplied = async () => {
+      if (!user?.token) return
+      try {
+        const res = await api.get(`/gma/is-applied/${jobId}`, {
+          headers: { Authorization: `Bearer ${user.token}` }
+        })
+        setIsApplied(res.data.is_applied)
+      } catch (err) {
+        // Optionally handle error
+      }
+    }
+    checkApplied()
+  }, [jobId, user?.token])
 
   const toggleSave = async (e: React.MouseEvent) => {
     e.stopPropagation && e.stopPropagation()
@@ -113,9 +129,20 @@ export default function JobDetail({ jobId, jobDetails, is_saved }: { jobId: stri
         </div>
 
         <div className="flex flex-wrap gap-3 mt-6">
-          <Link href={`/apply/${jobId}`}>
-            <Button className="bg-accent hover:bg-accent/90">Apply Now</Button>
-          </Link>
+          {isApplied ? (
+            <>
+              <Button className="bg-gray-400 cursor-not-allowed" disabled>
+                Applied
+              </Button>
+              <Link href={`/applications/edit/${jobId}`}>
+                <Button variant="outline">Edit Application</Button>
+              </Link>
+            </>
+          ) : (
+            <Link href={`/apply/${jobId}`}>
+              <Button className="bg-accent hover:bg-accent/90">Apply Now</Button>
+            </Link>
+          )}
 
           <Button variant="outline" onClick={toggleSave}>
             {isSaved ? (
