@@ -1,191 +1,242 @@
+"use client"
+
+import { useState } from "react"
+import { useRouter } from "next/navigation"
 import Image from "next/image"
-import Link from "next/link"
-import { MapPin, Calendar } from "lucide-react"
-import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { cn } from "@/lib/utils"
+import { Card, CardContent } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Input } from "@/components/ui/input"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Calendar, Clock, Search, ChevronRight, CalendarIcon } from "lucide-react"
+import { Calendar as CalendarComponent } from "@/components/ui/calendar"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { format } from "date-fns"
 
-interface ApplicationProps {
-  status: "active" | "history"
-}
-
-const activeApplications = [
+// Mock applications data
+const mockApplications = [
   {
-    id: "1",
+    id: "app-123456",
+    jobId: "job-789012",
     jobTitle: "Senior Frontend Developer",
     company: "Tech Innovations Inc.",
+    location: "San Francisco, CA",
+    appliedDate: "2023-11-15T14:30:00Z",
+    status: "interview", // pending, interview, accepted, rejected
     logo: "/abstract-circuit-board.png",
-    location: "San Francisco, CA (Remote)",
-    appliedDate: "May 10, 2023",
-    status: "Under Review",
-    statusColor: "bg-amber-100 text-amber-800",
+    interviewDate: "2023-12-05T13:00:00Z",
   },
   {
-    id: "2",
+    id: "app-234567",
+    jobId: "job-890123",
     jobTitle: "UX/UI Designer",
     company: "Creative Solutions",
-    logo: "/placeholder.svg?height=48&width=48&query=creative logo",
-    location: "Austin, TX (Hybrid)",
-    appliedDate: "May 8, 2023",
-    status: "Shortlisted",
-    statusColor: "bg-blue-100 text-blue-800",
-  },
-  {
-    id: "3",
-    jobTitle: "Product Manager",
-    company: "Growth Ventures",
-    logo: "/upward-sprout.png",
-    location: "New York, NY",
-    appliedDate: "May 5, 2023",
-    status: "Interview Scheduled",
-    statusColor: "bg-green-100 text-green-800",
-    interviewDate: "May 18, 2023",
-    interviewTime: "2:00 PM EST",
-  },
-]
-
-const applicationHistory = [
-  {
-    id: "4",
-    jobTitle: "Frontend Developer",
-    company: "Web Solutions",
-    logo: "/placeholder.svg?height=48&width=48&query=web logo",
-    location: "Chicago, IL",
-    appliedDate: "April 12, 2023",
-    status: "Rejected",
-    statusColor: "bg-red-100 text-red-800",
-    feedback: "We decided to go with a candidate who has more experience with our specific tech stack.",
-  },
-  {
-    id: "5",
-    jobTitle: "UI Developer",
-    company: "Design Agency",
-    logo: "/placeholder.svg?height=48&width=48&query=design logo",
     location: "Remote",
-    appliedDate: "April 3, 2023",
-    status: "Offer Accepted",
-    statusColor: "bg-green-100 text-green-800",
+    appliedDate: "2023-11-10T09:15:00Z",
+    status: "pending",
+    logo: "/abstract-geometric-logo.png",
   },
   {
-    id: "6",
-    jobTitle: "React Developer",
-    company: "AppWorks Inc.",
-    logo: "/placeholder.svg?height=48&width=48&query=app logo",
-    location: "Seattle, WA",
-    appliedDate: "March 25, 2023",
-    status: "Withdrawn",
-    statusColor: "bg-gray-100 text-gray-800",
-    reason: "Found another opportunity",
+    id: "app-345678",
+    jobId: "job-901234",
+    jobTitle: "Full Stack Developer",
+    company: "Global Tech",
+    location: "New York, NY",
+    appliedDate: "2023-11-05T11:45:00Z",
+    status: "rejected",
+    logo: "/abstract-data-flow.png",
+    feedback: "We were looking for someone with more experience in backend development.",
+  },
+  {
+    id: "app-456789",
+    jobId: "job-012345",
+    jobTitle: "Product Manager",
+    company: "Innovative Products Inc.",
+    location: "Austin, TX",
+    appliedDate: "2023-11-01T10:30:00Z",
+    status: "accepted",
+    logo: "/abstract-software-logo.png",
+    offerDetails: {
+      salary: "$130,000/year",
+      startDate: "2024-01-15T00:00:00Z",
+      benefits: "Health insurance, 401(k), unlimited PTO",
+    },
   },
 ]
 
-export default function ApplicationList({ status }: ApplicationProps) {
-  const applications = status === "active" ? activeApplications : applicationHistory
+export default function ApplicationList() {
+  const router = useRouter()
+  const [searchQuery, setSearchQuery] = useState("")
+  const [statusFilter, setStatusFilter] = useState("all")
+  const [dateFilter, setDateFilter] = useState<Date | undefined>(undefined)
 
-  if (applications.length === 0) {
-    return (
-      <div className="text-center py-12">
-        <h3 className="text-lg font-medium text-dark-gray mb-2">No applications found</h3>
-        <p className="text-gray-500 mb-6">
-          {status === "active"
-            ? "You don't have any active job applications at the moment."
-            : "Your application history is empty."}
-        </p>
-        <Link href="/jobs">
-          <Button className="bg-accent hover:bg-accent/90">Browse Jobs</Button>
-        </Link>
-      </div>
-    )
+  // Filter applications based on search query and filters
+  const filteredApplications = mockApplications.filter((app) => {
+    // Search filter
+    const matchesSearch =
+      app.jobTitle.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      app.company.toLowerCase().includes(searchQuery.toLowerCase())
+
+    // Status filter
+    const matchesStatus = statusFilter === "all" || app.status === statusFilter
+
+    // Date filter
+    const matchesDate = !dateFilter || new Date(app.appliedDate).toDateString() === dateFilter.toDateString()
+
+    return matchesSearch && matchesStatus && matchesDate
+  })
+
+  // Format date to readable string
+  const formatDate = (dateString: string) => {
+    const options: Intl.DateTimeFormatOptions = { year: "numeric", month: "long", day: "numeric" }
+    return new Date(dateString).toLocaleDateString(undefined, options)
+  }
+
+  // Get status badge
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case "pending":
+        return (
+          <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200">
+            Pending Review
+          </Badge>
+        )
+      case "interview":
+        return (
+          <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+            Interview Scheduled
+          </Badge>
+        )
+      case "accepted":
+        return (
+          <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+            Accepted
+          </Badge>
+        )
+      case "rejected":
+        return (
+          <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200">
+            Not Selected
+          </Badge>
+        )
+      default:
+        return <Badge variant="outline">Unknown</Badge>
+    }
   }
 
   return (
-    <div className="space-y-4">
-      {applications.map((app) => (
-        <div key={app.id} className="bg-white border rounded-lg shadow-sm p-4 hover:shadow-md transition-shadow">
-          <div className="flex flex-col sm:flex-row gap-4">
-            <div className="w-12 h-12 bg-light-gray flex-shrink-0 rounded-md overflow-hidden border border-gray-200">
-              <Image
-                src={app.logo || "/placeholder.svg"}
-                width={48}
-                height={48}
-                alt={`${app.company} logo`}
-                className="object-contain"
-              />
-            </div>
-
-            <div className="flex-1">
-              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
-                <div>
-                  <h3 className="font-medium text-dark-gray">{app.jobTitle}</h3>
-                  <p className="text-sm text-gray-500">{app.company}</p>
-                </div>
-                <Badge className={cn("font-normal", app.statusColor)}>{app.status}</Badge>
-              </div>
-
-              <div className="mt-2 text-xs text-gray-500 flex flex-wrap gap-x-4 gap-y-1">
-                <div className="flex items-center">
-                  <MapPin className="h-3.5 w-3.5 mr-1" />
-                  {app.location}
-                </div>
-                <div className="flex items-center">
-                  <Calendar className="h-3.5 w-3.5 mr-1" />
-                  Applied on {app.appliedDate}
-                </div>
-              </div>
-
-              {/* Interview details */}
-              {"interviewDate" in app && (
-                <div className="mt-3 p-3 bg-blue-50 rounded-md text-sm">
-                  <p className="font-medium text-blue-700">Interview Scheduled</p>
-                  <p className="text-blue-600">
-                    {app.interviewDate} at {app.interviewTime}
-                  </p>
-                </div>
-              )}
-
-              {/* Rejection feedback */}
-              {"feedback" in app && (
-                <div className="mt-3 p-3 bg-red-50 rounded-md text-sm">
-                  <p className="font-medium text-red-700">Feedback</p>
-                  <p className="text-red-600">{app.feedback}</p>
-                </div>
-              )}
-
-              {/* Withdrawal reason */}
-              {"reason" in app && (
-                <div className="mt-3 p-3 bg-gray-50 rounded-md text-sm">
-                  <p className="font-medium text-gray-700">Reason for withdrawal</p>
-                  <p className="text-gray-600">{app.reason}</p>
-                </div>
-              )}
-
-              <div className="mt-4 flex flex-wrap gap-2">
-                <Link href={`/jobs/${app.id}`}>
-                  <Button variant="outline" size="sm" className="h-8">
-                    View Job
-                  </Button>
-                </Link>
-                <Link href={`/applications/${app.id}`}>
-                  <Button variant="outline" size="sm" className="h-8">
-                    View Application
-                  </Button>
-                </Link>
-                {status === "active" && app.status !== "Interview Scheduled" && (
-                  <Button variant="ghost" size="sm" className="h-8 text-red-500 hover:text-red-700 hover:bg-red-50">
-                    Withdraw
-                  </Button>
-                )}
-                {app.status === "Interview Scheduled" && (
-                  <Button variant="outline" size="sm" className="h-8 text-blue-500 hover:text-blue-700">
-                    <Calendar className="h-3.5 w-3.5 mr-1" />
-                    Add to Calendar
-                  </Button>
-                )}
-              </div>
-            </div>
-          </div>
+    <div className="space-y-6">
+      {/* Filters */}
+      <div className="flex flex-col md:flex-row gap-4">
+        <div className="relative flex-grow">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+          <Input
+            placeholder="Search by job title or company"
+            className="pl-10"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
         </div>
-      ))}
+        <div className="flex gap-4">
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Filter by status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Statuses</SelectItem>
+              <SelectItem value="pending">Pending Review</SelectItem>
+              <SelectItem value="interview">Interview Scheduled</SelectItem>
+              <SelectItem value="accepted">Accepted</SelectItem>
+              <SelectItem value="rejected">Not Selected</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" className="w-[180px] justify-start text-left font-normal">
+                <CalendarIcon className="mr-2 h-4 w-4" />
+                {dateFilter ? format(dateFilter, "PPP") : "Filter by date"}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0">
+              <CalendarComponent mode="single" selected={dateFilter} onSelect={setDateFilter} initialFocus />
+            </PopoverContent>
+          </Popover>
+        </div>
+      </div>
+
+      {/* Applications List */}
+      <Tabs defaultValue="active" className="w-full">
+        <TabsList className="grid w-full grid-cols-2 mb-6">
+          <TabsTrigger value="active">Active Applications</TabsTrigger>
+          <TabsTrigger value="archived">Archived</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="active" className="space-y-4">
+          {filteredApplications.length === 0 ? (
+            <Card>
+              <CardContent className="flex flex-col items-center justify-center py-10 text-center">
+                <div className="text-gray-400 mb-2">No applications found</div>
+                <p className="text-sm text-gray-500 max-w-md">
+                  Try adjusting your search or filters to find what you're looking for.
+                </p>
+              </CardContent>
+            </Card>
+          ) : (
+            filteredApplications.map((app) => (
+              <Card
+                key={app.id}
+                className="overflow-hidden hover:border-gray-300 transition-colors cursor-pointer"
+                onClick={() => router.push(`/applications/${app.id}`)}
+              >
+                <CardContent className="p-0">
+                  <div className="flex items-center p-4">
+                    <div className="mr-4 flex-shrink-0">
+                      <Image
+                        src={app.logo || "/placeholder.svg"}
+                        alt={app.company}
+                        width={50}
+                        height={50}
+                        className="rounded-md"
+                      />
+                    </div>
+                    <div className="flex-grow min-w-0">
+                      <h3 className="font-semibold text-dark-gray truncate">{app.jobTitle}</h3>
+                      <p className="text-gray-600 text-sm">
+                        {app.company} • {app.location}
+                      </p>
+                      <div className="flex items-center mt-1 text-xs text-gray-500">
+                        <Clock className="h-3 w-3 mr-1" />
+                        Applied on {formatDate(app.appliedDate)}
+                      </div>
+                    </div>
+                    <div className="ml-4 flex flex-col items-end gap-2">
+                      {getStatusBadge(app.status)}
+                      {app.status === "interview" && app.interviewDate && (
+                        <div className="flex items-center text-xs text-blue-600">
+                          <Calendar className="h-3 w-3 mr-1" />
+                          Interview: {formatDate(app.interviewDate)}
+                        </div>
+                      )}
+                    </div>
+                    <ChevronRight className="h-5 w-5 ml-2 text-gray-400" />
+                  </div>
+                </CardContent>
+              </Card>
+            ))
+          )}
+        </TabsContent>
+
+        <TabsContent value="archived" className="space-y-4">
+          <Card>
+            <CardContent className="flex flex-col items-center justify-center py-10 text-center">
+              <div className="text-gray-400 mb-2">No archived applications</div>
+              <p className="text-sm text-gray-500 max-w-md">When you archive applications, they will appear here.</p>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   )
 }
