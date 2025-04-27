@@ -40,80 +40,74 @@ import {
   ExternalLink,
 } from "lucide-react"
 import ApplicationTimeline from "@/components/application-timeline"
+import api from "@/lib/axios"
+import { set } from "date-fns"
 
-// Mock application data - in a real app, you would fetch this based on the ID
-const mockApplication = {
-  id: "app-123456",
-  jobId: "job-789012",
-  appliedDate: "2023-11-15T14:30:00Z",
-  status: "interview", // pending, interview, accepted, rejected
-  job: {
-    title: "Senior Frontend Developer",
-    company: "Tech Innovations Inc.",
-    location: "San Francisco, CA",
-    type: "Full-time",
-    salary: "$120,000 - $160,000/year",
-    logo: "/abstract-circuit-board.png",
-    deadline: "2023-12-15T23:59:59Z",
-  },
-  resume: {
-    filename: "jane-smith-resume.pdf",
-    url: "#", // In a real app, this would be a URL to the actual file
-    lastUpdated: "2023-11-10T09:15:00Z",
-  },
-  coverLetter: {
-    content:
-      "Dear Hiring Manager,\n\nI am writing to express my interest in the Senior Frontend Developer position at Tech Innovations Inc. With over 5 years of experience in frontend development using React, TypeScript, and modern CSS frameworks, I believe I would be a valuable addition to your team.\n\nIn my current role at Digital Solutions, I have led the development of several key projects, including a complete redesign of our customer portal which resulted in a 40% increase in user engagement. I have a strong focus on creating accessible, performant, and visually appealing user interfaces.\n\nI am particularly excited about the opportunity to work at Tech Innovations because of your commitment to pushing the boundaries of web technology and your collaborative approach to product development.\n\nThank you for considering my application. I look forward to the possibility of discussing how my skills and experience align with your needs.\n\nSincerely,\nJane Smith",
-  },
-  personalInfo: {
-    name: "Jane Smith",
-    email: "jane.smith@example.com",
-    phone: "(555) 123-4567",
-    website: "janesmith.dev",
-    linkedin: "linkedin.com/in/janesmith",
-  },
-  customMessage:
-    "I'm particularly interested in this role because of the opportunity to work with cutting-edge technologies and contribute to innovative products that make a difference.",
-  timeline: [
-    {
-      date: "2023-11-15T14:30:00Z",
-      status: "applied",
-      description: "Application submitted",
-    },
-    {
-      date: "2023-11-18T10:45:00Z",
-      status: "reviewed",
-      description: "Application reviewed by employer",
-    },
-    {
-      date: "2023-11-22T16:20:00Z",
-      status: "interview",
-      description: "Invited for an interview",
-    },
-  ],
-  interview: {
-    date: "2023-12-05T13:00:00Z",
-    type: "Video Call (Zoom)",
-    duration: "45 minutes",
-    interviewers: ["Alex Johnson (Engineering Manager)", "Sarah Chen (Senior Developer)"],
-    instructions:
-      "Please prepare to discuss your experience with React and TypeScript. There will also be a short coding exercise to demonstrate problem-solving skills.",
-  },
-}
-
-export default function ApplicationDetailsPage({ params }: { params: { id: string } }) {
+export default function ApplicationDetailsPage({ params }: { params: Promise<{ id: string }> }) {
   const { user, isAuthenticated } = useAuthStore()
   const router = useRouter()
   const [isWithdrawDialogOpen, setIsWithdrawDialogOpen] = useState(false)
+  const [application, setApplication] = useState<any>(null)
+  const [error, setError] = useState("")
+  const [loading, setLoading] = useState(true)
+  const [id, setId] = useState("")
+
+  const fetchApplication = async (appId: string, token: string) => {
+       setLoading(true);
+       setError(""); // Clear previous errors
+       try {
+         const response = await api.get(`/ga/application/${appId}`, {
+           headers: { Authorization: `Bearer ${token}` },
+         });
+   
+         if (response.data && response.data.application) {
+           setApplication(response.data.application);
+           console.log("Fetched Application:", response.data.application); // Log fetched data
+         } else {
+           // Handle cases where the response is OK but the data structure is unexpected
+           throw new Error("Invalid application data received from API.");
+         }
+       } catch (err: any) {
+         console.error("Error fetching application:", err);
+         // Use error message from the API response if available, otherwise a generic one
+         const errorMessage = err.response?.data?.detail || err.message || "Failed to load application details.";
+         setError(errorMessage);
+       } finally {
+         setLoading(false);
+       }
+     };
+   
 
   useEffect(() => {
-    if (isAuthenticated && user?.role === "employer") {
-      router.push("/employer/dashboard")
-    } else if (!isAuthenticated) {
-      router.push("/auth/login")
-    }
-  }, [isAuthenticated, user, router])
+    const fetchParamsAndApplication = async () => {
+      // Get the id from params after resolving the Promise
+      const resolvedParams = await params;
+      const appId = resolvedParams.id;
+      setId(appId);
+      if (!isAuthenticated) {
+        console.log("User not authenticated, redirecting to login page");
+        router.push("/auth/login");
+        return; // Stop further execution in this effect
+      }
+  
+      if (user?.role === "employer") {
+        console.log("Employer role detected, redirecting to employer dashboard");
+        router.push("/employer/dashboard");
+        return; // Stop further execution in this effect
+      }
+      
+      console.log("User role:", user?.role);
+     
+      if (user?.role === "applicant" && appId && user.token) {
+        console.log("Fetching application details for applicant:", appId);
+        fetchApplication(appId, user.token);
+      }
+    };
 
+    fetchParamsAndApplication();
+  }, [isAuthenticated, user, router, params]);
+
+  
   // Format date to readable string
   const formatDate = (dateString: string) => {
     const options: Intl.DateTimeFormatOptions = {
@@ -169,7 +163,7 @@ export default function ApplicationDetailsPage({ params }: { params: { id: strin
   }
 
   const handleWithdrawApplication = () => {
-    console.log("Withdrawing application:", params.id)
+    console.log("Withdrawing application:", id)
     setIsWithdrawDialogOpen(false)
     // In a real app, you would make an API call here
     // Then redirect to applications list
@@ -194,23 +188,23 @@ export default function ApplicationDetailsPage({ params }: { params: { id: strin
               <div className="flex items-center">
                 <div className="mr-4 flex-shrink-0">
                   <Image
-                    src={mockApplication.job.logo || "/placeholder.svg"}
-                    alt={mockApplication.job.company}
+                    src={application?.job?.logo || "/placeholder.svg"}
+                    alt={application?.job?.company}
                     width={60}
                     height={60}
                     className="rounded-md"
                   />
                 </div>
                 <div>
-                  <CardTitle className="text-xl font-bold text-dark-gray">{mockApplication.job.title}</CardTitle>
+                  <CardTitle className="text-xl font-bold text-dark-gray">{application?.job?.title}</CardTitle>
                   <CardDescription className="text-gray-600 mt-1">
-                    {mockApplication.job.company} • {mockApplication.job.location}
+                    {application?.job?.company} • {application?.job?.location}
                   </CardDescription>
                 </div>
               </div>
               <div className="flex flex-col items-start md:items-end gap-2">
-                {getStatusBadge(mockApplication.status)}
-                <div className="text-sm text-gray-500">Applied on {formatDateOnly(mockApplication.appliedDate)}</div>
+                {getStatusBadge(application?.status)}
+                <div className="text-sm text-gray-500">Applied on {formatDateOnly(application?.appliedDate)}</div>
               </div>
             </div>
           </CardHeader>
@@ -218,19 +212,19 @@ export default function ApplicationDetailsPage({ params }: { params: { id: strin
             <div className="flex flex-wrap gap-3 text-sm">
               <div className="flex items-center bg-light-gray px-3 py-1 rounded-full">
                 <Briefcase className="h-4 w-4 mr-1 text-gray-500" />
-                {mockApplication.job.type}
+                {application?.job?.type}
               </div>
               <div className="flex items-center bg-light-gray px-3 py-1 rounded-full">
                 <DollarSign className="h-4 w-4 mr-1 text-gray-500" />
-                {mockApplication.job.salary}
+                {application?.job?.salary}
               </div>
               <div className="flex items-center bg-light-gray px-3 py-1 rounded-full">
                 <MapPin className="h-4 w-4 mr-1 text-gray-500" />
-                {mockApplication.job.location}
+                {application?.job?.location}
               </div>
               <div className="flex items-center bg-light-gray px-3 py-1 rounded-full">
                 <Clock className="h-4 w-4 mr-1 text-gray-500" />
-                Deadline: {formatDateOnly(mockApplication.job.deadline)}
+                Deadline: {formatDateOnly(application?.job?.deadline)}
               </div>
             </div>
           </CardContent>
@@ -238,7 +232,7 @@ export default function ApplicationDetailsPage({ params }: { params: { id: strin
             <Button
               variant="outline"
               size="sm"
-              onClick={() => router.push(`/jobs/${mockApplication.jobId}`)}
+              onClick={() => router.push(`/jobs/${application?.jobId}`)}
               className="text-gray-700"
             >
               <ExternalLink className="h-4 w-4 mr-2" />
@@ -256,8 +250,8 @@ export default function ApplicationDetailsPage({ params }: { params: { id: strin
                 <DialogHeader>
                   <DialogTitle>Withdraw Application</DialogTitle>
                   <DialogDescription>
-                    Are you sure you want to withdraw your application for {mockApplication.job.title} at{" "}
-                    {mockApplication.job.company}? This action cannot be undone.
+                    Are you sure you want to withdraw your application for {application?.job?.title} at{" "}
+                    {application?.job?.company}? This action cannot be undone.
                   </DialogDescription>
                 </DialogHeader>
                 <DialogFooter className="mt-4">
@@ -274,7 +268,7 @@ export default function ApplicationDetailsPage({ params }: { params: { id: strin
         </Card>
 
         {/* Interview alert if applicable */}
-        {mockApplication.status === "interview" && mockApplication.interview && (
+        {application?.status === "interview" && application?.interview && (
           <Card className="mb-6 border-blue-200 bg-blue-50">
             <CardHeader className="pb-2">
               <CardTitle className="text-lg text-blue-800 flex items-center">
@@ -287,9 +281,9 @@ export default function ApplicationDetailsPage({ params }: { params: { id: strin
                 <div className="flex items-start">
                   <Clock className="h-4 w-4 mr-2 text-blue-600 mt-0.5" />
                   <div>
-                    <div className="font-medium text-blue-800">{formatDate(mockApplication.interview.date)}</div>
+                    <div className="font-medium text-blue-800">{formatDate(application?.interview.date)}</div>
                     <div className="text-sm text-blue-700">
-                      {mockApplication.interview.type} • {mockApplication.interview.duration}
+                      {application?.interview.type} • {application?.interview.duration}
                     </div>
                   </div>
                 </div>
@@ -298,7 +292,7 @@ export default function ApplicationDetailsPage({ params }: { params: { id: strin
                   <Building className="h-4 w-4 mr-2 text-blue-600 mt-0.5" />
                   <div>
                     <div className="font-medium text-blue-800">Interviewers</div>
-                    <div className="text-sm text-blue-700">{mockApplication.interview.interviewers.join(", ")}</div>
+                    <div className="text-sm text-blue-700">{application?.interview.interviewers.join(", ")}</div>
                   </div>
                 </div>
 
@@ -306,7 +300,7 @@ export default function ApplicationDetailsPage({ params }: { params: { id: strin
                   <AlertCircle className="h-4 w-4 mr-2 text-blue-600 mt-0.5" />
                   <div>
                     <div className="font-medium text-blue-800">Instructions</div>
-                    <div className="text-sm text-blue-700">{mockApplication.interview.instructions}</div>
+                    <div className="text-sm text-blue-700">{application?.interview.instructions}</div>
                   </div>
                 </div>
               </div>
@@ -338,34 +332,34 @@ export default function ApplicationDetailsPage({ params }: { params: { id: strin
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-1">
                     <div className="text-sm text-gray-500">Full Name</div>
-                    <div className="font-medium">{mockApplication.personalInfo.name}</div>
+                    <div className="font-medium">{application?.personalInfo?.name}</div>
                   </div>
                   <div className="space-y-1">
                     <div className="text-sm text-gray-500">Email</div>
                     <div className="font-medium flex items-center">
                       <Mail className="h-4 w-4 mr-2 text-gray-400" />
-                      {mockApplication.personalInfo.email}
+                      {application?.personalInfo?.email}
                     </div>
                   </div>
                   <div className="space-y-1">
                     <div className="text-sm text-gray-500">Phone</div>
                     <div className="font-medium flex items-center">
                       <Phone className="h-4 w-4 mr-2 text-gray-400" />
-                      {mockApplication.personalInfo.phone}
+                      {application?.personalInfo?.phone}
                     </div>
                   </div>
                   <div className="space-y-1">
                     <div className="text-sm text-gray-500">Website</div>
                     <div className="font-medium flex items-center">
                       <Globe className="h-4 w-4 mr-2 text-gray-400" />
-                      {mockApplication.personalInfo.website}
+                      {application?.personalInfo?.website}
                     </div>
                   </div>
                   <div className="space-y-1 md:col-span-2">
                     <div className="text-sm text-gray-500">LinkedIn</div>
                     <div className="font-medium flex items-center">
                       <Linkedin className="h-4 w-4 mr-2 text-gray-400" />
-                      {mockApplication.personalInfo.linkedin}
+                      {application?.personalInfo?.linkedin}
                     </div>
                   </div>
                 </div>
@@ -373,14 +367,14 @@ export default function ApplicationDetailsPage({ params }: { params: { id: strin
             </Card>
 
             {/* Custom Message */}
-            {mockApplication.customMessage && (
+            {application?.customMessage && (
               <Card>
                 <CardHeader className="pb-2">
                   <CardTitle className="text-lg">Your Message to the Employer</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="bg-light-gray p-4 rounded-md text-gray-700 whitespace-pre-line">
-                    {mockApplication.customMessage}
+                    {application?.customMessage}
                   </div>
                 </CardContent>
               </Card>
@@ -395,18 +389,20 @@ export default function ApplicationDetailsPage({ params }: { params: { id: strin
                 <div className="space-y-4">
                   <div className="flex items-center">
                     <div className="w-32 text-sm text-gray-500">Current Status:</div>
-                    <div>{getStatusBadge(mockApplication.status)}</div>
+                    <div>{getStatusBadge(application?.status)}</div>
                   </div>
 
                   <div className="flex items-center">
                     <div className="w-32 text-sm text-gray-500">Applied On:</div>
-                    <div className="font-medium">{formatDate(mockApplication.appliedDate)}</div>
+                    <div className="font-medium">{formatDate(application?.appliedDate)}</div>
                   </div>
 
                   <div className="flex items-center">
                     <div className="w-32 text-sm text-gray-500">Last Updated:</div>
                     <div className="font-medium">
-                      {formatDate(mockApplication.timeline[mockApplication.timeline.length - 1].date)}
+                    {application?.timeline && application.timeline.length > 0 
+                        ? formatDate(application.timeline[application.timeline.length - 1].date)
+                        : "No Timeline Available"}
                     </div>
                   </div>
                 </div>
@@ -414,7 +410,7 @@ export default function ApplicationDetailsPage({ params }: { params: { id: strin
             </Card>
 
             {/* Interview Details (if applicable) */}
-            {mockApplication.status === "interview" && mockApplication.interview && (
+            {application?.status === "interview" && application?.interview && (
               <Card>
                 <CardHeader className="pb-2">
                   <CardTitle className="text-lg">Interview Details</CardTitle>
@@ -423,23 +419,23 @@ export default function ApplicationDetailsPage({ params }: { params: { id: strin
                   <div className="space-y-4">
                     <div className="flex items-start">
                       <div className="w-32 text-sm text-gray-500 mt-0.5">Date & Time:</div>
-                      <div className="font-medium">{formatDate(mockApplication.interview.date)}</div>
+                      <div className="font-medium">{formatDate(application?.interview.date)}</div>
                     </div>
 
                     <div className="flex items-start">
                       <div className="w-32 text-sm text-gray-500 mt-0.5">Format:</div>
-                      <div className="font-medium">{mockApplication.interview.type}</div>
+                      <div className="font-medium">{application?.interview.type}</div>
                     </div>
 
                     <div className="flex items-start">
                       <div className="w-32 text-sm text-gray-500 mt-0.5">Duration:</div>
-                      <div className="font-medium">{mockApplication.interview.duration}</div>
+                      <div className="font-medium">{application?.interview.duration}</div>
                     </div>
 
                     <div className="flex items-start">
                       <div className="w-32 text-sm text-gray-500 mt-0.5">Interviewers:</div>
                       <div>
-                        {mockApplication.interview.interviewers.map((interviewer, index) => (
+                        {application?.interview.interviewers.map((interviewer, index) => (
                           <div key={index} className="font-medium">
                             {interviewer}
                           </div>
@@ -451,7 +447,7 @@ export default function ApplicationDetailsPage({ params }: { params: { id: strin
 
                     <div className="flex items-start">
                       <div className="w-32 text-sm text-gray-500 mt-0.5">Instructions:</div>
-                      <div className="text-gray-700">{mockApplication.interview.instructions}</div>
+                      <div className="text-gray-700">{application?.interview.instructions}</div>
                     </div>
                   </div>
                 </CardContent>
@@ -476,10 +472,10 @@ export default function ApplicationDetailsPage({ params }: { params: { id: strin
                   <div className="flex items-center justify-between">
                     <div className="flex items-center">
                       <FileText className="h-5 w-5 mr-2 text-gray-500" />
-                      <span className="font-medium">{mockApplication.resume.filename}</span>
+                      <span className="font-medium">{application?.resume?.filename}</span>
                     </div>
                     <div className="text-sm text-gray-500">
-                      Last updated: {formatDateOnly(mockApplication.resume.lastUpdated)}
+                      Last updated: {formatDateOnly(application?.resume?.lastUpdated)}
                     </div>
                   </div>
                 </div>
@@ -497,14 +493,14 @@ export default function ApplicationDetailsPage({ params }: { params: { id: strin
             </Card>
 
             {/* Cover Letter */}
-            {mockApplication.coverLetter && (
+            {application?.coverLetter && (
               <Card>
                 <CardHeader className="pb-2">
                   <CardTitle className="text-lg">Cover Letter</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="bg-light-gray p-4 rounded-md text-gray-700 whitespace-pre-line">
-                    {mockApplication.coverLetter.content}
+                    {application?.coverLetter.content}
                   </div>
                 </CardContent>
               </Card>
@@ -518,7 +514,7 @@ export default function ApplicationDetailsPage({ params }: { params: { id: strin
                 <CardTitle className="text-lg">Application Timeline</CardTitle>
               </CardHeader>
               <CardContent>
-                <ApplicationTimeline timeline={mockApplication.timeline} />
+                <ApplicationTimeline timeline={application?.timeline} />
               </CardContent>
             </Card>
           </TabsContent>

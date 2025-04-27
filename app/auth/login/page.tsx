@@ -2,33 +2,19 @@
 
 import type React from "react"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { useAuthStore } from "@/store/authStore"
+import Link from "next/link"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
+import { useAuthStore } from "@/store/authStore"
 import type { UserRole } from "@/store/authStore"
-import api from "@/lib/axios"
-import { jwtDecode } from "jwt-decode"
-import Link from "next/link"
 
 export default function LoginPage() {
   const router = useRouter()
-  const { isAuthenticated, user } = useAuthStore()
-
-  useEffect(() => {
-    if (isAuthenticated) {
-      if (user?.role === "applicant") {
-        router.push("/dashboard")
-      } else if (user?.role === "employer") {
-        router.push("/employer/dashboard")
-      }
-    }
-  }, [isAuthenticated, user, router])
-
   const login = useAuthStore((state) => state.login)
   const [role, setRole] = useState<UserRole>("applicant")
   const [formData, setFormData] = useState({
@@ -64,39 +50,36 @@ export default function LoginPage() {
     setError("")
 
     try {
-      const res = await api.post("/auth/login", {
-        email: formData.email,
-        password: formData.password,
-      })
-      const { access_token } = res.data
-      // Decode JWT to get user info
-      const decoded: any = jwtDecode(access_token)
-      console.log("Decoded JWT:", decoded)
-      const userType = decoded.user_type
-      const user = {
-        id: decoded.user_id,
-        name:
-          userType === "employer"
-            ? decoded.first_name + " " + decoded.last_name
-            : decoded.first_name + " " + decoded.last_name,
-        email: decoded.email,
-        role: userType === "employer" ? "employer" : "applicant",
-        avatar:
-          userType === "employer"
-            ? "/abstract-circuit-board.png"
-            : "/mystical-forest-spirit.png",
-        token: access_token,
-      }
-      login(user)
-      // Redirect based on user type
-      if (userType === "employer") {
-        router.push("/employer/dashboard")
-      } else {
-        router.push("/dashboard")
-      }
-    } catch (err: any) {
-      setError(err.response?.data?.detail || "Invalid email or password")
-    } finally {
+      // In a real app, you would make an API call to authenticate
+      // For now, we'll simulate a successful login
+      setTimeout(() => {
+        // Mock user data
+        const user = {
+          id: "1",
+          name: role === "applicant" ? "Jane Smith" : "Tech Innovations Inc.",
+          email: formData.email,
+          role: role,
+          avatar: role === "applicant" ? "/mystical-forest-spirit.png" : "/abstract-circuit-board.png",
+          onboarding: {
+            isComplete: false, // Default to incomplete
+            lastStep: 0,
+            startedAt: new Date().toISOString(),
+          },
+        }
+
+        login(user)
+
+        // The middleware will handle redirection based on onboarding status
+        if (role === "applicant") {
+          router.push("/dashboard")
+        } else {
+          router.push("/employer/dashboard")
+        }
+
+        setIsLoading(false)
+      }, 1000)
+    } catch (err) {
+      setError("Invalid email or password")
       setIsLoading(false)
     }
   }
