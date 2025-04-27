@@ -13,17 +13,17 @@ interface ProtectedRouteProps {
 }
 
 export default function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) {
-  const { isAuthenticated, user } = useAuthStore()
+  const { isAuthenticated, user, hydrated } = useAuthStore()
   const router = useRouter()
   const pathname = usePathname()
 
   useEffect(() => {
+    if (!hydrated) return;
     // If not authenticated, redirect to login
     if (!isAuthenticated) {
       router.push("/auth/login")
       return
     }
-
     // If roles are specified and user's role is not included, redirect to appropriate dashboard
     if (allowedRoles && user?.role && !allowedRoles.includes(user.role)) {
       if (user.role === "applicant") {
@@ -32,7 +32,10 @@ export default function ProtectedRoute({ children, allowedRoles }: ProtectedRout
         router.push("/employer/dashboard")
       }
     }
-  }, [isAuthenticated, user, router, allowedRoles, pathname])
+  }, [hydrated, isAuthenticated, user, router, allowedRoles, pathname])
+
+  // Wait for hydration before rendering or redirecting
+  if (!hydrated) return null
 
   // If authenticated and role is allowed (or no specific roles required), render children
   if (isAuthenticated && (!allowedRoles || (user?.role && allowedRoles.includes(user.role)))) {

@@ -42,7 +42,7 @@ export default function JobListings() {
     const fetchSavedJobs = async () => {
       if (!user || user.role !== "applicant" || !user.token) return
       try {
-        const res = await api.get("/jobs/saved-jobs", {
+        const res = await api.get("/sj/saved-jobs", {
           headers: {
             Authorization: `Bearer ${user.token}`,
           },
@@ -71,7 +71,7 @@ export default function JobListings() {
     if (savedJobs.includes(jobId)) {
       // Unsave job
       try {
-        await api.delete(`/jobs/remove-saved-job/${jobId}`, {
+        await api.delete(`/sj/remove-saved-job/${jobId}`, {
           headers: {
             Authorization: `Bearer ${user.token}`,
           },
@@ -85,7 +85,7 @@ export default function JobListings() {
     }
     // Save job
     try {
-      await api.post(`/jobs/save-job/${jobId}`, {}, {
+      await api.post(`/sj/save-job/${jobId}`, {}, {
         headers: {
           Authorization: `Bearer ${user.token}`,
         },
