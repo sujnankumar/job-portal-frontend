@@ -1,6 +1,5 @@
 "use client"
 
-import { useState } from "react"
 import { PlusCircle, Trash2, Save } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -9,6 +8,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
+import axios from "@/lib/axios"
+import { useAuthStore } from "@/store/authStore"
+import { useToast } from "@/hooks/use-toast"
 
 interface Education {
   id: string
@@ -37,76 +39,58 @@ interface Skill {
   level: string
 }
 
-export default function ProfileEditor() {
-  const [personalInfo, setPersonalInfo] = useState({
-    firstName: "Jane",
-    lastName: "Smith",
-    headline: "Senior Frontend Developer",
-    email: "jane.smith@example.com",
-    phone: "(555) 123-4567",
-    location: "San Francisco, CA",
-    website: "janesmith.dev",
-    linkedin: "linkedin.com/in/janesmith",
-    github: "github.com/janesmith",
-    bio: "Passionate frontend developer with 5+ years of experience building responsive and accessible web applications. Specialized in React, TypeScript, and modern frontend frameworks.",
-  })
+interface ProfileEditorProps {
+  isEditing: boolean
+  setIsEditing: (val: boolean) => void
+  personalInfo: any
+  setPersonalInfo: (val: any) => void
+  education: any[]
+  setEducation: (val: any[]) => void
+  experience: any[]
+  setExperience: (val: any[]) => void
+  skills: any[]
+  setSkills: (val: any[]) => void
+  onCancel: () => void
+}
 
-  const [education, setEducation] = useState<Education[]>([
-    {
-      id: "1",
-      school: "University of California, Berkeley",
-      degree: "Bachelor of Science",
-      field: "Computer Science",
-      startDate: "2014-09",
-      endDate: "2018-05",
-      current: false,
-    },
-    {
-      id: "2",
-      school: "Stanford University",
-      degree: "Master of Science",
-      field: "Human-Computer Interaction",
-      startDate: "2018-09",
-      endDate: "2020-05",
-      current: false,
-    },
-  ])
+export default function ProfileEditor({
+  isEditing,
+  setIsEditing,
+  personalInfo,
+  setPersonalInfo,
+  education,
+  setEducation,
+  experience,
+  setExperience,
+  skills,
+  setSkills,
+  onCancel,
+}: ProfileEditorProps) {
+  const { user } = useAuthStore()
+  const { toast } = useToast()
 
-  const [experience, setExperience] = useState<Experience[]>([
-    {
-      id: "1",
-      company: "Tech Innovations Inc.",
-      title: "Senior Frontend Developer",
-      location: "San Francisco, CA",
-      startDate: "2022-03",
-      endDate: "",
-      current: true,
-      description:
-        "Lead frontend development for multiple projects using React, TypeScript, and Next.js. Implemented responsive designs and improved performance by 40%. Mentored junior developers and conducted code reviews.",
-    },
-    {
-      id: "2",
-      company: "Digital Solutions",
-      title: "Frontend Developer",
-      location: "San Francisco, CA",
-      startDate: "2020-06",
-      endDate: "2022-02",
-      current: false,
-      description:
-        "Developed and maintained web applications using React and Redux. Collaborated with designers to implement UI/UX improvements. Participated in agile development processes.",
-    },
-  ])
-
-  const [skills, setSkills] = useState<Skill[]>([
-    { id: "1", name: "React", level: "Expert" },
-    { id: "2", name: "TypeScript", level: "Expert" },
-    { id: "3", name: "Next.js", level: "Advanced" },
-    { id: "4", name: "CSS/Tailwind", level: "Expert" },
-    { id: "5", name: "JavaScript", level: "Expert" },
-    { id: "6", name: "Redux", level: "Advanced" },
-    { id: "7", name: "GraphQL", level: "Intermediate" },
-    { id: "8", name: "Node.js", level: "Intermediate" },
-  ])
+  const handleSave = async () => {
+    try {
+      await axios.put(
+        "/profile/update_profile",
+        {
+          ...personalInfo,
+          education,
+          experience,
+          skills,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${user?.token}`,
+          },
+        }
+      )
+      setIsEditing(false)
+      toast({ title: "Profile updated successfully!" })
+    } catch (e: any) {
+      toast({ title: "Failed to update profile", description: e?.response?.data?.detail || "Unknown error", variant: "destructive" })
+    }
+  }
 
   const handleAddEducation = () => {
     setEducation([
@@ -167,18 +151,22 @@ export default function ProfileEditor() {
                 <Label htmlFor="firstName">First Name</Label>
                 <Input
                   id="firstName"
-                  value={personalInfo.firstName}
-                  onChange={(e) => setPersonalInfo({ ...personalInfo, firstName: e.target.value })}
+                  value={personalInfo.first_name}
+                  onChange={(e) => setPersonalInfo({ ...personalInfo, first_name: e.target.value })}
                   className="mt-1"
+                  readOnly={!isEditing}
+                  disabled={!isEditing}
                 />
               </div>
               <div>
                 <Label htmlFor="lastName">Last Name</Label>
                 <Input
                   id="lastName"
-                  value={personalInfo.lastName}
-                  onChange={(e) => setPersonalInfo({ ...personalInfo, lastName: e.target.value })}
+                  value={personalInfo.last_name}
+                  onChange={(e) => setPersonalInfo({ ...personalInfo, last_name: e.target.value })}
                   className="mt-1"
+                  readOnly={!isEditing}
+                  disabled={!isEditing}
                 />
               </div>
               <div className="md:col-span-2">
@@ -189,6 +177,8 @@ export default function ProfileEditor() {
                   onChange={(e) => setPersonalInfo({ ...personalInfo, headline: e.target.value })}
                   placeholder="e.g., Senior Frontend Developer with 5+ years of experience"
                   className="mt-1"
+                  readOnly={!isEditing}
+                  disabled={!isEditing}
                 />
               </div>
               <div>
@@ -199,6 +189,8 @@ export default function ProfileEditor() {
                   value={personalInfo.email}
                   onChange={(e) => setPersonalInfo({ ...personalInfo, email: e.target.value })}
                   className="mt-1"
+                  readOnly={!isEditing}
+                  disabled={!isEditing}
                 />
               </div>
               <div>
@@ -209,6 +201,8 @@ export default function ProfileEditor() {
                   value={personalInfo.phone}
                   onChange={(e) => setPersonalInfo({ ...personalInfo, phone: e.target.value })}
                   className="mt-1"
+                  readOnly={!isEditing}
+                  disabled={!isEditing}
                 />
               </div>
               <div>
@@ -219,6 +213,8 @@ export default function ProfileEditor() {
                   onChange={(e) => setPersonalInfo({ ...personalInfo, location: e.target.value })}
                   placeholder="City, State"
                   className="mt-1"
+                  readOnly={!isEditing}
+                  disabled={!isEditing}
                 />
               </div>
               <div>
@@ -229,6 +225,8 @@ export default function ProfileEditor() {
                   onChange={(e) => setPersonalInfo({ ...personalInfo, website: e.target.value })}
                   placeholder="yourwebsite.com"
                   className="mt-1"
+                  readOnly={!isEditing}
+                  disabled={!isEditing}
                 />
               </div>
               <div>
@@ -239,6 +237,8 @@ export default function ProfileEditor() {
                   onChange={(e) => setPersonalInfo({ ...personalInfo, linkedin: e.target.value })}
                   placeholder="linkedin.com/in/username"
                   className="mt-1"
+                  readOnly={!isEditing}
+                  disabled={!isEditing}
                 />
               </div>
               <div>
@@ -249,6 +249,8 @@ export default function ProfileEditor() {
                   onChange={(e) => setPersonalInfo({ ...personalInfo, github: e.target.value })}
                   placeholder="github.com/username"
                   className="mt-1"
+                  readOnly={!isEditing}
+                  disabled={!isEditing}
                 />
               </div>
               <div className="md:col-span-2">
@@ -259,6 +261,8 @@ export default function ProfileEditor() {
                   onChange={(e) => setPersonalInfo({ ...personalInfo, bio: e.target.value })}
                   placeholder="Write a short bio about yourself..."
                   className="mt-1 min-h-[120px]"
+                  readOnly={!isEditing}
+                  disabled={!isEditing}
                 />
               </div>
             </div>
@@ -294,6 +298,8 @@ export default function ProfileEditor() {
                         setExperience(newExperience)
                       }}
                       className="mt-1"
+                      readOnly={!isEditing}
+                      disabled={!isEditing}
                     />
                   </div>
                   <div>
@@ -306,6 +312,8 @@ export default function ProfileEditor() {
                         setExperience(newExperience)
                       }}
                       className="mt-1"
+                      readOnly={!isEditing}
+                      disabled={!isEditing}
                     />
                   </div>
                   <div>
@@ -319,6 +327,8 @@ export default function ProfileEditor() {
                       }}
                       placeholder="City, State or Remote"
                       className="mt-1"
+                      readOnly={!isEditing}
+                      disabled={!isEditing}
                     />
                   </div>
                   <div className="flex items-center gap-2 mt-6">
@@ -347,6 +357,8 @@ export default function ProfileEditor() {
                         setExperience(newExperience)
                       }}
                       className="mt-1"
+                      readOnly={!isEditing}
+                      disabled={!isEditing}
                     />
                   </div>
                   <div>
@@ -361,6 +373,8 @@ export default function ProfileEditor() {
                       }}
                       disabled={exp.current}
                       className="mt-1"
+                      readOnly={!isEditing}
+                      disabled={!isEditing}
                     />
                   </div>
                   <div className="md:col-span-2">
@@ -374,6 +388,8 @@ export default function ProfileEditor() {
                       }}
                       placeholder="Describe your responsibilities and achievements"
                       className="mt-1 min-h-[100px]"
+                      readOnly={!isEditing}
+                      disabled={!isEditing}
                     />
                   </div>
                 </div>
@@ -415,6 +431,8 @@ export default function ProfileEditor() {
                         setEducation(newEducation)
                       }}
                       className="mt-1"
+                      readOnly={!isEditing}
+                      disabled={!isEditing}
                     />
                   </div>
                   <div>
@@ -428,6 +446,8 @@ export default function ProfileEditor() {
                       }}
                       placeholder="e.g., Bachelor's, Master's"
                       className="mt-1"
+                      readOnly={!isEditing}
+                      disabled={!isEditing}
                     />
                   </div>
                   <div>
@@ -441,6 +461,8 @@ export default function ProfileEditor() {
                       }}
                       placeholder="e.g., Computer Science"
                       className="mt-1"
+                      readOnly={!isEditing}
+                      disabled={!isEditing}
                     />
                   </div>
                   <div className="flex items-center gap-2 mt-6">
@@ -469,6 +491,8 @@ export default function ProfileEditor() {
                         setEducation(newEducation)
                       }}
                       className="mt-1"
+                      readOnly={!isEditing}
+                      disabled={!isEditing}
                     />
                   </div>
                   <div>
@@ -483,6 +507,8 @@ export default function ProfileEditor() {
                       }}
                       disabled={edu.current}
                       className="mt-1"
+                      readOnly={!isEditing}
+                      disabled={!isEditing}
                     />
                   </div>
                 </div>
@@ -512,6 +538,8 @@ export default function ProfileEditor() {
                           setSkills(newSkills)
                         }}
                         placeholder="e.g., JavaScript, Project Management"
+                        readOnly={!isEditing}
+                        disabled={!isEditing}
                       />
                     </div>
                     <div className="w-40">
@@ -555,8 +583,13 @@ export default function ProfileEditor() {
       </Accordion>
 
       {/* Save Button */}
-      <div className="flex justify-end">
-        <Button className="bg-accent hover:bg-accent/90">
+      <div className="flex justify-end gap-2">
+        {isEditing && (
+          <Button variant="outline" onClick={onCancel} type="button">
+            Cancel
+          </Button>
+        )}
+        <Button className="bg-accent hover:bg-accent/90" disabled={!isEditing} onClick={handleSave} type="button">
           <Save className="h-4 w-4 mr-1" /> Save Profile
         </Button>
       </div>
