@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import Image from "next/image"
 import { Button } from "@/components/ui/button"
@@ -9,91 +9,72 @@ import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Calendar, Clock, Search, ChevronRight, CalendarIcon } from "lucide-react"
+import { Calendar as CalendarIcon, Clock, Search, ChevronRight, Calendar } from "lucide-react"
 import { Calendar as CalendarComponent } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { format } from "date-fns"
-
-// Mock applications data
-const mockApplications = [
-  {
-    id: "app-123456",
-    jobId: "job-789012",
-    jobTitle: "Senior Frontend Developer",
-    company: "Tech Innovations Inc.",
-    location: "San Francisco, CA",
-    appliedDate: "2023-11-15T14:30:00Z",
-    status: "interview", // pending, interview, accepted, rejected
-    logo: "/abstract-circuit-board.png",
-    interviewDate: "2023-12-05T13:00:00Z",
-  },
-  {
-    id: "app-234567",
-    jobId: "job-890123",
-    jobTitle: "UX/UI Designer",
-    company: "Creative Solutions",
-    location: "Remote",
-    appliedDate: "2023-11-10T09:15:00Z",
-    status: "pending",
-    logo: "/abstract-geometric-logo.png",
-  },
-  {
-    id: "app-345678",
-    jobId: "job-901234",
-    jobTitle: "Full Stack Developer",
-    company: "Global Tech",
-    location: "New York, NY",
-    appliedDate: "2023-11-05T11:45:00Z",
-    status: "rejected",
-    logo: "/abstract-data-flow.png",
-    feedback: "We were looking for someone with more experience in backend development.",
-  },
-  {
-    id: "app-456789",
-    jobId: "job-012345",
-    jobTitle: "Product Manager",
-    company: "Innovative Products Inc.",
-    location: "Austin, TX",
-    appliedDate: "2023-11-01T10:30:00Z",
-    status: "accepted",
-    logo: "/abstract-software-logo.png",
-    offerDetails: {
-      salary: "$130,000/year",
-      startDate: "2024-01-15T00:00:00Z",
-      benefits: "Health insurance, 401(k), unlimited PTO",
-    },
-  },
-]
+import api from "@/lib/axios"
+import { useAuthStore } from "@/store/authStore"
 
 export default function ApplicationList() {
   const router = useRouter()
+  const { user } = useAuthStore()
+
   const [searchQuery, setSearchQuery] = useState("")
   const [statusFilter, setStatusFilter] = useState("all")
   const [dateFilter, setDateFilter] = useState<Date | undefined>(undefined)
+  const [applications, setApplications] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
-  // Filter applications based on search query and filters
-  const filteredApplications = mockApplications.filter((app) => {
-    // Search filter
+  // Fetch applications
+  const fetchApplications = async () => {
+    try {
+      const response = await api.get("/gma/applications/my-applications", {
+        headers: user && user.token ? { Authorization: `Bearer ${user.token}` } : {},
+      })
+
+      if (response.data && response.data.applications) {
+        setApplications(response.data.applications)
+      } else {
+        throw new Error("Invalid response structure")
+      }
+    } catch (err: any) {
+      console.error("Error fetching applications:", err)
+      setError("Failed to load applications")
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    if (user?.token) {
+      fetchApplications()
+    } else {
+      setLoading(false)
+      setError("You must be logged in to view applications.")
+    }
+  }, [user])
+
+  // Filter logic
+  const filteredApplications = applications.filter((app) => {
     const matchesSearch =
       app.jobTitle.toLowerCase().includes(searchQuery.toLowerCase()) ||
       app.company.toLowerCase().includes(searchQuery.toLowerCase())
 
-    // Status filter
     const matchesStatus = statusFilter === "all" || app.status === statusFilter
 
-    // Date filter
     const matchesDate = !dateFilter || new Date(app.appliedDate).toDateString() === dateFilter.toDateString()
 
     return matchesSearch && matchesStatus && matchesDate
   })
 
-  // Format date to readable string
+  // Utilities
   const formatDate = (dateString: string) => {
     const options: Intl.DateTimeFormatOptions = { year: "numeric", month: "long", day: "numeric" }
     return new Date(dateString).toLocaleDateString(undefined, options)
   }
 
-  // Get status badge
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "pending":
@@ -125,6 +106,14 @@ export default function ApplicationList() {
     }
   }
 
+  if (loading) {
+    return <div>Loading...</div>
+  }
+
+  if (error) {
+    return <div className="text-center text-red-500">{error}</div>
+  }
+
   return (
     <div className="space-y-6">
       {/* Filters */}
@@ -138,6 +127,7 @@ export default function ApplicationList() {
             onChange={(e) => setSearchQuery(e.target.value)}
           />
         </div>
+
         <div className="flex gap-4">
           <Select value={statusFilter} onValueChange={setStatusFilter}>
             <SelectTrigger className="w-[180px]">
@@ -232,7 +222,9 @@ export default function ApplicationList() {
           <Card>
             <CardContent className="flex flex-col items-center justify-center py-10 text-center">
               <div className="text-gray-400 mb-2">No archived applications</div>
-              <p className="text-sm text-gray-500 max-w-md">When you archive applications, they will appear here.</p>
+              <p className="text-sm text-gray-500 max-w-md">
+                When you archive applications, they will appear here.
+              </p>
             </CardContent>
           </Card>
         </TabsContent>
