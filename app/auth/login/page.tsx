@@ -2,21 +2,33 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import Link from "next/link"
+import { useAuthStore } from "@/store/authStore"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
-import { useAuthStore } from "@/store/authStore"
 import type { UserRole } from "@/store/authStore"
 import api from "@/lib/axios"
 import { jwtDecode } from "jwt-decode"
+import Link from "next/link"
 
 export default function LoginPage() {
   const router = useRouter()
+  const { isAuthenticated, user } = useAuthStore()
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      if (user?.role === "applicant") {
+        router.push("/dashboard")
+      } else if (user?.role === "employer") {
+        router.push("/employer/dashboard")
+      }
+    }
+  }, [isAuthenticated, user, router])
+
   const login = useAuthStore((state) => state.login)
   const [role, setRole] = useState<UserRole>("applicant")
   const [formData, setFormData] = useState({

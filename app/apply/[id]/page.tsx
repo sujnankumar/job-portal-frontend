@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { useForm } from "react-hook-form"
 import { useAuthStore } from "@/store/authStore"
@@ -12,6 +12,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Form, FormControl, FormField, FormItem, FormLabel } from "@/components/ui/form"
 import ResumeUploader from "@/components/resume-uploader"
 import ResumeBuilder from "@/components/resume-builder"
+import api from "@/lib/axios"
+import React from "react"
 
 interface FormValues {
   coverLetter: string
@@ -19,9 +21,11 @@ interface FormValues {
   portfolio: string
 }
 
-export default function ApplyPage({ params }: { params: { id: string } }) {
-  const { user, isAuthenticated } = useAuthStore()
+export default function ApplyPage({ params }: { params: Promise<{ id: string }> }) {
+  const { user, isAuthenticated, hydrated } = useAuthStore()
   const router = useRouter()
+  const [resumeConfirmed, setResumeConfirmed] = useState(false)
+  const [selectedResume, setSelectedResume] = useState<any>(null)
 
   // Initialize form with react-hook-form
   const form = useForm<FormValues>({
@@ -32,19 +36,75 @@ export default function ApplyPage({ params }: { params: { id: string } }) {
     },
   })
 
+  const unwrappedParams = React.use(params)
+
   useEffect(() => {
+    if (!hydrated) return;
+    console.log("User:", user)
+    console.log("Is Authenticated:", isAuthenticated)
     if (isAuthenticated && user?.role === "employer") {
       router.push("/employer/dashboard")
     } else if (!isAuthenticated) {
       router.push("/auth/login")
     }
-  }, [isAuthenticated, user, router])
+  }, [hydrated, isAuthenticated, user, router])
 
   // Note: In a real app, you would fetch the job details based on the id
 
-  const onSubmit = (data: FormValues) => {
-    console.log("Form submitted:", data)
-    // Here you would handle the form submission, e.g., send data to an API
+  const onSubmit = async (data: FormValues) => {
+    if (!selectedResume) return;
+    const formData = new FormData();
+    // Attach resume file
+    if (selectedResume.type === "custom") {
+      if (selectedResume.file) {
+        formData.append("resume", selectedResume.file);
+      } else {
+        alert("Please upload your resume file.");
+        return;
+      }
+    } else if (selectedResume.type === "profile") {
+      // For profile resume, fetch the file from the server and append as Blob
+      try {
+        const res = await api.get("/resume/get_profile_resume", {
+          responseType: "blob",
+          headers: user && user.token ? { Authorization: `Bearer ${user.token}` } : {},
+        });
+        // Use .get for fetch/axios compatibility
+        const contentType = res.headers instanceof Headers
+          ? res.headers.get("content-type")
+          : res.headers["content-type"] || "application/pdf";
+        let filename = selectedResume.filename || "profile_resume.pdf";
+        const disposition = res.headers instanceof Headers
+          ? res.headers.get("content-disposition")
+          : res.headers["content-disposition"];
+        if (disposition) {
+          const match = disposition.match(/filename="?([^";]+)"?/);
+          if (match) filename = match[1];
+        }
+        const file = new File([res.data], filename, { type: contentType });
+        formData.append("resume", file);
+      } catch (err) {
+        alert("Failed to fetch profile resume. Please try uploading a custom resume.");
+        return;
+      }
+    }
+    // Attach other fields
+    formData.append("cover_letter", data.coverLetter || "");
+    formData.append("linked_in", data.linkedIn || "");
+    formData.append("portfolio", data.portfolio || "");
+    console.log("Form Data:", formData.get("resume"), data.coverLetter, data.linkedIn, data.portfolio)
+    try {
+      await api.post(`/application/apply/${unwrappedParams.id}`, formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+          Authorization: user && user.token ? `Bearer ${user.token}` : "",
+        },
+      });
+      alert("Application submitted successfully!");
+      router.push("/applications");
+    } catch (err: any) {
+      alert(err.response?.data?.detail || "Failed to submit application.");
+    }
   }
 
   return (
@@ -72,7 +132,12 @@ export default function ApplyPage({ params }: { params: { id: string } }) {
           </TabsList>
 
           <TabsContent value="upload" className="p-6">
-            <ResumeUploader />
+            <ResumeUploader
+              onConfirm={(resume) => {
+                setSelectedResume(resume)
+                setResumeConfirmed(!!resume)
+              }}
+            />
           </TabsContent>
 
           <TabsContent value="build" className="p-6">
@@ -130,7 +195,7 @@ export default function ApplyPage({ params }: { params: { id: string } }) {
               />
 
               <div className="pt-4">
-                <Button type="submit" className="w-full bg-accent hover:bg-accent/90">
+                <Button type="submit" className="w-full bg-accent hover:bg-accent/90" disabled={!resumeConfirmed}>
                   Submit Application
                 </Button>
               </div>

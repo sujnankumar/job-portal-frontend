@@ -4,83 +4,84 @@ import { MapPin, Calendar } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
+import { useEffect, useState } from "react"
+import { useAuthStore } from "@/store/authStore"
+import api from "@/lib/axios"
 
 interface ApplicationProps {
   status: "active" | "history"
 }
 
-const activeApplications = [
-  {
-    id: "1",
-    jobTitle: "Senior Frontend Developer",
-    company: "Tech Innovations Inc.",
-    logo: "/abstract-circuit-board.png",
-    location: "San Francisco, CA (Remote)",
-    appliedDate: "May 10, 2023",
-    status: "Under Review",
-    statusColor: "bg-amber-100 text-amber-800",
-  },
-  {
-    id: "2",
-    jobTitle: "UX/UI Designer",
-    company: "Creative Solutions",
-    logo: "/placeholder.svg?height=48&width=48&query=creative logo",
-    location: "Austin, TX (Hybrid)",
-    appliedDate: "May 8, 2023",
-    status: "Shortlisted",
-    statusColor: "bg-blue-100 text-blue-800",
-  },
-  {
-    id: "3",
-    jobTitle: "Product Manager",
-    company: "Growth Ventures",
-    logo: "/upward-sprout.png",
-    location: "New York, NY",
-    appliedDate: "May 5, 2023",
-    status: "Interview Scheduled",
-    statusColor: "bg-green-100 text-green-800",
-    interviewDate: "May 18, 2023",
-    interviewTime: "2:00 PM EST",
-  },
-]
-
-const applicationHistory = [
-  {
-    id: "4",
-    jobTitle: "Frontend Developer",
-    company: "Web Solutions",
-    logo: "/placeholder.svg?height=48&width=48&query=web logo",
-    location: "Chicago, IL",
-    appliedDate: "April 12, 2023",
-    status: "Rejected",
-    statusColor: "bg-red-100 text-red-800",
-    feedback: "We decided to go with a candidate who has more experience with our specific tech stack.",
-  },
-  {
-    id: "5",
-    jobTitle: "UI Developer",
-    company: "Design Agency",
-    logo: "/placeholder.svg?height=48&width=48&query=design logo",
-    location: "Remote",
-    appliedDate: "April 3, 2023",
-    status: "Offer Accepted",
-    statusColor: "bg-green-100 text-green-800",
-  },
-  {
-    id: "6",
-    jobTitle: "React Developer",
-    company: "AppWorks Inc.",
-    logo: "/placeholder.svg?height=48&width=48&query=app logo",
-    location: "Seattle, WA",
-    appliedDate: "March 25, 2023",
-    status: "Withdrawn",
-    statusColor: "bg-gray-100 text-gray-800",
-    reason: "Found another opportunity",
-  },
-]
-
 export default function ApplicationList({ status }: ApplicationProps) {
+  const [activeApplications, setActiveApplications] = useState<any[]>([])
+  const [applicationHistory, setApplicationHistory] = useState<any[]>([])
+  const [loading, setLoading] = useState(false)
+  const user = useAuthStore((state) => state.user)
+  const hydrated = useAuthStore((state) => state.hydrated)
+
+  useEffect(() => {
+    if (!user?.token || !hydrated) return
+    setLoading(true)
+    if (status === "active") {
+      const fetchActiveApplications = async () => {
+        try {
+          const res = await api.get("/gma/applications/active", {
+            headers: { Authorization: `Bearer ${user.token}` }
+          })
+          setActiveApplications(res.data.active_applications || [])
+        } catch (err) {
+          setActiveApplications([])
+        } finally {
+          setLoading(false)
+        }
+      }
+      fetchActiveApplications()
+    } else if (status === "history") {
+      const fetchApplicationHistory = async () => {
+        try {
+          const res = await api.get("/gma/applications/my-applications", {
+            headers: { Authorization: `Bearer ${user.token}` }
+          })
+          setApplicationHistory(res.data.applications || [])
+        } catch (err) {
+          setApplicationHistory([])
+        } finally {
+          setLoading(false)
+        }
+      }
+      fetchApplicationHistory()
+    }
+  }, [status, user?.token, hydrated])
+
+  // Status color mapping
+  const statusColor = (status: string) => {
+    switch (status) {
+      case "Under Review":
+        return "bg-amber-100 text-amber-800"
+      case "Shortlisted":
+        return "bg-blue-100 text-blue-800"
+      case "Interview Scheduled":
+        return "bg-green-100 text-green-800"
+      case "Rejected":
+        return "bg-red-100 text-red-800"
+      case "Offer Accepted":
+        return "bg-green-100 text-green-800"
+      case "Withdrawn":
+        return "bg-gray-100 text-gray-800"
+      default:
+        return "bg-gray-100 text-gray-800"
+    }
+  }
+
   const applications = status === "active" ? activeApplications : applicationHistory
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center py-12">
+        <span className="text-gray-500 text-lg">Loading...</span>
+      </div>
+    )
+  }
 
   if (applications.length === 0) {
     return (
@@ -101,7 +102,7 @@ export default function ApplicationList({ status }: ApplicationProps) {
   return (
     <div className="space-y-4">
       {applications.map((app) => (
-        <div key={app.id} className="bg-white border rounded-lg shadow-sm p-4 hover:shadow-md transition-shadow">
+        <div key={app.id || app.job_id} className="bg-white border rounded-lg shadow-sm p-4 hover:shadow-md transition-shadow">
           <div className="flex flex-col sm:flex-row gap-4">
             <div className="w-12 h-12 bg-light-gray flex-shrink-0 rounded-md overflow-hidden border border-gray-200">
               <Image
@@ -119,7 +120,7 @@ export default function ApplicationList({ status }: ApplicationProps) {
                   <h3 className="font-medium text-dark-gray">{app.jobTitle}</h3>
                   <p className="text-sm text-gray-500">{app.company}</p>
                 </div>
-                <Badge className={cn("font-normal", app.statusColor)}>{app.status}</Badge>
+                <Badge className={cn("font-normal", statusColor(app.status))}>{app.status}</Badge>
               </div>
 
               <div className="mt-2 text-xs text-gray-500 flex flex-wrap gap-x-4 gap-y-1">
@@ -160,7 +161,7 @@ export default function ApplicationList({ status }: ApplicationProps) {
               )}
 
               <div className="mt-4 flex flex-wrap gap-2">
-                <Link href={`/jobs/${app.id}`}>
+                <Link href={`/jobs/${app.job_id}`}>
                   <Button variant="outline" size="sm" className="h-8">
                     View Job
                   </Button>
