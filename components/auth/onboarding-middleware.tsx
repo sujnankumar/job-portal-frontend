@@ -19,6 +19,10 @@ export default function OnboardingMiddleware({ children }: { children: React.Rea
     // Only check if user is authenticated
     if (!isAuthenticated || !user) return
 
+    if (user.role === "employer") {
+      return
+    }
+
     // Check if current path is exempt
     const isExemptPath = EXEMPT_PATHS.some((path) => pathname.startsWith(path))
     if (isExemptPath) return

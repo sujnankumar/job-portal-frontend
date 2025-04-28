@@ -14,6 +14,7 @@ import ResumeUploader from "@/components/resume-uploader"
 import ResumeBuilder from "@/components/resume-builder"
 import api from "@/lib/axios"
 import React from "react"
+import OnboardingMiddleware from "@/components/auth/onboarding-middleware";
 
 interface FormValues {
   coverLetter: string
@@ -67,7 +68,7 @@ export default function ApplyPage({ params }: { params: Promise<{ id: string }> 
       try {
         const res = await api.get("/resume/get_profile_resume", {
           responseType: "blob",
-          headers: user && user.token ? { Authorization: `Bearer ${user.token}` } : {},
+          headers: user && "token" in user ? { Authorization: `Bearer ${user.token}` } : {},
         });
         // Use .get for fetch/axios compatibility
         const contentType = res.headers instanceof Headers
@@ -97,7 +98,7 @@ export default function ApplyPage({ params }: { params: Promise<{ id: string }> 
       await api.post(`/application/apply/${unwrappedParams.id}`, formData, {
         headers: {
           "Content-Type": "multipart/form-data",
-          Authorization: user && user.token ? `Bearer ${user.token}` : "",
+          Authorization: user && "token" in user ? `Bearer ${user.token}` : "",
         },
       });
       alert("Application submitted successfully!");
@@ -108,101 +109,103 @@ export default function ApplyPage({ params }: { params: Promise<{ id: string }> 
   }
 
   return (
-    <ProtectedRoute allowedRoles={["applicant"]}>
-      <div className="container mx-auto max-w-4xl py-8 px-4">
-        <div className="bg-white p-6 rounded-xl shadow-md mb-6">
-          <h1 className="text-2xl font-bold text-dark-gray">Apply for: Senior Frontend Developer</h1>
-          <p className="text-gray-600">Tech Innovations Inc. • San Francisco, CA</p>
+    <OnboardingMiddleware>
+      <ProtectedRoute allowedRoles={["applicant"]}>
+        <div className="container mx-auto max-w-4xl py-8 px-4">
+          <div className="bg-white p-6 rounded-xl shadow-md mb-6">
+            <h1 className="text-2xl font-bold text-dark-gray">Apply for: Senior Frontend Developer</h1>
+            <p className="text-gray-600">Tech Innovations Inc. • San Francisco, CA</p>
+          </div>
+
+          <Tabs defaultValue="upload" className="bg-white rounded-xl shadow-md">
+            <TabsList className="border-b w-full rounded-t-xl rounded-b-none p-0">
+              <TabsTrigger
+                value="upload"
+                className="flex-1 rounded-tl-xl rounded-tr-none rounded-bl-none rounded-br-none py-3"
+              >
+                Upload Resume
+              </TabsTrigger>
+              <TabsTrigger
+                value="build"
+                className="flex-1 rounded-tr-xl rounded-tl-none rounded-bl-none rounded-br-none py-3"
+              >
+                Resume Builder
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="upload" className="p-6">
+              <ResumeUploader
+                onConfirm={(resume) => {
+                  setSelectedResume(resume)
+                  setResumeConfirmed(!!resume)
+                }}
+              />
+            </TabsContent>
+
+            <TabsContent value="build" className="p-6">
+              <ResumeBuilder />
+            </TabsContent>
+          </Tabs>
+
+          {/* Additional Information */}
+          <div className="bg-white p-6 rounded-xl shadow-md mt-6">
+            <h2 className="text-xl font-semibold text-dark-gray mb-4">Additional Information</h2>
+
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                <FormField
+                  control={form.control}
+                  name="coverLetter"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Cover Letter (Optional)</FormLabel>
+                      <FormControl>
+                        <Textarea
+                          placeholder="Tell us why you're a good fit for this position..."
+                          className="min-h-[150px]"
+                          {...field}
+                        />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="linkedIn"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>LinkedIn Profile (Optional)</FormLabel>
+                      <FormControl>
+                        <Input placeholder="https://linkedin.com/in/your-profile" {...field} />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="portfolio"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Portfolio or Website (Optional)</FormLabel>
+                      <FormControl>
+                        <Input placeholder="https://your-website.com" {...field} />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+
+                <div className="pt-4">
+                  <Button type="submit" className="w-full bg-accent hover:bg-accent/90" disabled={!resumeConfirmed}>
+                    Submit Application
+                  </Button>
+                </div>
+              </form>
+            </Form>
+          </div>
         </div>
-
-        <Tabs defaultValue="upload" className="bg-white rounded-xl shadow-md">
-          <TabsList className="border-b w-full rounded-t-xl rounded-b-none p-0">
-            <TabsTrigger
-              value="upload"
-              className="flex-1 rounded-tl-xl rounded-tr-none rounded-bl-none rounded-br-none py-3"
-            >
-              Upload Resume
-            </TabsTrigger>
-            <TabsTrigger
-              value="build"
-              className="flex-1 rounded-tr-xl rounded-tl-none rounded-bl-none rounded-br-none py-3"
-            >
-              Resume Builder
-            </TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="upload" className="p-6">
-            <ResumeUploader
-              onConfirm={(resume) => {
-                setSelectedResume(resume)
-                setResumeConfirmed(!!resume)
-              }}
-            />
-          </TabsContent>
-
-          <TabsContent value="build" className="p-6">
-            <ResumeBuilder />
-          </TabsContent>
-        </Tabs>
-
-        {/* Additional Information */}
-        <div className="bg-white p-6 rounded-xl shadow-md mt-6">
-          <h2 className="text-xl font-semibold text-dark-gray mb-4">Additional Information</h2>
-
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-              <FormField
-                control={form.control}
-                name="coverLetter"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Cover Letter (Optional)</FormLabel>
-                    <FormControl>
-                      <Textarea
-                        placeholder="Tell us why you're a good fit for this position..."
-                        className="min-h-[150px]"
-                        {...field}
-                      />
-                    </FormControl>
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="linkedIn"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>LinkedIn Profile (Optional)</FormLabel>
-                    <FormControl>
-                      <Input placeholder="https://linkedin.com/in/your-profile" {...field} />
-                    </FormControl>
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="portfolio"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Portfolio or Website (Optional)</FormLabel>
-                    <FormControl>
-                      <Input placeholder="https://your-website.com" {...field} />
-                    </FormControl>
-                  </FormItem>
-                )}
-              />
-
-              <div className="pt-4">
-                <Button type="submit" className="w-full bg-accent hover:bg-accent/90" disabled={!resumeConfirmed}>
-                  Submit Application
-                </Button>
-              </div>
-            </form>
-          </Form>
-        </div>
-      </div>
-    </ProtectedRoute>
+      </ProtectedRoute>
+    </OnboardingMiddleware>
   )
 }
