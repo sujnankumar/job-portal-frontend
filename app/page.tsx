@@ -1,13 +1,8 @@
 "use client"
 
-import { useEffect } from "react"
-import { useRouter } from "next/navigation"
-import { useAuthStore } from "@/store/authStore"
 import HomePage from "@/components/home-page"
 
 export default function Home() {
-  const { isAuthenticated, user } = useAuthStore()
-  const router = useRouter()
 
   // useEffect(() => {
   //   if (isAuthenticated) {
@@ -19,5 +14,8 @@ export default function Home() {
   //   }
   // }, [isAuthenticated, user, router])
 
-  return <HomePage />
+  return (
+    
+      <HomePage />
+  )
 }

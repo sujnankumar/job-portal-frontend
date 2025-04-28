@@ -2,26 +2,27 @@
 
 import type React from "react"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { FileUp, File, X, CheckCircle, ArrowRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
+import api from "@/lib/axios"
+import { useAuthStore } from "@/store/authStore"
 
 interface ApplicantResumeProps {
   data: any
   onNext: (data: any) => void
 }
 
-// Mock File type for client-side only
-interface MockFile {
-  name: string
-  size: number
-  type: string
-}
-
 export default function ApplicantResume({ data, onNext }: ApplicantResumeProps) {
-  const [resumeFile, setResumeFile] = useState<MockFile | null>(null)
+  // Store the actual File object in state
+  const [resumeFile, setResumeFile] = useState<File | null>(null)
   const [dragActive, setDragActive] = useState(false)
+  const user = useAuthStore((state) => state.user)
+  const { updateUser } = useAuthStore.getState();
+  const [uploading, setUploading] = useState(false)
+  const [error, setError] = useState("")
+  const inputRef = useRef<HTMLInputElement>(null)
 
   // Initialize from data if available
   useEffect(() => {
@@ -48,13 +49,7 @@ export default function ApplicantResume({ data, onNext }: ApplicantResumeProps) 
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
       const file = e.dataTransfer.files[0]
       if (isValidFile(file)) {
-        // Create a mock file object with just the properties we need
-        const mockFile = {
-          name: file.name,
-          size: file.size,
-          type: file.type,
-        }
-        setResumeFile(mockFile)
+        setResumeFile(file)
       }
     }
   }
@@ -64,13 +59,7 @@ export default function ApplicantResume({ data, onNext }: ApplicantResumeProps) 
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0]
       if (isValidFile(file)) {
-        // Create a mock file object with just the properties we need
-        const mockFile = {
-          name: file.name,
-          size: file.size,
-          type: file.type,
-        }
-        setResumeFile(mockFile)
+        setResumeFile(file)
       }
     }
   }
@@ -79,9 +68,35 @@ export default function ApplicantResume({ data, onNext }: ApplicantResumeProps) 
     setResumeFile(null)
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    onNext({ resume: resumeFile })
+    setError("")
+    if (!resumeFile) {
+      setError("Please upload your resume file.")
+      return
+    }
+    setUploading(true)
+    try {
+      const formData = new FormData()
+      formData.append("file", resumeFile)
+      await api.post("/resume/upload_resume", formData, {
+        headers: {
+          Authorization: `Bearer ${user?.token}`,
+          "Content-Type": "multipart/form-data",
+        },
+      })
+      // Update onboarding in backend and local auth state
+      const onboarding = user?.onboarding ? { ...user.onboarding, lastUpdated: new Date().toISOString(), isComplete: true } : { isComplete: true, lastUpdated: new Date().toISOString() }
+      await api.put("/profile/update_profile", { onboarding }, {
+        headers: { Authorization: `Bearer ${user?.token}` },
+      })
+      updateUser({ onboarding })
+      onNext({ ...data, resume: { name: resumeFile.name, size: resumeFile.size, type: resumeFile.type } })
+    } catch (err: any) {
+      setError(err.response?.data?.detail || "Failed to upload resume.")
+    } finally {
+      setUploading(false)
+    }
   }
 
   const isValidFile = (file: File) => {
@@ -147,10 +162,17 @@ export default function ApplicantResume({ data, onNext }: ApplicantResumeProps) 
           </h3>
           <p className="text-sm text-gray-500 mb-4">Supported formats: PDF, DOCX, RTF (Max 5MB)</p>
           <label htmlFor="resume-upload">
-            <Button type="button" className="bg-primary hover:bg-primary/90">
+            <Button type="button" className="bg-primary hover:bg-primary/90" onClick={() => inputRef.current?.click()}>
               Choose File
             </Button>
-            <input id="resume-upload" type="file" className="hidden" accept=".pdf,.docx,.rtf" onChange={handleChange} />
+            <input
+              id="resume-upload"
+              ref={inputRef}
+              type="file"
+              className="hidden"
+              accept=".pdf,.docx,.rtf"
+              onChange={handleChange}
+            />
           </label>
           <p className="text-xs text-gray-500 mt-3">or drag and drop your file here</p>
         </div>
@@ -197,10 +219,11 @@ export default function ApplicantResume({ data, onNext }: ApplicantResumeProps) 
       </div>
 
       <div className="flex justify-end mt-6">
-        <Button type="submit" className="bg-primary hover:bg-primary/90">
-          Continue <ArrowRight className="ml-2 h-4 w-4" />
+        <Button type="submit" className="bg-primary hover:bg-primary/90" disabled={uploading}>
+          {uploading ? "Uploading..." : "Continue"}
         </Button>
       </div>
+      {error && <p className="text-red-500 text-sm mt-2">{error}</p>}
     </form>
   )
 }

@@ -1,8 +1,7 @@
 "use client"
 
 import type React from "react"
-
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -12,13 +11,13 @@ import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
 import { useAuthStore } from "@/store/authStore"
 import type { UserRole } from "@/store/authStore"
+import api from "@/lib/axios"
 
 export default function RegisterPage() {
   const router = useRouter()
   const login = useAuthStore((state) => state.login)
   const [role, setRole] = useState<UserRole>("applicant")
   const [formData, setFormData] = useState({
-    name: "",
     firstName: "",
     lastName: "",
     jobPosition: "",
@@ -29,6 +28,8 @@ export default function RegisterPage() {
   })
   const [isLoading, setIsLoading] = useState(false)
   const [errors, setErrors] = useState<Record<string, string>>({})
+  const [error, setError] = useState<string>("")
+  const { isAuthenticated, user, hydrated } = useAuthStore()
 
   const handleRoleChange = (value: string) => {
     setRole(value as UserRole)
@@ -65,10 +66,12 @@ export default function RegisterPage() {
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {}
-
     if (role === "applicant") {
-      if (!formData.name.trim()) {
-        newErrors.name = "Name is required"
+      if (!formData.firstName.trim()) {
+        newErrors.firstName = "First name is required"
+      }
+      if (!formData.lastName.trim()) {
+        newErrors.lastName = "Last name is required"
       }
     } else {
       if (!formData.firstName.trim()) {
@@ -81,109 +84,110 @@ export default function RegisterPage() {
         newErrors.jobPosition = "Job position is required"
       }
     }
-
     if (!formData.email.trim()) {
       newErrors.email = "Email is required"
     } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
       newErrors.email = "Email is invalid"
     }
-
     if (!formData.password) {
       newErrors.password = "Password is required"
     } else if (formData.password.length < 8) {
       newErrors.password = "Password must be at least 8 characters"
     }
-
-    try {
-      const res = await api.post("/auth/register", {
-        user_type: "job_seeker",
-        first_name: applicantForm.firstName,
-        last_name: applicantForm.lastName,
-        email: applicantForm.email,
-        password: applicantForm.password,
-      })
-      const user = res.data
-      console.log(res.data)
-      // login({
-      //   id: user.user_id,
-      //   name: user.first_name + " " + user.last_name,
-      //   email: user.email,
-      //   role: (user.user_type === "job_seeker") ? "applicant" : "employer",
-      //   avatar: "/mystical-forest-spirit.png",
-      // })
-      router.push("/auth/login")
-    } catch (err: any) {
-      setError(err.response?.data?.detail || "Registration failed. Please try again.")
-    } finally {
-      setIsLoading(false)
     if (formData.password !== formData.confirmPassword) {
       newErrors.confirmPassword = "Passwords do not match"
     }
-
     if (!formData.agreeTerms) {
       newErrors.agreeTerms = "You must agree to the terms and conditions"
     }
-
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-
+    setError("")
     if (!validateForm()) {
       return
     }
-
     setIsLoading(true)
-
     try {
-      // In a real app, you would make an API call to register
-      // For now, we'll simulate a successful registration
-      setTimeout(() => {
-        // Mock user data
-        const user = {
-          id: "1",
-          name: role === "applicant" ? formData.name : `${formData.firstName} ${formData.lastName}`,
+      let payload: any
+      if (role === "applicant") {
+        payload = {
+          user_type: "job_seeker",
+          first_name: formData.firstName,
+          last_name: formData.lastName,
           email: formData.email,
-          role: role,
-          jobPosition: role === "employer" ? formData.jobPosition : undefined,
-          avatar: role === "applicant" ? "/mystical-forest-spirit.png" : "/abstract-circuit-board.png",
-          onboarding: {
-            isComplete: false, // Default to incomplete
-            lastStep: 0,
-            startedAt: new Date().toISOString(),
-          },
+          password: formData.password,
         }
-
-        login(user)
-
-        // Redirect to onboarding
-        router.push("/onboarding")
-
-        setIsLoading(false)
-      }, 1000)
-    } catch (err) {
-      console.error("Registration error:", err)
-      setErrors({
-        form: "An error occurred during registration. Please try again.",
+      } else {
+        payload = {
+          user_type: "employer",
+          first_name: formData.firstName,
+          last_name: formData.lastName,
+          job_position: formData.jobPosition,
+          email: formData.email,
+          password: formData.password,
+        }
+      }
+      // Register user
+      await api.post("/auth/register", payload)
+      // Immediately log in the user
+      const response = await api.post("/auth/login", {
+        email: formData.email,
+        password: formData.password,
       })
-      const user = res.data
-      console.log(res.data)
-      // login({
-      //   id: user.user_id,
-      //   name: user.company_name,
-      //   email: user.email,
-      //   role: "employer",
-      //   avatar: "/abstract-circuit-board.png",
-      // })
-      router.push("/auth/login")
+      const { access_token, token_type, onboarding } = response.data
+      console.log("Access Token Type:", token_type)
+      const userRes = await api.get("/user/me", {
+        headers: { Authorization: `Bearer ${access_token}` },
+      })
+      const userData = userRes.data
+      const user = {
+        id: userData.user_id || userData.id || "",
+        name: userData.first_name && userData.last_name
+          ? `${userData.first_name} ${userData.last_name}`
+          : userData.company_name || userData.name || formData.email,
+        email: userData.email,
+        role: userData.user_type === "employer" ? ("employer" as UserRole) : ("applicant" as UserRole),
+        avatar: userData.avatar || (userData.user_type === "employer"
+          ? "/abstract-circuit-board.png"
+          : "/mystical-forest-spirit.png"),
+        onboarding: onboarding || {
+          isComplete: false,
+          lastStep: 0,
+          startedAt: new Date().toISOString(),
+        },
+        token: access_token,
+      }
+      login(user)
+      if (!user.onboarding?.isComplete) {
+        router.push("/onboarding")
+      } else if (user.role === "employer") {
+        router.push("/employer/dashboard")
+      } else {
+        router.push("/dashboard")
+      }
     } catch (err: any) {
       setError(err.response?.data?.detail || "Registration failed. Please try again.")
     } finally {
       setIsLoading(false)
     }
   }
+
+  useEffect(() => {
+    if (!hydrated) return
+    if (isAuthenticated) {
+      if (!user?.onboarding?.isComplete) {
+        router.push("/onboarding")
+      } else if (user?.role === "employer") {
+        router.push("/employer/dashboard")
+      } else {
+        router.push("/dashboard")
+      }
+    }
+  }, [hydrated, isAuthenticated, user, router])
 
   return (
     <div className="container mx-auto max-w-md py-12 px-4">
@@ -212,10 +216,17 @@ export default function RegisterPage() {
           <div className="p-6">
             <form onSubmit={handleSubmit} className="space-y-4">
               {role === "applicant" ? (
-                <div className="space-y-2">
-                  <Label htmlFor="name">Full Name</Label>
-                  <Input id="name" name="name" placeholder="John Doe" value={formData.name} onChange={handleChange} />
-                  {errors.name && <p className="text-red-500 text-xs mt-1">{errors.name}</p>}
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="firstName">First Name</Label>
+                    <Input id="firstName" name="firstName" placeholder="John" value={formData.firstName} onChange={handleChange} />
+                    {errors.firstName && <p className="text-red-500 text-xs mt-1">{errors.firstName}</p>}
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="lastName">Last Name</Label>
+                    <Input id="lastName" name="lastName" placeholder="Doe" value={formData.lastName} onChange={handleChange} />
+                    {errors.lastName && <p className="text-red-500 text-xs mt-1">{errors.lastName}</p>}
+                  </div>
                 </div>
               ) : (
                 <>
@@ -319,7 +330,7 @@ export default function RegisterPage() {
                 </div>
               </div>
 
-              {errors.form && <p className="text-red-500 text-sm">{errors.form}</p>}
+              {error && <p className="text-red-500 text-sm">{error}</p>}
 
               <Button type="submit" className="w-full bg-accent hover:bg-accent/90" disabled={isLoading}>
                 {isLoading ? "Creating Account..." : "Create Account"}

@@ -111,13 +111,18 @@ export default function OnboardingForm({ userRole }: OnboardingFormProps) {
       }
     }
 
-    if (currentStepKey === "experience" && Array.isArray(stepData.experience)) {
-      const hasValidExperience = stepData.experience.some(
-        (exp: any) => exp.company && exp.company.trim() !== "" && exp.title && exp.title.trim() !== "",
-      )
-      if (!hasValidExperience) {
-        isValid = false
-        errors.push("Please add at least one work experience with company and job title")
+    if (currentStepKey === "experience") {
+      // If fresher, skip experience validation
+      if (stepData.isFresher) {
+        isValid = true
+      } else if (Array.isArray(stepData.experience)) {
+        const hasValidExperience = stepData.experience.some(
+          (exp: any) => exp.company && exp.company.trim() !== "" && exp.title && exp.title.trim() !== "",
+        )
+        if (!hasValidExperience) {
+          isValid = false
+          errors.push("Please add at least one work experience with company and job title or fresher")
+        }
       }
     }
 
@@ -170,9 +175,38 @@ export default function OnboardingForm({ userRole }: OnboardingFormProps) {
       // Simulate API call
       await new Promise((resolve) => setTimeout(resolve, 1500))
 
-      // Mark onboarding as complete
-      completeOnboarding()
-
+      // Check if all steps are valid before marking onboarding as complete
+      let allValid = true
+      for (const step of steps) {
+        const key = step.key
+        const stepData = finalData[key] || finalData
+        // Use the same validation as validateCurrentStep
+        if (key === "basicInfo") {
+          if (!stepData.headline || stepData.headline.trim() === "") allValid = false
+          if (userRole === "employer" && stepData.isNewCompany && (!stepData.companyName || stepData.companyName.trim() === "")) allValid = false
+        }
+        if (key === "skills" && Array.isArray(stepData.skills)) {
+          const hasValidSkill = stepData.skills.some((skill: any) => skill.name && skill.name.trim() !== "")
+          if (!hasValidSkill) allValid = false
+        }
+        if (key === "education" && Array.isArray(stepData.education)) {
+          const hasValidEducation = stepData.education.some((edu: any) => edu.school && edu.school.trim() !== "" && edu.degree && edu.degree.trim() !== "")
+          if (!hasValidEducation) allValid = false
+        }
+        if (key === "experience") {
+          if (stepData.isFresher) {
+            // valid
+          } else if (Array.isArray(stepData.experience)) {
+            const hasValidExperience = stepData.experience.some((exp: any) => exp.company && exp.company.trim() !== "" && exp.title && exp.title.trim() !== "")
+            if (!hasValidExperience) allValid = false
+          } else {
+            allValid = false
+          }
+        }
+      }
+      if (allValid) {
+        completeOnboarding()
+      }
       // Redirect to appropriate dashboard
       if (userRole === "applicant") {
         router.push("/dashboard")

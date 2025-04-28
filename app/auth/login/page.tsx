@@ -1,6 +1,7 @@
 "use client"
 
 import type React from "react"
+import { useEffect } from "react"
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
@@ -12,6 +13,7 @@ import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
 import { useAuthStore } from "@/store/authStore"
 import type { UserRole } from "@/store/authStore"
+import api from "@/lib/axios"
 
 export default function LoginPage() {
   const router = useRouter()
@@ -24,6 +26,8 @@ export default function LoginPage() {
   })
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState("")
+
+  const { isAuthenticated, user, hydrated } = useAuthStore()
 
   const handleRoleChange = (value: string) => {
     setRole(value as UserRole)
@@ -50,39 +54,72 @@ export default function LoginPage() {
     setError("")
 
     try {
-      // In a real app, you would make an API call to authenticate
-      // For now, we'll simulate a successful login
-      setTimeout(() => {
-        // Mock user data
-        const user = {
-          id: "1",
-          name: role === "applicant" ? "Jane Smith" : "Tech Innovations Inc.",
-          email: formData.email,
-          role: role,
-          avatar: role === "applicant" ? "/mystical-forest-spirit.png" : "/abstract-circuit-board.png",
-          onboarding: {
-            isComplete: false, // Default to incomplete
-            lastStep: 0,
-            startedAt: new Date().toISOString(),
-          },
-        }
+      // Call the backend login API
+      const response = await api.post("/auth/login", {
+        email: formData.email,
+        password: formData.password,
+      })
+      const { access_token, token_type, onboarding } = response.data
+      console.log("Type of access token:", token_type)
 
-        login(user)
+      // Optionally, fetch user profile info after login
+      const userRes = await api.get("/user/me", {
+        headers: { Authorization: `Bearer ${access_token}` },
+      })
+      const userData = userRes.data
 
-        // The middleware will handle redirection based on onboarding status
-        if (role === "applicant") {
-          router.push("/dashboard")
-        } else {
-          router.push("/employer/dashboard")
-        }
+      // Compose user object for the store
+      const user = {
+        id: userData.user_id || userData.id || "",
+        name: userData.first_name && userData.last_name
+          ? `${userData.first_name} ${userData.last_name}`
+          : userData.company_name || userData.name || formData.email,
+        email: userData.email,
+        role: userData.user_type === "employer" ? "employer" as UserRole : "applicant" as UserRole,
+        avatar: userData.avatar || (userData.user_type === "employer"
+          ? "/abstract-circuit-board.png"
+          : "/mystical-forest-spirit.png"),
+        onboarding: onboarding || {
+          isComplete: false,
+          lastStep: 0,
+          startedAt: new Date().toISOString(),
+        },
+        token: access_token,
+      }
 
-        setIsLoading(false)
-      }, 1000)
-    } catch (err) {
-      setError("Invalid email or password")
+      login(user)
+
+      // Redirect based on role
+      if (!user.onboarding?.isComplete) {
+        router.push("/onboarding");
+      } else if (user.role === "applicant") {
+        router.push("/dashboard");
+      } else {
+        router.push("/employer/dashboard");
+      }
+    } catch (err: any) {
+      setError(
+        err.response?.data?.detail ||
+        err.message ||
+        "Invalid email or password"
+      )
+    } finally {
       setIsLoading(false)
     }
   }
+
+  useEffect(() => {
+    if (!hydrated) return
+    if (isAuthenticated) {
+      if (!user?.onboarding?.isComplete) {
+        router.push("/onboarding")
+      } else if (user?.role === "employer") {
+        router.push("/employer/dashboard")
+      } else {
+        router.push("/dashboard")
+      }
+    }
+  }, [hydrated, isAuthenticated, user, router])
 
   return (
     <div className="container mx-auto max-w-md py-12 px-4">

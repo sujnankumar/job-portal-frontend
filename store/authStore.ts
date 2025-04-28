@@ -27,6 +27,7 @@ interface User {
   companyId?: string
   companyName?: string
   onboarding: OnboardingStatus
+  token?: string // <-- add token for authentication
 }
 
 interface AuthState {
@@ -60,13 +61,14 @@ export const useAuthStore = create<AuthState>()(
               validationStatus: {},
               validationMessages: {},
             },
+            token: user.token, // <-- persist token
           },
           isAuthenticated: true,
         }),
       logout: () => set({ user: null, isAuthenticated: false }),
       updateUser: (userData) =>
         set((state) => ({
-          user: state.user ? { ...state.user, ...userData } : null,
+          user: state.user ? { ...state.user, ...userData, token: userData.token || state.user.token } : null,
         })),
       updateOnboardingStatus: (status) =>
         set((state) => ({
@@ -101,13 +103,22 @@ export const useAuthStore = create<AuthState>()(
         set((state) => {
           if (!state.user) return { user: null }
 
+          // Ensure onboarding and its properties are always initialized
+          const onboarding = state.user.onboarding || {
+            isComplete: false,
+            startedAt: new Date().toISOString(),
+            formData: {},
+            validationStatus: {},
+            validationMessages: {},
+          }
+
           const validationStatus = {
-            ...(state.user.onboarding.validationStatus || {}),
+            ...(onboarding.validationStatus || {}),
             [field]: isValid,
           }
 
           const validationMessages = {
-            ...(state.user.onboarding.validationMessages || {}),
+            ...(onboarding.validationMessages || {}),
           }
 
           if (message) {
@@ -122,7 +133,7 @@ export const useAuthStore = create<AuthState>()(
             user: {
               ...state.user,
               onboarding: {
-                ...state.user.onboarding,
+                ...onboarding,
                 validationStatus,
                 validationMessages,
                 lastUpdated: new Date().toISOString(),

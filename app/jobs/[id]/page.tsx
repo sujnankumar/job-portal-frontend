@@ -7,6 +7,8 @@ import JobChat from "@/components/job-chat"
 import api from "@/lib/axios"
 import { useAuthStore } from "@/store/authStore"
 import React from "react"
+import OnboardingMiddleware from "@/components/auth/onboarding-middleware";
+
 
 export default function JobDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = React.use(params)
@@ -52,7 +54,7 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
   }
 
   return (
-    <>
+    <OnboardingMiddleware>
       <div className="container mx-auto py-8 px-4">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-3">
@@ -65,6 +67,6 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
         </div>
       </div>
       <JobChat jobId={id} companyName={job.company} companyLogo={job.logo} jobTitle={job.title} />
-    </>
+    </OnboardingMiddleware>
   )
 }

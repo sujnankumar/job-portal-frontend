@@ -6,6 +6,8 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { Textarea } from "@/components/ui/textarea"
+import api from "@/lib/axios"
+import { useAuthStore } from "@/store/authStore"
 
 interface Experience {
   id: string
@@ -24,8 +26,11 @@ interface ApplicantExperienceProps {
 }
 
 export default function ApplicantExperience({ data, onNext }: ApplicantExperienceProps) {
+  const [isFresher, setIsFresher] = useState(() => {
+    // If data indicates fresher, initialize as true
+    return data && data.isFresher === true
+  })
   const [experiences, setExperiences] = useState<Experience[]>(() => {
-    // Safely initialize experiences array
     if (data && Array.isArray(data)) {
       return data
     } else if (data && data.experience && Array.isArray(data.experience)) {
@@ -69,9 +74,9 @@ export default function ApplicantExperience({ data, onNext }: ApplicantExperienc
     setExperiences(newExperience)
   }
 
-  // Use useEffect to initialize with one experience entry if empty
+  // Use useEffect to initialize with one experience entry if empty and not fresher
   useEffect(() => {
-    if (experiences.length === 0) {
+    if (!isFresher && experiences.length === 0) {
       setExperiences([
         {
           id: Date.now().toString(),
@@ -85,20 +90,64 @@ export default function ApplicantExperience({ data, onNext }: ApplicantExperienc
         },
       ])
     }
-  }, [experiences.length])
+  }, [experiences.length, isFresher])
 
-  const handleSubmit = () => {
-    onNext({ experience: experiences })
+  const user = useAuthStore((state) => state.user)
+  const [profileUpdated, setProfileUpdated] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState("")
+
+  // Helper to collect all onboarding data for update_profile
+  const getProfilePayload = () => {
+    console.log("Collecting profile payload...", user?.onboarding)
+    // You may need to adjust this to collect all fields from onboarding
+    return {
+      ...data.basicInfo,
+      ...data,
+      education: data.education?.education || [],
+      experience: isFresher ? [] : experiences,
+      skills: data.skills?.skills || [],
+      onboarding: user?.onboarding || {}, // send the full onboarding object, not just boolean
+    }
+  }
+
+  const handleUpdateProfile = async () => {
+    setLoading(true)
+    setError("")
+    try {
+      const payload = getProfilePayload()
+      await api.put("/profile/update_profile", payload, {
+        headers: { Authorization: `Bearer ${user?.token}` },
+      })
+      setProfileUpdated(true)
+    } catch (err: any) {
+      setError(err.response?.data?.detail || "Failed to update profile.")
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleContinue = () => {
+    if (isFresher) {
+      onNext({ ...data, isFresher: true, experience: [] })
+    } else {
+      onNext({ ...data, isFresher: false, experience: experiences })
+    }
   }
 
   return (
     <div className="space-y-6">
       <div className="space-y-2">
         <h2 className="text-xl font-semibold text-dark-gray">Work Experience</h2>
-        <p className="text-sm text-gray-500">Add your work experience</p>
+        <p className="text-sm text-gray-500">Add your work experience or indicate if you are a fresher</p>
       </div>
 
-      {experiences.map((exp, index) => (
+      <div className="flex items-center gap-2 mb-4">
+        <Switch id="fresher-switch" checked={isFresher} onCheckedChange={setIsFresher} />
+        <Label htmlFor="fresher-switch">I'm a fresher (no work experience)</Label>
+      </div>
+
+      {!isFresher && experiences.map((exp, index) => (
         <div key={exp.id} className="border rounded-md p-4 mb-4 bg-light-gray">
           <div className="flex justify-between items-center mb-3">
             <h4 className="font-medium text-dark-gray">{exp.title ? exp.title : `Experience #${index + 1}`}</h4>
@@ -180,15 +229,24 @@ export default function ApplicantExperience({ data, onNext }: ApplicantExperienc
         </div>
       ))}
 
-      <Button variant="outline" size="sm" onClick={handleAddExperience} className="mt-2" type="button">
-        <PlusCircle className="h-4 w-4 mr-1" /> Add Experience
-      </Button>
+      {!isFresher && (
+        <Button variant="outline" size="sm" onClick={handleAddExperience} className="mt-2" type="button">
+          <PlusCircle className="h-4 w-4 mr-1" /> Add Experience
+        </Button>
+      )}
 
       <div className="flex justify-end mt-6">
-        <Button onClick={handleSubmit} type="button">
-          Continue
-        </Button>
+        {!profileUpdated ? (
+          <Button onClick={handleUpdateProfile} type="button" disabled={loading}>
+            {loading ? "Updating..." : "Update Profile"}
+          </Button>
+        ) : (
+          <Button onClick={handleContinue} type="button">
+            Continue to Resume Upload
+          </Button>
+        )}
       </div>
+      {error && <p className="text-red-500 text-sm mt-2">{error}</p>}
     </div>
   )
 }
