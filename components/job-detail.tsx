@@ -53,7 +53,7 @@ export default function JobDetail({ jobId, jobDetails, is_saved }: { jobId: stri
     if (isSaved) {
       // Unsave job
       try {
-        await api.delete(`/jobs/remove-saved-job/${jobId}`, {
+        await api.delete(`/sj/remove-saved-job/${jobId}`, {
           headers: {
             Authorization: `Bearer ${user.token}`,
           },
@@ -67,7 +67,7 @@ export default function JobDetail({ jobId, jobDetails, is_saved }: { jobId: stri
     }
     // Save job
     try {
-      await api.post(`/jobs/save-job/${jobId}`, {}, {
+      await api.post(`/sj/save-job/${jobId}`, {}, {
         headers: {
           Authorization: `Bearer ${user.token}`,
         },

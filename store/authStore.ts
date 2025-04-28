@@ -32,6 +32,7 @@ interface User {
 interface AuthState {
   user: User | null
   isAuthenticated: boolean
+  hydrated: boolean // <-- add hydrated state
   login: (user: User) => void
   logout: () => void
   updateUser: (userData: Partial<User>) => void
@@ -39,6 +40,7 @@ interface AuthState {
   updateOnboardingData: (formData: any) => void
   updateValidationStatus: (field: string, isValid: boolean, message?: string) => void
   completeOnboarding: () => void
+  setHydrated: (hydrated: boolean) => void // <-- add setter
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -46,6 +48,7 @@ export const useAuthStore = create<AuthState>()(
     (set) => ({
       user: null,
       isAuthenticated: false,
+      hydrated: false, // <-- initial value
       login: (user) =>
         set({
           user: {
@@ -140,14 +143,17 @@ export const useAuthStore = create<AuthState>()(
               }
             : null,
         })),
+      setHydrated: (hydrated) => set({ hydrated }), // <-- setter
     }),
     {
       name: "auth-storage",
-      // Add storage event listener to sync across tabs
       partialize: (state) => ({
         user: state.user,
         isAuthenticated: state.isAuthenticated,
       }),
+      onRehydrateStorage: () => (state) => {
+        state?.setHydrated(true)
+      },
     },
   ),
 )
