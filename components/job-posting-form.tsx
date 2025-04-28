@@ -23,8 +23,8 @@ export default function JobPostingForm() {
     title: "",
     department: "",
     location: "",
-    locationType: "onsite",
-    employmentType: "full-time",
+    locationType: "On-site",
+    employmentType: "Full-time",
     minSalary: "",
     maxSalary: "",
     showSalary: true,
@@ -35,6 +35,8 @@ export default function JobPostingForm() {
     companyLogo: null,
     skills: ["", "", ""],
     autoExpire: true,
+    experienceLevel: "",
+    jobCategory: "",
   })
   const loginUser = useAuthStore((state) => state.user)
   const [isLoading, setIsLoading] = useState(false)
@@ -116,6 +118,8 @@ export default function JobPostingForm() {
         skills: formData.skills.filter((s) => s.trim() !== ""),
         auto_expire: formData.autoExpire,
         validity_days: formData.autoExpire ? 15 : undefined,
+        experience_level: formData.experienceLevel,
+        job_category: formData.jobCategory,
         // company_logo: formData.companyLogo, // handle file upload separately if needed
       }
       const res = await api.post("/job/post_job", payload, {
@@ -212,9 +216,9 @@ export default function JobPostingForm() {
                   <SelectValue placeholder="Select location type" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="onsite">On-site</SelectItem>
-                  <SelectItem value="remote">Remote</SelectItem>
-                  <SelectItem value="hybrid">Hybrid</SelectItem>
+                  <SelectItem value="On-site">On-site</SelectItem>
+                  <SelectItem value="Remote">Remote</SelectItem>
+                  <SelectItem value="Hybrid">Hybrid</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -231,11 +235,59 @@ export default function JobPostingForm() {
                   <SelectValue placeholder="Select employment type" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="full-time">Full-time</SelectItem>
-                  <SelectItem value="part-time">Part-time</SelectItem>
-                  <SelectItem value="contract">Contract</SelectItem>
-                  <SelectItem value="temporary">Temporary</SelectItem>
-                  <SelectItem value="internship">Internship</SelectItem>
+                  <SelectItem value="Full-time">Full-time</SelectItem>
+                  <SelectItem value="Part-time">Part-time</SelectItem>
+                  <SelectItem value="Contract">Contract</SelectItem>
+                  <SelectItem value="Temporary">Temporary</SelectItem>
+                  <SelectItem value="Internship">Internship</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="experienceLevel">
+                Experience Level <span className="text-red-500">*</span>
+              </Label>
+              <Select
+                value={formData.experienceLevel}
+                onValueChange={(value) => handleSelectChange("experienceLevel", value)}
+              >
+                <SelectTrigger id="experienceLevel">
+                  <SelectValue placeholder="Select experience level" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Entry Level">Entry Level</SelectItem>
+                  <SelectItem value="Mid Level">Mid Level</SelectItem>
+                  <SelectItem value="Senior Level">Senior Level</SelectItem>
+                  <SelectItem value="Director">Director</SelectItem>
+                  <SelectItem value="Executive">Executive</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="jobCategory">
+                Job Category <span className="text-red-500">*</span>
+              </Label>
+              <Select
+                value={formData.jobCategory}
+                onValueChange={(value) => handleSelectChange("jobCategory", value)}
+              >
+                <SelectTrigger id="jobCategory">
+                  <SelectValue placeholder="Select job category" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Technology">Technology</SelectItem>
+                  <SelectItem value="Business">Business</SelectItem>
+                  <SelectItem value="Healthcare">Healthcare</SelectItem>
+                  <SelectItem value="Education">Education</SelectItem>
+                  <SelectItem value="Engineering">Engineering</SelectItem>
+                  <SelectItem value="Finance">Finance</SelectItem>
+                  <SelectItem value="Retail">Retail</SelectItem>
+                  <SelectItem value="Logistics">Logistics</SelectItem>
+                  <SelectItem value="Government">Government</SelectItem>
+                  <SelectItem value="Administration">Administration</SelectItem>
+                  <SelectItem value="Other">Other</SelectItem>
                 </SelectContent>
               </Select>
             </div>

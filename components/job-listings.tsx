@@ -1,6 +1,7 @@
 "use client"
 
 import type React from "react"
+import type { JobFiltersState } from "./job-filters"
 
 import { useState, useEffect } from "react"
 import Image from "next/image"
@@ -12,7 +13,11 @@ import { cn } from "@/lib/utils"
 import api from "@/lib/axios"
 import { useAuthStore } from "@/store/authStore"
 
-export default function JobListings() {
+interface JobListingsProps {
+  filters: JobFiltersState
+}
+
+export default function JobListings({ filters }: JobListingsProps) {
   const [expandedJob, setExpandedJob] = useState<string | null>(null)
   const [savedJobs, setSavedJobs] = useState<string[]>([])
   const [jobs, setJobs] = useState<any[]>([])
@@ -29,6 +34,7 @@ export default function JobListings() {
       try {
         const res = await api.get("/job/list")
         setJobs(res.data)
+        console.log("Jobs fetched:", res.data)
       } catch (err: any) {
         setError("Failed to load jobs. Please try again later.")
       } finally {
@@ -97,6 +103,36 @@ export default function JobListings() {
     }
   }
 
+  // Filtering logic
+  const filteredJobs = jobs.filter((job) => {
+    // Job Type
+    if (filters.jobTypes.length > 0 && !filters.jobTypes.includes(job.employment_type)) return false
+    // Experience
+    if (filters.experienceLevels.length > 0 && !filters.experienceLevels.includes(job.experience_level)) return false
+    // Location Type
+    if (filters.locationTypes && filters.locationTypes.length > 0 && !filters.locationTypes.includes(job.location_type)) return false
+    // Salary
+    // if (job.min_salary < filters.salaryRange[0] || job.max_salary > filters.salaryRange[1]) return false
+    // Location
+    if (filters.location && !job.location?.toLowerCase().includes(filters.location.toLowerCase())) return false
+    // Industry
+    if (filters.industries.length > 0 && !filters.industries.includes(job.industry)) return false
+    // Skills
+    if (filters.skills.length > 0 && !filters.skills.every(skill => job.skills?.includes(skill))) return false
+    // Search (title, keywords, company)
+    if (filters.search && filters.search.trim() !== "") {
+      const searchLower = filters.search.toLowerCase()
+      if (
+        !(job.title?.toLowerCase().includes(searchLower) ||
+          job.company?.toLowerCase().includes(searchLower) ||
+          (job.tags && job.tags.some((tag: string) => tag.toLowerCase().includes(searchLower))))
+      ) {
+        return false
+      }
+    }
+    return true
+  })
+
   if (loading) {
     return <div className="text-center py-8 text-gray-500">Loading jobs...</div>
   }
@@ -108,7 +144,7 @@ export default function JobListings() {
     <div className="space-y-4">
       {saveError && <div className="text-center text-red-500 text-sm">{saveError}</div>}
       {saveSuccess && <div className="text-center text-green-600 text-sm">{saveSuccess}</div>}
-      {jobs.length === 0 ? (
+      {filteredJobs.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-16 bg-white rounded-xl shadow-sm border border-gray-100">
           <img src="/placeholder-logo.svg" alt="No jobs" className="w-20 h-20 mb-4 opacity-60" />
           <h2 className="text-xl font-semibold text-gray-700 mb-2">No jobs available right now</h2>
@@ -116,7 +152,7 @@ export default function JobListings() {
           <p className="text-gray-400 text-xs">Please check back later or adjust your filters.</p>
         </div>
       ) : (
-        jobs.map((job, index) => (
+        filteredJobs.map((job, index) => (
           <div key={ job.job_id} className="relative">
             {/* Job Card */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
@@ -175,7 +211,7 @@ export default function JobListings() {
                     </div>
 
                     <div className="mt-3 flex flex-wrap gap-1.5">
-                      {(job.tags || []).slice(0, 3).map((tag) => (
+                      {(job.tags || []).slice(0, 3).map((tag: string) => (
                         <Badge key={tag} variant="outline" className="bg-light-gray text-xs">
                           {tag}
                         </Badge>
@@ -208,7 +244,7 @@ export default function JobListings() {
 
                   <div className="flex flex-col sm:flex-row gap-3 justify-between items-center">
                     <div className="flex flex-wrap gap-1.5">
-                      {(job.tags || []).map((tag) => (
+                      {(job.tags || []).map((tag: string) => (
                         <Badge key={tag} variant="outline" className="bg-white text-xs">
                           {tag}
                         </Badge>
