@@ -1,192 +1,234 @@
+"use client"
+
+import { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
 import Image from "next/image"
-import Link from "next/link"
-import { MapPin, Calendar } from "lucide-react"
-import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { cn } from "@/lib/utils"
-import { useEffect, useState } from "react"
-import { useAuthStore } from "@/store/authStore"
+import { Card, CardContent } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Input } from "@/components/ui/input"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Calendar as CalendarIcon, Clock, Search, ChevronRight, Calendar } from "lucide-react"
+import { Calendar as CalendarComponent } from "@/components/ui/calendar"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { format } from "date-fns"
 import api from "@/lib/axios"
+import { useAuthStore } from "@/store/authStore"
 
-interface ApplicationProps {
-  status: "active" | "history"
-}
+export default function ApplicationList() {
+  const router = useRouter()
+  const { user } = useAuthStore()
 
-export default function ApplicationList({ status }: ApplicationProps) {
-  const [activeApplications, setActiveApplications] = useState<any[]>([])
-  const [applicationHistory, setApplicationHistory] = useState<any[]>([])
-  const [loading, setLoading] = useState(false)
-  const user = useAuthStore((state) => state.user)
-  const hydrated = useAuthStore((state) => state.hydrated)
+  const [searchQuery, setSearchQuery] = useState("")
+  const [statusFilter, setStatusFilter] = useState("all")
+  const [dateFilter, setDateFilter] = useState<Date | undefined>(undefined)
+  const [applications, setApplications] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  // Fetch applications
+  const fetchApplications = async () => {
+    try {
+      const response = await api.get("/gma/applications/my-applications", {
+        headers: user && user.token ? { Authorization: `Bearer ${user.token}` } : {},
+      })
+
+      if (response.data && response.data.applications) {
+        setApplications(response.data.applications)
+      } else {
+        throw new Error("Invalid response structure")
+      }
+    } catch (err: any) {
+      console.error("Error fetching applications:", err)
+      setError("Failed to load applications")
+    } finally {
+      setLoading(false)
+    }
+  }
 
   useEffect(() => {
-    if (!user?.token || !hydrated) return
-    setLoading(true)
-    if (status === "active") {
-      const fetchActiveApplications = async () => {
-        try {
-          const res = await api.get("/gma/applications/active", {
-            headers: { Authorization: `Bearer ${user.token}` }
-          })
-          setActiveApplications(res.data.active_applications || [])
-        } catch (err) {
-          setActiveApplications([])
-        } finally {
-          setLoading(false)
-        }
-      }
-      fetchActiveApplications()
-    } else if (status === "history") {
-      const fetchApplicationHistory = async () => {
-        try {
-          const res = await api.get("/gma/applications/my-applications", {
-            headers: { Authorization: `Bearer ${user.token}` }
-          })
-          setApplicationHistory(res.data.applications || [])
-        } catch (err) {
-          setApplicationHistory([])
-        } finally {
-          setLoading(false)
-        }
-      }
-      fetchApplicationHistory()
+    if (user?.token) {
+      fetchApplications()
+    } else {
+      setLoading(false)
+      setError("You must be logged in to view applications.")
     }
-  }, [status, user?.token, hydrated])
+  }, [user])
 
-  // Status color mapping
-  const statusColor = (status: string) => {
-    switch (status) {
-      case "Under Review":
-        return "bg-amber-100 text-amber-800"
-      case "Shortlisted":
-        return "bg-blue-100 text-blue-800"
-      case "Interview Scheduled":
-        return "bg-green-100 text-green-800"
-      case "Rejected":
-        return "bg-red-100 text-red-800"
-      case "Offer Accepted":
-        return "bg-green-100 text-green-800"
-      case "Withdrawn":
-        return "bg-gray-100 text-gray-800"
-      default:
-        return "bg-gray-100 text-gray-800"
-    }
+  // Filter logic
+  const filteredApplications = applications.filter((app) => {
+    const matchesSearch =
+      app.jobTitle.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      app.company.toLowerCase().includes(searchQuery.toLowerCase())
+
+    const matchesStatus = statusFilter === "all" || app.status === statusFilter
+
+    const matchesDate = !dateFilter || new Date(app.appliedDate).toDateString() === dateFilter.toDateString()
+
+    return matchesSearch && matchesStatus && matchesDate
+  })
+
+  // Utilities
+  const formatDate = (dateString: string) => {
+    const options: Intl.DateTimeFormatOptions = { year: "numeric", month: "long", day: "numeric" }
+    return new Date(dateString).toLocaleDateString(undefined, options)
   }
 
-  const applications = status === "active" ? activeApplications : applicationHistory
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case "pending":
+        return (
+          <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200">
+            Pending Review
+          </Badge>
+        )
+      case "interview":
+        return (
+          <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+            Interview Scheduled
+          </Badge>
+        )
+      case "accepted":
+        return (
+          <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+            Accepted
+          </Badge>
+        )
+      case "rejected":
+        return (
+          <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200">
+            Not Selected
+          </Badge>
+        )
+      default:
+        return <Badge variant="outline">Unknown</Badge>
+    }
+  }
 
   if (loading) {
-    return (
-      <div className="flex justify-center items-center py-12">
-        <span className="text-gray-500 text-lg">Loading...</span>
-      </div>
-    )
+    return <div>Loading...</div>
   }
 
-  if (applications.length === 0) {
-    return (
-      <div className="text-center py-12">
-        <h3 className="text-lg font-medium text-dark-gray mb-2">No applications found</h3>
-        <p className="text-gray-500 mb-6">
-          {status === "active"
-            ? "You don't have any active job applications at the moment."
-            : "Your application history is empty."}
-        </p>
-        <Link href="/jobs">
-          <Button className="bg-accent hover:bg-accent/90">Browse Jobs</Button>
-        </Link>
-      </div>
-    )
+  if (error) {
+    return <div className="text-center text-red-500">{error}</div>
   }
 
   return (
-    <div className="space-y-4">
-      {applications.map((app) => (
-        <div key={app.id || app.job_id} className="bg-white border rounded-lg shadow-sm p-4 hover:shadow-md transition-shadow">
-          <div className="flex flex-col sm:flex-row gap-4">
-            <div className="w-12 h-12 bg-light-gray flex-shrink-0 rounded-md overflow-hidden border border-gray-200">
-              <Image
-                src={app.logo || "/placeholder.svg"}
-                width={48}
-                height={48}
-                alt={`${app.company} logo`}
-                className="object-contain"
-              />
-            </div>
-
-            <div className="flex-1">
-              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
-                <div>
-                  <h3 className="font-medium text-dark-gray">{app.jobTitle}</h3>
-                  <p className="text-sm text-gray-500">{app.company}</p>
-                </div>
-                <Badge className={cn("font-normal", statusColor(app.status))}>{app.status}</Badge>
-              </div>
-
-              <div className="mt-2 text-xs text-gray-500 flex flex-wrap gap-x-4 gap-y-1">
-                <div className="flex items-center">
-                  <MapPin className="h-3.5 w-3.5 mr-1" />
-                  {app.location}
-                </div>
-                <div className="flex items-center">
-                  <Calendar className="h-3.5 w-3.5 mr-1" />
-                  Applied on {app.appliedDate}
-                </div>
-              </div>
-
-              {/* Interview details */}
-              {"interviewDate" in app && (
-                <div className="mt-3 p-3 bg-blue-50 rounded-md text-sm">
-                  <p className="font-medium text-blue-700">Interview Scheduled</p>
-                  <p className="text-blue-600">
-                    {app.interviewDate} at {app.interviewTime}
-                  </p>
-                </div>
-              )}
-
-              {/* Rejection feedback */}
-              {"feedback" in app && (
-                <div className="mt-3 p-3 bg-red-50 rounded-md text-sm">
-                  <p className="font-medium text-red-700">Feedback</p>
-                  <p className="text-red-600">{app.feedback}</p>
-                </div>
-              )}
-
-              {/* Withdrawal reason */}
-              {"reason" in app && (
-                <div className="mt-3 p-3 bg-gray-50 rounded-md text-sm">
-                  <p className="font-medium text-gray-700">Reason for withdrawal</p>
-                  <p className="text-gray-600">{app.reason}</p>
-                </div>
-              )}
-
-              <div className="mt-4 flex flex-wrap gap-2">
-                <Link href={`/jobs/${app.job_id}`}>
-                  <Button variant="outline" size="sm" className="h-8">
-                    View Job
-                  </Button>
-                </Link>
-                <Link href={`/applications/${app.id}`}>
-                  <Button variant="outline" size="sm" className="h-8">
-                    View Application
-                  </Button>
-                </Link>
-                {status === "active" && app.status !== "Interview Scheduled" && (
-                  <Button variant="ghost" size="sm" className="h-8 text-red-500 hover:text-red-700 hover:bg-red-50">
-                    Withdraw
-                  </Button>
-                )}
-                {app.status === "Interview Scheduled" && (
-                  <Button variant="outline" size="sm" className="h-8 text-blue-500 hover:text-blue-700">
-                    <Calendar className="h-3.5 w-3.5 mr-1" />
-                    Add to Calendar
-                  </Button>
-                )}
-              </div>
-            </div>
-          </div>
+    <div className="space-y-6">
+      {/* Filters */}
+      <div className="flex flex-col md:flex-row gap-4">
+        <div className="relative flex-grow">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+          <Input
+            placeholder="Search by job title or company"
+            className="pl-10"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
         </div>
-      ))}
+
+        <div className="flex gap-4">
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Filter by status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Statuses</SelectItem>
+              <SelectItem value="pending">Pending Review</SelectItem>
+              <SelectItem value="interview">Interview Scheduled</SelectItem>
+              <SelectItem value="accepted">Accepted</SelectItem>
+              <SelectItem value="rejected">Not Selected</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" className="w-[180px] justify-start text-left font-normal">
+                <CalendarIcon className="mr-2 h-4 w-4" />
+                {dateFilter ? format(dateFilter, "PPP") : "Filter by date"}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0">
+              <CalendarComponent mode="single" selected={dateFilter} onSelect={setDateFilter} initialFocus />
+            </PopoverContent>
+          </Popover>
+        </div>
+      </div>
+
+      {/* Applications List */}
+      <Tabs defaultValue="active" className="w-full">
+        <TabsList className="grid w-full grid-cols-2 mb-6">
+          <TabsTrigger value="active">Active Applications</TabsTrigger>
+          <TabsTrigger value="archived">Archived</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="active" className="space-y-4">
+          {filteredApplications.length === 0 ? (
+            <Card>
+              <CardContent className="flex flex-col items-center justify-center py-10 text-center">
+                <div className="text-gray-400 mb-2">No applications found</div>
+                <p className="text-sm text-gray-500 max-w-md">
+                  Try adjusting your search or filters to find what you're looking for.
+                </p>
+              </CardContent>
+            </Card>
+          ) : (
+            filteredApplications.map((app) => (
+              <Card
+                key={app.id}
+                className="overflow-hidden hover:border-gray-300 transition-colors cursor-pointer"
+                onClick={() => router.push(`/applications/${app.id}`)}
+              >
+                <CardContent className="p-0">
+                  <div className="flex items-center p-4">
+                    <div className="mr-4 flex-shrink-0">
+                      <Image
+                        src={app.logo || "/placeholder.svg"}
+                        alt={app.company}
+                        width={50}
+                        height={50}
+                        className="rounded-md"
+                      />
+                    </div>
+                    <div className="flex-grow min-w-0">
+                      <h3 className="font-semibold text-dark-gray truncate">{app.jobTitle}</h3>
+                      <p className="text-gray-600 text-sm">
+                        {app.company} • {app.location}
+                      </p>
+                      <div className="flex items-center mt-1 text-xs text-gray-500">
+                        <Clock className="h-3 w-3 mr-1" />
+                        Applied on {formatDate(app.appliedDate)}
+                      </div>
+                    </div>
+                    <div className="ml-4 flex flex-col items-end gap-2">
+                      {getStatusBadge(app.status)}
+                      {app.status === "interview" && app.interviewDate && (
+                        <div className="flex items-center text-xs text-blue-600">
+                          <Calendar className="h-3 w-3 mr-1" />
+                          Interview: {formatDate(app.interviewDate)}
+                        </div>
+                      )}
+                    </div>
+                    <ChevronRight className="h-5 w-5 ml-2 text-gray-400" />
+                  </div>
+                </CardContent>
+              </Card>
+            ))
+          )}
+        </TabsContent>
+
+        <TabsContent value="archived" className="space-y-4">
+          <Card>
+            <CardContent className="flex flex-col items-center justify-center py-10 text-center">
+              <div className="text-gray-400 mb-2">No archived applications</div>
+              <p className="text-sm text-gray-500 max-w-md">
+                When you archive applications, they will appear here.
+              </p>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   )
 }
