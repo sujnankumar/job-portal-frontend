@@ -9,15 +9,15 @@ export default function Home() {
   const { isAuthenticated, user } = useAuthStore()
   const router = useRouter()
 
-  useEffect(() => {
-    if (isAuthenticated) {
-      if (user?.role === "applicant") {
-        router.push("/dashboard")
-      } else if (user?.role === "employer") {
-        router.push("/employer/dashboard")
-      }
-    }
-  }, [isAuthenticated, user, router])
+  // useEffect(() => {
+  //   if (isAuthenticated) {
+  //     if (user?.role === "applicant") {
+  //       router.push("/dashboard")
+  //     } else if (user?.role === "employer") {
+  //       router.push("/employer/dashboard")
+  //     }
+  //   }
+  // }, [isAuthenticated, user, router])
 
   return <HomePage />
 }
