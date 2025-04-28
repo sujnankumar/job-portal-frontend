@@ -30,7 +30,11 @@ export default function LoginPage() {
   const { isAuthenticated, user, hydrated } = useAuthStore()
 
   const handleRoleChange = (value: string) => {
-    setRole(value as UserRole)
+    if (role === "applicant") {
+      setRole("employer")
+    } else {
+      setRole("applicant")
+    }
   }
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {

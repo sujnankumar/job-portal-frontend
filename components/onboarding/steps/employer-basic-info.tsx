@@ -20,7 +20,7 @@ const MOCK_COMPANIES = [
 ]
 
 interface BasicInfoData {
-  headline: string
+  jobPosition: string
   phone: string
   location: string
   website: string
@@ -40,7 +40,7 @@ interface EmployerBasicInfoProps {
 export default function EmployerBasicInfo({ data = {}, onNext }: EmployerBasicInfoProps) {
   // Initialize data with default values if not provided
   const [formData, setFormData] = useState<BasicInfoData>({
-    headline: data.headline || "",
+    jobPosition: data.jobPosition || "",
     phone: data.phone || "",
     location: data.location || "",
     website: data.website || "",
@@ -104,7 +104,7 @@ export default function EmployerBasicInfo({ data = {}, onNext }: EmployerBasicIn
 
       <div className="space-y-4">
         <div className="space-y-2">
-          <Label htmlFor="company">Company</Label>
+          <Label htmlFor="company">Company <span className="text-red-500">*</span></Label>
           <Select value={formData.isNewCompany ? "new" : formData.companyId} onValueChange={handleCompanySelect}>
             <SelectTrigger id="company">
               <SelectValue placeholder="Select your company" />
@@ -127,7 +127,7 @@ export default function EmployerBasicInfo({ data = {}, onNext }: EmployerBasicIn
 
         {formData.isNewCompany && (
           <div className="space-y-2">
-            <Label htmlFor="companyName">Company Name</Label>
+            <Label htmlFor="companyName">Company Name <span className="text-red-500">*</span></Label>
             <Input
               id="companyName"
               name="companyName"
@@ -142,19 +142,21 @@ export default function EmployerBasicInfo({ data = {}, onNext }: EmployerBasicIn
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="md:col-span-2">
-          <Label htmlFor="headline">Your Job Title</Label>
+          <Label htmlFor="jobPosition">
+            Your Job Position <span className="text-red-500">*</span>
+          </Label>
           <Input
-            id="headline"
-            name="headline"
+            id="jobPosition"
+            name="jobPosition"
             placeholder="e.g., HR Manager, Talent Acquisition Specialist"
-            value={formData.headline}
+            value={formData.jobPosition}
             onChange={handleChange}
             className="mt-1"
           />
         </div>
 
         <div>
-          <Label htmlFor="phone">Business Phone</Label>
+          <Label htmlFor="phone">Business Phone <span className="text-red-500">*</span></Label>
           <Input
             id="phone"
             name="phone"
@@ -167,7 +169,7 @@ export default function EmployerBasicInfo({ data = {}, onNext }: EmployerBasicIn
         </div>
 
         <div>
-          <Label htmlFor="location">Office Location</Label>
+          <Label htmlFor="location">Office Location <span className="text-red-500">*</span></Label>
           <Input
             id="location"
             name="location"
@@ -191,7 +193,7 @@ export default function EmployerBasicInfo({ data = {}, onNext }: EmployerBasicIn
         </div>
 
         <div className="md:col-span-2">
-          <Label htmlFor="bio">Your Role Description</Label>
+          <Label htmlFor="bio">Your Role Description <span className="text-red-500">*</span></Label>
           <Textarea
             id="bio"
             name="bio"

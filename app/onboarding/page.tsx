@@ -7,18 +7,18 @@ import ProtectedRoute from "@/components/auth/protected-route"
 import OnboardingForm from "@/components/onboarding/onboarding-form"
 import { Button } from "@/components/ui/button"
 import { ArrowLeft } from "lucide-react"
+import type { UserRole } from "@/store/authStore"
 
 export default function OnboardingPage() {
   const { user, isAuthenticated, updateOnboardingStatus } = useAuthStore()
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(true)
   const [sessionExpired, setSessionExpired] = useState(false)
-
+  
   useEffect(() => {
     if (!isAuthenticated) {
       router.push("/auth/login")
     } else {
-      // Check if onboarding session has expired (24 hours)
       const startedAt = user?.onboarding?.startedAt ? new Date(user.onboarding.startedAt) : null
       const now = new Date()
 
@@ -42,6 +42,8 @@ export default function OnboardingPage() {
   const handleGoBack = () => {
     router.push("/dashboard")
   }
+
+  console.log(user, "user role")
 
   if (isLoading) {
     return (

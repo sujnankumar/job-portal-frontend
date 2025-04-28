@@ -137,7 +137,7 @@ export default function EmployerCompanyDetails({ data, onNext }: EmployerCompany
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="md:col-span-2">
-          <Label htmlFor="description">Company Description</Label>
+          <Label htmlFor="description">Company Description <span className="text-red-500">*</span></Label>
           <Textarea
             id="description"
             name="description"
@@ -149,7 +149,7 @@ export default function EmployerCompanyDetails({ data, onNext }: EmployerCompany
         </div>
 
         <div>
-          <Label htmlFor="foundedYear">Founded Year</Label>
+          <Label htmlFor="foundedYear">Founded Year <span className="text-red-500">*</span></Label>
           <Input
             id="foundedYear"
             name="foundedYear"
@@ -158,11 +158,14 @@ export default function EmployerCompanyDetails({ data, onNext }: EmployerCompany
             value={formData.foundedYear}
             onChange={handleChange}
             className="mt-1"
+            min={1900}
+            max={new Date().getFullYear()}
+            defaultValue={2025}
           />
         </div>
 
         <div>
-          <Label htmlFor="companySize">Company Size</Label>
+          <Label htmlFor="companySize">Company Size <span className="text-red-500">*</span></Label>
           <Select value={formData.companySize} onValueChange={(value) => handleSelectChange("companySize", value)}>
             <SelectTrigger id="companySize">
               <SelectValue placeholder="Select company size" />
@@ -179,7 +182,7 @@ export default function EmployerCompanyDetails({ data, onNext }: EmployerCompany
         </div>
 
         <div>
-          <Label htmlFor="industry">Industry</Label>
+          <Label htmlFor="industry">Industry <span className="text-red-500">*</span></Label>
           <Select value={formData.industry} onValueChange={(value) => handleSelectChange("industry", value)}>
             <SelectTrigger id="industry">
               <SelectValue placeholder="Select industry" />
