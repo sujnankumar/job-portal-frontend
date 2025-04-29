@@ -37,6 +37,8 @@ export default function ApplyPage({ params }: { params: Promise<{ id: string }> 
     },
   })
 
+  const coverLetter = form.watch("coverLetter");
+
   const unwrappedParams = React.use(params)
 
   useEffect(() => {
@@ -101,7 +103,6 @@ export default function ApplyPage({ params }: { params: Promise<{ id: string }> 
           Authorization: user && "token" in user ? `Bearer ${user.token}` : "",
         },
       });
-      alert("Application submitted successfully!");
       router.push("/applications");
     } catch (err: any) {
       alert(err.response?.data?.detail || "Failed to submit application.");
@@ -158,7 +159,7 @@ export default function ApplyPage({ params }: { params: Promise<{ id: string }> 
                   name="coverLetter"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Cover Letter (Optional)</FormLabel>
+                      <FormLabel>Cover Letter <span className="text-red-500">*</span></FormLabel>
                       <FormControl>
                         <Textarea
                           placeholder="Tell us why you're a good fit for this position..."
@@ -197,7 +198,7 @@ export default function ApplyPage({ params }: { params: Promise<{ id: string }> 
                 />
 
                 <div className="pt-4">
-                  <Button type="submit" className="w-full bg-accent hover:bg-accent/90" disabled={!resumeConfirmed}>
+                  <Button type="submit" className="w-full bg-accent hover:bg-accent/90" disabled={!resumeConfirmed || !coverLetter.trim()}>
                     Submit Application
                   </Button>
                 </div>
