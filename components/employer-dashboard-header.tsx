@@ -3,7 +3,12 @@ import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { PlusCircle, Settings } from "lucide-react"
 
-export default function EmployerDashboardHeader() {
+interface EmployerDashboardHeaderProps {
+  company: any
+  jobTitle: string
+}
+
+export default function EmployerDashboardHeader({ company, jobTitle }: EmployerDashboardHeaderProps) {
   return (
     <div className="bg-white rounded-xl shadow-sm overflow-hidden">
       <div className="p-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -18,8 +23,10 @@ export default function EmployerDashboardHeader() {
             />
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-dark-gray">Tech Innovations Inc.</h1>
-            <p className="text-gray-500">Employer Dashboard</p>
+            <h1 className="text-2xl font-bold text-dark-gray">{company?.company_name || "Company"}</h1>
+            <p className="text-gray-500">{jobTitle}</p>
+            {/* You can access more company fields here, e.g. */}
+            {/* <p className="text-gray-400 text-sm">{company?.industry}</p> */}
           </div>
         </div>
 
