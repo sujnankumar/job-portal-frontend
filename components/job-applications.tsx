@@ -1,6 +1,8 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
+import api from "@/lib/axios"
+import { useAuthStore } from "@/store/authStore"
 import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -30,241 +32,42 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import InterviewScheduler from "@/components/interview-scheduler"
 
-// Mock data for job details
-const jobDetails = {
-  "1": {
-    id: "1",
-    title: "Senior Frontend Developer",
-    location: "San Francisco, CA (Remote)",
-    department: "Engineering",
-    company: "Tech Innovations Inc.",
-    companyLogo: "/abstract-geometric-logo.png",
-  },
-  "2": {
-    id: "2",
-    title: "UX/UI Designer",
-    location: "Austin, TX (Hybrid)",
-    department: "Design",
-    company: "Design Solutions",
-    companyLogo: "/abstract-geometric-logo.png",
-  },
-  "3": {
-    id: "3",
-    title: "Product Manager",
-    location: "New York, NY",
-    department: "Product",
-    company: "Product Ventures",
-    companyLogo: "/abstract-geometric-logo.png",
-  },
-  "4": {
-    id: "4",
-    title: "Data Scientist",
-    location: "Remote",
-    department: "Data",
-    company: "Data Insights",
-    companyLogo: "/abstract-geometric-logo.png",
-  },
-  "5": {
-    id: "5",
-    title: "DevOps Engineer",
-    location: "Seattle, WA",
-    department: "Engineering",
-    company: "Cloud Systems",
-    companyLogo: "/abstract-geometric-logo.png",
-  },
-}
-
-// Mock data for applications
-const applications = {
-  "1": [
-    {
-      id: "101",
-      candidate: {
-        id: "c1",
-        name: "John Smith",
-        email: "john.smith@example.com",
-        avatar: "/mystical-forest-spirit.png",
-        phone: "(555) 123-4567",
-        location: "San Francisco, CA",
-      },
-      appliedDate: "2023-05-10",
-      status: "review",
-      resumeUrl: "#",
-      coverLetter:
-        "Dear Hiring Manager,\n\nI am writing to express my interest in the Senior Frontend Developer position at Tech Innovations Inc. With over 5 years of experience in frontend development using React, TypeScript, and modern JavaScript frameworks, I believe I would be a valuable addition to your team.\n\nThroughout my career, I have focused on building responsive, accessible, and performant web applications. In my current role at Digital Solutions, I have led the development of several key projects, resulting in a 40% improvement in performance metrics and a significant enhancement in user experience.\n\nI am particularly drawn to Tech Innovations Inc. because of your commitment to innovation and your focus on creating products that make a real difference. Your recent work on AI-powered accessibility tools aligns perfectly with my passion for creating inclusive web experiences.\n\nI am excited about the opportunity to bring my technical expertise and creative problem-solving skills to your team. I am confident that my experience with modern frontend technologies and my collaborative approach would make me a great fit for this role.\n\nThank you for considering my application. I look forward to the possibility of discussing how my background, skills, and experiences would benefit Tech Innovations Inc.\n\nSincerely,\nJohn Smith",
-      matchScore: 92,
-    },
-    {
-      id: "102",
-      candidate: {
-        id: "c2",
-        name: "Emily Johnson",
-        email: "emily.johnson@example.com",
-        avatar: "/mystical-forest-spirit.png",
-        phone: "(555) 234-5678",
-        location: "Oakland, CA",
-      },
-      appliedDate: "2023-05-08",
-      status: "interview",
-      resumeUrl: "#",
-      coverLetter: "I am interested in this position...",
-      matchScore: 88,
-      interviewDate: "2023-05-18",
-      interviewTime: "2:00 PM EST",
-    },
-    {
-      id: "103",
-      candidate: {
-        id: "c3",
-        name: "Michael Brown",
-        email: "michael.brown@example.com",
-        avatar: "/mystical-forest-spirit.png",
-        phone: "(555) 345-6789",
-        location: "San Jose, CA",
-      },
-      appliedDate: "2023-05-05",
-      status: "review",
-      resumeUrl: "#",
-      coverLetter: "I am interested in this position...",
-      matchScore: 75,
-    },
-    {
-      id: "104",
-      candidate: {
-        id: "c4",
-        name: "Sarah Wilson",
-        email: "sarah.wilson@example.com",
-        avatar: "/mystical-forest-spirit.png",
-        phone: "(555) 456-7890",
-        location: "Palo Alto, CA",
-      },
-      appliedDate: "2023-05-12",
-      status: "accepted",
-      resumeUrl: "#",
-      coverLetter: "I am interested in this position...",
-      matchScore: 95,
-    },
-    {
-      id: "105",
-      candidate: {
-        id: "c5",
-        name: "David Lee",
-        email: "david.lee@example.com",
-        avatar: "/mystical-forest-spirit.png",
-        phone: "(555) 567-8901",
-        location: "Mountain View, CA",
-      },
-      appliedDate: "2023-05-15",
-      status: "rejected",
-      resumeUrl: "#",
-      coverLetter: "I am interested in this position...",
-      matchScore: 65,
-    },
-  ],
-  "2": [
-    {
-      id: "201",
-      candidate: {
-        id: "c6",
-        name: "Jessica Miller",
-        email: "jessica.miller@example.com",
-        avatar: "/mystical-forest-spirit.png",
-        phone: "(555) 678-9012",
-        location: "Austin, TX",
-      },
-      appliedDate: "2023-05-11",
-      status: "review",
-      resumeUrl: "#",
-      coverLetter: "I am interested in this position...",
-      matchScore: 89,
-    },
-    {
-      id: "202",
-      candidate: {
-        id: "c7",
-        name: "Robert Taylor",
-        email: "robert.taylor@example.com",
-        avatar: "/mystical-forest-spirit.png",
-        phone: "(555) 789-0123",
-        location: "Dallas, TX",
-      },
-      appliedDate: "2023-05-09",
-      status: "interview",
-      resumeUrl: "#",
-      coverLetter: "I am interested in this position...",
-      matchScore: 82,
-      interviewDate: "2023-05-19",
-      interviewTime: "3:00 PM CST",
-    },
-  ],
-  "3": [
-    {
-      id: "301",
-      candidate: {
-        id: "c8",
-        name: "Amanda Clark",
-        email: "amanda.clark@example.com",
-        avatar: "/mystical-forest-spirit.png",
-        phone: "(555) 890-1234",
-        location: "New York, NY",
-      },
-      appliedDate: "2023-05-12",
-      status: "review",
-      resumeUrl: "#",
-      coverLetter: "I am interested in this position...",
-      matchScore: 91,
-    },
-  ],
-  "4": [
-    {
-      id: "401",
-      candidate: {
-        id: "c9",
-        name: "Daniel White",
-        email: "daniel.white@example.com",
-        avatar: "/mystical-forest-spirit.png",
-        phone: "(555) 901-2345",
-        location: "Chicago, IL",
-      },
-      appliedDate: "2023-05-14",
-      status: "review",
-      resumeUrl: "#",
-      coverLetter: "I am interested in this position...",
-      matchScore: 87,
-    },
-  ],
-  "5": [
-    {
-      id: "501",
-      candidate: {
-        id: "c10",
-        name: "Jennifer Harris",
-        email: "jennifer.harris@example.com",
-        avatar: "/mystical-forest-spirit.png",
-        phone: "(555) 012-3456",
-        location: "Seattle, WA",
-      },
-      appliedDate: "2023-05-16",
-      status: "review",
-      resumeUrl: "#",
-      coverLetter: "I am interested in this position...",
-      matchScore: 84,
-    },
-  ],
-}
-
 interface JobApplicationsProps {
   jobId: string
 }
 
 export default function JobApplications({ jobId }: JobApplicationsProps) {
+  const { user } = useAuthStore()
+  const [job, setJob] = useState<any>(null)
+  const [jobApplications, setJobApplications] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState("")
   const [searchTerm, setSearchTerm] = useState("")
   const [statusFilter, setStatusFilter] = useState("all")
   const [selectedApplication, setSelectedApplication] = useState<string | null>(null)
   const [chatOpen, setChatOpen] = useState<Record<string, boolean>>({})
 
-  const job = jobDetails[jobId as keyof typeof jobDetails]
-  const jobApplications = applications[jobId as keyof typeof applications] || []
+  useEffect(() => {
+    const fetchApplications = async () => {
+      if (!user?.token || !jobId) return
+      setLoading(true)
+      setError("")
+      try {
+        const res = await api.get(`/emp/job_applications/${jobId}`, {
+          headers: { Authorization: `Bearer ${user.token}` },
+        })
+        setJob(res.data.jobDetails)
+        setJobApplications(res.data.applications)
+      } catch (err) {
+        setError("Failed to load job applications.")
+        setJob(null)
+        setJobApplications([])
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchApplications()
+  }, [user, jobId])
 
   // Filter applications based on search term and status
   const filteredApplications = jobApplications.filter((app) => {
@@ -299,6 +102,16 @@ export default function JobApplications({ jobId }: JobApplicationsProps) {
       ...prev,
       [appId]: !prev[appId],
     }))
+  }
+
+  if (loading) {
+    return <div className="py-8 text-center text-gray-500">Loading...</div>
+  }
+  if (error) {
+    return <div className="py-8 text-center text-red-500">{error}</div>
+  }
+  if (!job) {
+    return <div className="py-8 text-center text-gray-500">Job not found.</div>
   }
 
   return (
