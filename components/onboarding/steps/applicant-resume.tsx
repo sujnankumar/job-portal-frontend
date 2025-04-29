@@ -220,7 +220,7 @@ export default function ApplicantResume({ data, onNext }: ApplicantResumeProps) 
 
       <div className="flex justify-end mt-6">
         <Button type="submit" className="bg-primary hover:bg-primary/90" disabled={uploading}>
-          {uploading ? "Uploading..." : "Continue"}
+          {uploading ? "Uploading..." : "Upload & Finish"}
         </Button>
       </div>
       {error && <p className="text-red-500 text-sm mt-2">{error}</p>}

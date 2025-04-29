@@ -104,9 +104,9 @@ export default function ApplicantExperience({ data, onNext }: ApplicantExperienc
     return {
       ...data.basicInfo,
       ...data,
-      education: data.education?.education || [],
+      education: data.education || [],
       experience: isFresher ? [] : experiences,
-      skills: data.skills?.skills || [],
+      skills: data.skills || [],
       onboarding: user?.onboarding || {}, // send the full onboarding object, not just boolean
     }
   }
@@ -241,9 +241,14 @@ export default function ApplicantExperience({ data, onNext }: ApplicantExperienc
             {loading ? "Updating..." : "Update Profile"}
           </Button>
         ) : (
-          <Button onClick={handleContinue} type="button">
-            Continue to Resume Upload
-          </Button>
+            <div className="flex items-center gap-4">
+            <div className="p-2 bg-green-100 text-green-700 rounded-md">
+              Profile updated successfully!
+            </div>
+            <Button onClick={handleContinue} type="button">
+              Continue to Resume Upload
+            </Button>
+            </div>
         )}
       </div>
       {error && <p className="text-red-500 text-sm mt-2">{error}</p>}

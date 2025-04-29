@@ -5,6 +5,8 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
+import { useAuthStore } from "@/store/authStore"
+
 
 interface Education {
   id: string
@@ -29,7 +31,7 @@ export default function ApplicantEducation({ data, onNext }: ApplicantEducationP
     }
     return []
   })
-
+  const user = useAuthStore((state) => state.user)
   const handleAddEducation = () => {
     setEducationList([
       ...educationList,
