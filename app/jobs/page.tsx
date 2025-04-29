@@ -5,6 +5,7 @@ import { useSearchParams, useRouter } from "next/navigation"
 import JobFilters, { JobFiltersState } from "@/components/job-filters"
 import JobListings from "@/components/job-listings"
 import JobSearch from "@/components/job-search"
+import { console } from "inspector"
 
 export default function JobListingsPage() {
   const searchParams = useSearchParams()
@@ -13,12 +14,13 @@ export default function JobListingsPage() {
   // 1) Read initial values from URL
   const initialSearch   = searchParams.get("search")   ?? ""
   const initialLocation = searchParams.get("location") ?? ""
-
+  const initialJobTypes = searchParams.getAll("jobType")
+  
   // 2) Local state for inputs & filters
   const [search, setSearch]     = useState(initialSearch)
   const [location, setLocation] = useState(initialLocation)
   const [filters, setFilters]   = useState<JobFiltersState>({
-    jobTypes: [],
+    jobTypes: initialJobTypes,
     experienceLevels: [],
     salaryRange: [50, 150],
     location: initialLocation,
@@ -26,6 +28,7 @@ export default function JobListingsPage() {
     skills: [],
   })
 
+  
   // 3) Keep input-fields in sync if the user hits back/forward
   useEffect(() => {
     const s = searchParams.get("search") ?? ""
@@ -40,6 +43,7 @@ export default function JobListingsPage() {
     const params = new URLSearchParams()
     if (search)   params.set("search", search)
     if (location) params.set("location", location)
+    
     router.push(`/jobs?${params.toString()}`)
   }
 

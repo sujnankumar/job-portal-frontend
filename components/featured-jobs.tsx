@@ -1,125 +1,158 @@
 import Image from "next/image"
 import Link from "next/link"
-import { MapPin, DollarSign, Clock } from "lucide-react"
+import { MapPin, IndianRupee, Clock } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
+import { formatSalaryRange, formatRelativeTime } from "@/lib/utils"
+import { useEffect, useState } from "react" // Import hooks
+import api from "@/lib/axios" // Import your configured axios instance
 
-const featuredJobs = [
-  {
-    id: "1",
-    title: "Senior Frontend Developer",
-    company: "Tech Innovations Inc.",
-    location: "San Francisco, CA (Remote)",
-    salary: "$120,000 - $160,000/year",
-    type: "Full-time",
-    logo: "/abstract-circuit-board.png",
-    posted: "2 days ago",
-    tags: ["React", "TypeScript", "Next.js"],
-  },
-  {
-    id: "2",
-    title: "Product Manager",
-    company: "Growth Ventures",
-    location: "New York, NY",
-    salary: "$110,000 - $140,000/year",
-    type: "Full-time",
-    logo: "/upward-sprout.png",
-    posted: "3 days ago",
-    tags: ["Product Strategy", "Agile", "User Research"],
-  },
-  {
-    id: "3",
-    title: "UX/UI Designer",
-    company: "Creative Solutions",
-    location: "Austin, TX (Hybrid)",
-    salary: "$90,000 - $120,000/year",
-    type: "Full-time",
-    logo: "/abstract-geometric-logo.png",
-    posted: "1 day ago",
-    tags: ["Figma", "UI Design", "User Testing"],
-  },
-  {
-    id: "4",
-    title: "Data Scientist",
-    company: "DataWorks Analytics",
-    location: "Remote",
-    salary: "$130,000 - $180,000/year",
-    type: "Full-time",
-    logo: "/abstract-data-flow.png",
-    posted: "5 days ago",
-    tags: ["Python", "Machine Learning", "SQL"],
-  },
-  {
-    id: "5",
-    title: "DevOps Engineer",
-    company: "Cloud Systems",
-    location: "Seattle, WA",
-    salary: "$125,000 - $165,000/year",
-    type: "Full-time",
-    logo: "/abstract-cloud-network.png",
-    posted: "6 days ago",
-    tags: ["AWS", "Kubernetes", "CI/CD"],
-  },
-  {
-    id: "6",
-    title: "Marketing Specialist",
-    company: "Brand Builders",
-    location: "Chicago, IL (Remote)",
-    salary: "$75,000 - $95,000/year",
-    type: "Full-time",
-    logo: "/abstract-geometric-logo.png",
-    posted: "1 week ago",
-    tags: ["Digital Marketing", "SEO", "Content Strategy"],
-  },
-]
+// Define a employment_type/interface for the job object structure
+interface Job {
+  job_id: string;
+  title: string;
+  company_name: string;
+  location: string;
+  show_salary: boolean;
+  min_salary?: number | null; // Optional or null
+  max_salary?: number | null; // Optional or null
+  employment_type: string;
+  logo?: string | null; // Optional or null
+  posted_at: string; // Expecting ISO string from API
+  tags?: string[] | null; // Optional or null
+}
+
+// Function to fetch featured jobs from the API
+async function fetchFeaturedJobs(): Promise<Job[]> {
+  try {
+    // *** Replace with your actual API endpoint ***
+    const response = await api.get("/job/featured-jobs");
+    console.log("API Response:", response.data); // Debugging line
+    if (Array.isArray(response.data.featured_jobs)) {
+      return response.data.featured_jobs  ;
+    } else {
+      console.error("Unexpected API response structure:", response.data);
+      return []; // Return empty array if structure is wrong
+    }
+  } catch (error) {
+    console.error("Failed to fetch featured jobs:", error);
+    return []; // Return empty array on error
+  }
+}
+
 
 export default function FeaturedJobs() {
+  const [jobs, setJobs] = useState<Job[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setIsLoading(true);
+    setError(null);
+    fetchFeaturedJobs()
+      .then(data => {
+        setJobs(data);
+      })
+      .catch(err => {
+        // Error handling is mostly done within fetchFeaturedJobs,
+        // but you could set a generic error message here if needed.
+        setError("Could not load featured jobs.");
+        console.error(err); // Log the specific error
+      })
+      .finally(() => {
+        setIsLoading(false);
+      });
+  }, []); // Empty dependency array ensures this runs only once on mount
+
+  if (isLoading) {
+    // Optional: Render a loading state (e.g., skeletons)
+    return <div className="text-center py-8">Loading featured jobs...</div>;
+  }
+
+  if (error) {
+    // Optional: Render an error message
+    return <div className="text-center py-8 text-red-600">{error}</div>;
+  }
+
+  if (jobs.length === 0) {
+    // Optional: Render a message if no jobs are found
+    return <div className="text-center py-8 text-gray-500">No featured jobs available right now.</div>;
+  }
+
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-      {featuredJobs.map((job) => (
+      {/* Map over the fetched jobs state */}
+      {jobs.map((job) => (
         <Link
-          href={`/jobs/${job.id}`}
-          key={job.id}
-          className="bg-white p-4 rounded-xl shadow-sm hover:shadow-md transition-shadow border border-gray-100"
+          href={`/jobs/${job.job_id}`}
+          key={job.job_id}
+          className="bg-white p-4 rounded-xl shadow-sm hover:shadow-md transition-shadow border border-gray-100 flex flex-col" // Use flex column for better structure
         >
-          <div className="flex items-start gap-3">
+          {/* Top section with logo, title, company */}
+          <div className="flex items-start gap-3 mb-3">
             <div className="w-12 h-12 bg-light-gray flex-shrink-0 rounded-md overflow-hidden border border-gray-200">
               <Image
+                // Use a placeholder if logo is missing
                 src={job.logo || "/placeholder.svg"}
                 width={48}
                 height={48}
-                alt={`${job.company} logo`}
-                className="object-contain"
+                alt={`${job.company_name} logo`}
+                className="object-contain" // Ensure image fits well
+                // Add error handling for images if needed
+                onError={(e) => { e.currentTarget.src = '/placeholder.svg'; }}
               />
             </div>
-
             <div className="flex-1 min-w-0">
               <h3 className="font-medium text-dark-gray truncate line-clamp-1">{job.title}</h3>
-              <p className="text-sm text-gray-500 truncate line-clamp-1">{job.company}</p>
+              <p className="text-sm text-gray-500 truncate line-clamp-1">{job.company_name}</p>
+            </div>
+          </div>
 
-              <div className="mt-3 flex flex-wrap gap-y-2 gap-x-3 text-xs text-gray-600">
-                <div className="flex items-center">
-                  <MapPin className="h-3.5 w-3.5 mr-1" />
-                  {job.location}
-                </div>
-                <div className="flex items-center">
-                  <DollarSign className="h-3.5 w-3.5 mr-1" />
-                  {job.salary}
-                </div>
-                <div className="flex items-center">
-                  <Clock className="h-3.5 w-3.5 mr-1" />
-                  {job.type}
-                </div>
+
+          {/* Job Details Section */}
+          <div className="mt-auto space-y-2"> {/* Push details to bottom and add spacing */}
+            {/* Location, Salary, employment_type details */}
+            <div className="flex flex-wrap gap-y-1 gap-x-3 text-xs text-gray-600">
+              <div className="flex items-center">
+                <MapPin className="h-3.5 w-3.5 mr-1 flex-shrink-0" />
+                <span className="truncate">{job.location}</span>
               </div>
+              {job.show_salary ? (
+                <div className="flex items-center">
+                  <IndianRupee className="h-3.5 w-3.5 mr-1 flex-shrink-0" />
+                  <span className="truncate">{formatSalaryRange(job.min_salary, job.max_salary)}</span>
+                </div>
+              ) : (
+                 <div className="flex items-center text-gray-500 italic">
+                   <IndianRupee className="h-3.5 w-3.5 mr-1 flex-shrink-0" />
+                   <span>Salary not disclosed</span>
+                 </div>
+              )}
+              <div className="flex items-center">
+                <Clock className="h-3.5 w-3.5 mr-1 flex-shrink-0" />
+                <span className="truncate">{job.employment_type}</span>
+              </div>
+            </div>
 
-              <div className="mt-3 flex flex-wrap gap-1.5">
-                {job.tags.map((tag) => (
-                  <Badge key={tag} variant="outline" className="bg-light-gray text-xs">
+
+            {/* Tags Section */}
+            {job.tags && job.tags.length > 0 && (
+              <div className="flex flex-wrap gap-1.5">
+                {job.tags.slice(0, 3).map((tag) => ( // Limit tags shown for space
+                  <Badge key={tag} variant="outline" className="bg-light-gray text-xs px-1.5 py-0.5">
                     {tag}
                   </Badge>
                 ))}
+                {job.tags.length > 3 && (
+                   <Badge variant="outline" className="bg-light-gray text-xs px-1.5 py-0.5">
+                    +{job.tags.length - 3} more
+                  </Badge>
+                )}
               </div>
+            )}
 
-              <div className="mt-3 text-xs text-gray-500">Posted {job.posted}</div>
+            {/* Posted Date - Updated */}
+            <div className="text-xs text-gray-500 pt-1">
+              Posted {formatRelativeTime(job.posted_at)}
             </div>
           </div>
         </Link>

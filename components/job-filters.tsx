@@ -26,6 +26,7 @@ interface JobFiltersProps {
 
 export default function JobFilters({ filters, setFilters }: JobFiltersProps) {
   // Handlers for filter changes
+  console.log(filters)
   const handleJobTypeChange = (type: string, checked: boolean) => {
     setFilters({
       ...filters,

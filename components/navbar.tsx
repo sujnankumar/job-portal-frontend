@@ -35,7 +35,7 @@ export default function Navbar() {
     { name: "Home", path: "/" },
     { name: "Jobs", path: "/jobs" },
     ...(isAuthenticated && user?.role === "applicant"
-      ? [{ name: "Applications", path: "/applications" }, { name: "Dashboard", path: "/employer/dashboard" },]
+      ? [{ name: "Applications", path: "/applications" }, { name: "Dashboard", path: "/dashboard" },]
       : []),
     ...(isAuthenticated && user?.role === "employer"
       ? [{ name: "Dashboard", path: "/employer/dashboard" }]
