@@ -16,7 +16,7 @@ export default function EmployerStats() {
     const fetchStats = async () => {
       if (!user?.token) return
       try {
-        const res = await api.get("/employer_stats", {
+        const res = await api.get("/emp/employer_stats", {
           headers: { Authorization: `Bearer ${user.token}` },
         })
         setStats(res.data)

@@ -13,12 +13,17 @@ import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { format } from "date-fns"
 import { cn } from "@/lib/utils"
+import api from "@/lib/axios"
+import { useAuthStore } from "@/store/authStore"
 
 interface InterviewSchedulerProps {
   candidateName: string
+  candidateId: string
+  jobId: string
 }
 
-export default function InterviewScheduler({ candidateName }: InterviewSchedulerProps) {
+export default function InterviewScheduler({ candidateName, candidateId, jobId }: InterviewSchedulerProps) {
+  const { user } = useAuthStore()
   const [date, setDate] = useState<Date>()
   const [formData, setFormData] = useState({
     interviewType: "video",
@@ -28,6 +33,9 @@ export default function InterviewScheduler({ candidateName }: InterviewScheduler
     notes: "",
     zoomLink: "https://zoom.us/j/123456789",
   })
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState("")
+  const [success, setSuccess] = useState("")
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target
@@ -44,11 +52,39 @@ export default function InterviewScheduler({ candidateName }: InterviewScheduler
     })
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    // In a real app, you would submit the form data to your backend
-    console.log({ ...formData, date })
-    alert("Interview scheduled successfully!")
+    setError("")
+    setSuccess("")
+    setLoading(true)
+    try {
+      if (!date) {
+        setError("Please select a date.")
+        setLoading(false)
+        return
+      }
+      const payload: any = {
+        candidate_id: candidateId,
+        job_id: jobId,
+        date: date.toISOString().slice(0, 10),
+        startTime: formData.startTime,
+        duration: formData.duration,
+        interviewType: formData.interviewType,
+        interviewers: formData.interviewers,
+        notes: formData.notes,
+      }
+      if (formData.interviewType === "video") {
+        payload.zoomLink = formData.zoomLink
+      }
+      await api.post("/interview/schedule", payload, {
+        headers: { Authorization: `Bearer ${user?.token}` },
+      })
+      setSuccess("Interview scheduled successfully!")
+    } catch (err: any) {
+      setError(err?.response?.data?.detail || "Failed to schedule interview.")
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
@@ -57,7 +93,8 @@ export default function InterviewScheduler({ candidateName }: InterviewScheduler
         <Video className="h-5 w-5 text-accent" />
         <h2 className="text-lg font-medium text-dark-gray">Schedule Interview with {candidateName}</h2>
       </div>
-
+      {error && <div className="text-red-500">{error}</div>}
+      {success && <div className="text-green-600">{success}</div>}
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
@@ -180,11 +217,11 @@ export default function InterviewScheduler({ candidateName }: InterviewScheduler
         </div>
 
         <div className="pt-4 border-t flex justify-end gap-3">
-          <Button type="button" variant="outline">
+          <Button type="button" variant="outline" disabled={loading}>
             Cancel
           </Button>
-          <Button type="submit" className="bg-accent hover:bg-accent/90">
-            Schedule Interview
+          <Button type="submit" className="bg-accent hover:bg-accent/90" disabled={loading}>
+            {loading ? "Scheduling..." : "Schedule Interview"}
           </Button>
         </div>
       </form>

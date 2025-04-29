@@ -20,6 +20,7 @@ import {
   Phone,
   Send,
   X,
+  CodeSquare,
 } from "lucide-react"
 import {
   Dialog,
@@ -31,6 +32,7 @@ import {
 } from "@/components/ui/dialog"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import InterviewScheduler from "@/components/interview-scheduler"
+import ResumeActions from "@/components/resume-actions"
 
 interface JobApplicationsProps {
   jobId: string
@@ -47,6 +49,12 @@ export default function JobApplications({ jobId }: JobApplicationsProps) {
   const [selectedApplication, setSelectedApplication] = useState<string | null>(null)
   const [chatOpen, setChatOpen] = useState<Record<string, boolean>>({})
 
+  // Add state for dialog open, resume base64, loading, and error
+  const [dialogOpenMap, setDialogOpenMap] = useState<Record<string, boolean>>({})
+  const [resumeBase64Map, setResumeBase64Map] = useState<Record<string, string>>({})
+  const [resumeLoadingMap, setResumeLoadingMap] = useState<Record<string, boolean>>({})
+  const [resumeErrorMap, setResumeErrorMap] = useState<Record<string, string>>({})
+
   useEffect(() => {
     const fetchApplications = async () => {
       if (!user?.token || !jobId) return
@@ -58,6 +66,7 @@ export default function JobApplications({ jobId }: JobApplicationsProps) {
         })
         setJob(res.data.jobDetails)
         setJobApplications(res.data.applications)
+        console.log("Application Details : ", res.data.applications)
       } catch (err) {
         setError("Failed to load job applications.")
         setJob(null)
@@ -102,6 +111,33 @@ export default function JobApplications({ jobId }: JobApplicationsProps) {
       ...prev,
       [appId]: !prev[appId],
     }))
+  }
+
+  // Function to fetch resume when dialog opens
+  const handleDialogOpenChange = async (open: boolean, app: any) => {
+    setDialogOpenMap((prev) => ({ ...prev, [app.id]: open }))
+    if (open && !resumeBase64Map[app.id] && !resumeLoadingMap[app.id]) {
+      setResumeLoadingMap((prev) => ({ ...prev, [app.id]: true }))
+      setResumeErrorMap((prev) => ({ ...prev, [app.id]: "" }))
+      try {
+        const response = await api.get(`/emp/get_resume_by_user/${job.id}/${app.candidate.id}`, {
+          headers: { Authorization: `Bearer ${user?.token}` },
+          responseType: "blob",
+        })
+        const reader = new FileReader()
+        reader.onloadend = () => {
+          const result = reader.result as string
+          const base64String = result.split(",")[1]
+          setResumeBase64Map((prev) => ({ ...prev, [app.id]: base64String }))
+        }
+        reader.onerror = () => setResumeErrorMap((prev) => ({ ...prev, [app.id]: "Failed to load resume preview." }))
+        reader.readAsDataURL(response.data)
+      } catch (err) {
+        setResumeErrorMap((prev) => ({ ...prev, [app.id]: "Failed to load resume preview." }))
+      } finally {
+        setResumeLoadingMap((prev) => ({ ...prev, [app.id]: false }))
+      }
+    }
   }
 
   if (loading) {
@@ -210,7 +246,7 @@ export default function JobApplications({ jobId }: JobApplicationsProps) {
               )}
 
               <div className="mt-4 flex flex-wrap gap-2">
-                <Dialog>
+                <Dialog onOpenChange={(open) => handleDialogOpenChange(open, app)}>
                   <DialogTrigger asChild>
                     <Button variant="outline" size="sm">
                       <Eye className="h-3.5 w-3.5 mr-1" /> View Application
@@ -283,39 +319,28 @@ export default function JobApplications({ jobId }: JobApplicationsProps) {
                         </div>
                       </TabsContent>
                       <TabsContent value="resume" className="p-4 border rounded-md mt-4">
-                        <div className="flex justify-center">
-                          <div className="w-full max-w-2xl bg-light-gray p-8 rounded-lg">
-                            <div className="text-center mb-6">
-                              <h2 className="text-2xl font-bold text-dark-gray">{app.candidate.name}</h2>
-                              <p className="text-gray-600">{app.candidate.location}</p>
-                              <div className="flex justify-center gap-3 mt-2 text-sm text-gray-500">
-                                <span>{app.candidate.email}</span>
-                                <span>•</span>
-                                <span>{app.candidate.phone}</span>
-                              </div>
+                        {resumeLoadingMap[app.id] ? (
+                          <div className="text-center py-8 text-gray-500">Loading resume...</div>
+                        ) : resumeErrorMap[app.id] ? (
+                          <div className="text-center py-8 text-red-500">{resumeErrorMap[app.id]}</div>
+                        ) : resumeBase64Map[app.id] ? (
+                            <div className="flex flex-col items-center justify-center">
+                              {/* Try to embed PDF using <embed>. If browser doesn't support, show download link */}
+                              <embed
+                              src={`data:application/pdf;base64,${resumeBase64Map[app.id]}`}
+                              type="application/pdf"
+                              className="w-full max-w-2xl h-[500px] border rounded-lg mb-4"
+                              />
+                              {/* <iframe
+                                src={`data:application/pdf;base64,${resumeBase64Map[app.id]}`}
+                                title="Resume Preview"
+                                className="w-full max-w-2xl h-[500px] border rounded-lg mb-4"
+                              /> */}
+                              <ResumeActions base64File={resumeBase64Map[app.id]} filename={`resume_${app.candidate.id}.pdf`} />
                             </div>
-                            <div className="mb-6">
-                              <h3 className="text-lg font-bold text-dark-gray border-b pb-1 mb-2">Summary</h3>
-                              <p className="text-gray-700">
-                                Experienced Frontend Developer with 5+ years of expertise in building responsive and
-                                accessible web applications using React, TypeScript, and modern JavaScript frameworks.
-                              </p>
-                            </div>
-                            <div className="mb-6">
-                              <h3 className="text-lg font-bold text-dark-gray border-b pb-1 mb-2">Experience</h3>
-                              <div className="mb-4">
-                                <div className="flex justify-between">
-                                  <h4 className="font-medium text-dark-gray">Senior Frontend Developer</h4>
-                                  <span className="text-sm text-gray-500">Mar 2021 - Present</span>
-                                </div>
-                                <p className="text-gray-600">Digital Solutions, San Francisco, CA</p>
-                                <p className="text-sm text-gray-700 mt-1">
-                                  Led frontend development for multiple projects using React, TypeScript, and Next.js.
-                                </p>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
+                        ) : (
+                          <div className="text-center py-8 text-gray-500">Resume not available.</div>
+                        )}
                       </TabsContent>
                       <TabsContent value="coverLetter" className="p-4 border rounded-md mt-4">
                         <div className="bg-light-gray p-6 rounded-lg">
@@ -324,17 +349,26 @@ export default function JobApplications({ jobId }: JobApplicationsProps) {
                       </TabsContent>
                     </Tabs>
                     <div className="flex justify-end gap-2 mt-4">
-                      <Button variant="outline">Download Resume</Button>
+                      {resumeBase64Map[app.id] ? (
+                        <a
+                          href={`data:application/pdf;base64,${resumeBase64Map[app.id]}`}
+                          download={`resume_${app.candidate.id}.pdf`}
+                        >
+                          <Button variant="outline">
+                            <Download className="h-4 w-4 mr-1" /> Download Resume
+                          </Button>
+                        </a>
+                      ) : (
+                        <Button variant="outline" disabled>
+                          <Download className="h-4 w-4 mr-1" /> Loading Resume...
+                        </Button>
+                      )}
                       <Button variant="outline" onClick={() => toggleChat(app.id)}>
                         <MessageSquare className="h-4 w-4 mr-1" /> Chat
                       </Button>
                     </div>
                   </DialogContent>
                 </Dialog>
-
-                <Button variant="outline" size="sm">
-                  <Download className="h-3.5 w-3.5 mr-1" /> Resume
-                </Button>
 
                 <Dialog>
                   <DialogTrigger asChild>
@@ -349,7 +383,7 @@ export default function JobApplications({ jobId }: JobApplicationsProps) {
                         Schedule an interview with {app.candidate.name} for the {job.title} position
                       </DialogDescription>
                     </DialogHeader>
-                    <InterviewScheduler candidateName={app.candidate.name} />
+                    <InterviewScheduler candidateName={app.candidate.name} candidateId={app.candidate.id} jobId={job.id} />
                   </DialogContent>
                 </Dialog>
 
@@ -366,50 +400,54 @@ export default function JobApplications({ jobId }: JobApplicationsProps) {
                 </Button>
               </div>
 
-              {chatOpen[app.id] && (
-                <div className="mt-4 border rounded-lg p-4">
-                  <div className="flex justify-between items-center mb-3">
-                    <h4 className="font-medium text-dark-gray">Chat with {app.candidate.name}</h4>
-                    <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => toggleChat(app.id)}>
-                      <X className="h-4 w-4" />
-                    </Button>
-                  </div>
-                  <div className="h-48 overflow-y-auto border rounded-md p-3 mb-3 bg-light-gray">
-                    <div className="flex justify-start mb-2">
-                      <div className="bg-white rounded-lg p-2 max-w-[80%] shadow-sm">
-                        <p className="text-sm">
-                          Hello! Thanks for your application. Do you have any questions about the role?
-                        </p>
-                        <p className="text-xs text-gray-500 mt-1">10:30 AM</p>
+              <Dialog open={chatOpen[app.id]} onOpenChange={() => toggleChat(app.id)}>
+                <DialogTrigger asChild>
+                  {/* <Button variant="outline" size="sm" className="ml-auto">
+                    <MessageSquare className="h-3.5 w-3.5 mr-1" /> Chat
+                  </Button> */}
+                </DialogTrigger>
+                <DialogContent className="max-w-lg">
+                  <div>
+                    <div className="flex justify-between items-center mb-3">
+                      <h4 className="font-medium text-dark-gray">Chat with {app.candidate.name}</h4>
+                    </div>
+                    <div className="h-48 overflow-y-auto border rounded-md p-3 mb-3 bg-light-gray">
+                      <div className="flex justify-start mb-2">
+                        <div className="bg-white rounded-lg p-2 max-w-[80%] shadow-sm">
+                          <p className="text-sm">
+                            Hello! Thanks for your application. Do you have any questions about the role?
+                          </p>
+                          <p className="text-xs text-gray-500 mt-1">10:30 AM</p>
+                        </div>
+                      </div>
+                      <div className="flex justify-end mb-2">
+                        <div className="bg-accent text-white rounded-lg p-2 max-w-[80%] shadow-sm">
+                          <p className="text-sm">
+                            Hi! Yes, I was wondering about the tech stack you're currently using and the team structure.
+                          </p>
+                          <p className="text-xs text-white/70 mt-1">10:32 AM</p>
+                        </div>
+                      </div>
+                      <div className="flex justify-start">
+                        <div className="bg-white rounded-lg p-2 max-w-[80%] shadow-sm">
+                          <p className="text-sm">
+                            We're using React, TypeScript, and Next.js for frontend, with Node.js and PostgreSQL for
+                            backend. The team consists of 5 frontend devs, 4 backend devs, 2 designers, and a product
+                            manager.
+                          </p>
+                          <p className="text-xs text-gray-500 mt-1">10:35 AM</p>
+                        </div>
                       </div>
                     </div>
-                    <div className="flex justify-end mb-2">
-                      <div className="bg-accent text-white rounded-lg p-2 max-w-[80%] shadow-sm">
-                        <p className="text-sm">
-                          Hi! Yes, I was wondering about the tech stack you're currently using and the team structure.
-                        </p>
-                        <p className="text-xs text-white/70 mt-1">10:32 AM</p>
-                      </div>
-                    </div>
-                    <div className="flex justify-start">
-                      <div className="bg-white rounded-lg p-2 max-w-[80%] shadow-sm">
-                        <p className="text-sm">
-                          We're using React, TypeScript, and Next.js for frontend, with Node.js and PostgreSQL for
-                          backend. The team consists of 5 frontend devs, 4 backend devs, 2 designers, and a product
-                          manager.
-                        </p>
-                        <p className="text-xs text-gray-500 mt-1">10:35 AM</p>
-                      </div>
+                    <div className="flex gap-2">
+                      <Input placeholder="Type a message..." className="flex-1" />
+                      <Button className="bg-accent hover:bg-accent/90">
+                        <Send className="h-4 w-4" />
+                      </Button>
                     </div>
                   </div>
-                  <div className="flex gap-2">
-                    <Input placeholder="Type a message..." className="flex-1" />
-                    <Button className="bg-accent hover:bg-accent/90">
-                      <Send className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-              )}
+                </DialogContent>
+              </Dialog>
             </div>
           ))
         )}
