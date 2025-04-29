@@ -43,6 +43,7 @@ import {
 import ApplicationTimeline from "@/components/application-timeline"
 import api from "@/lib/axios"
 import { set } from "date-fns"
+import ResumeActions from "@/components/resume-actions"
 
 export default function ApplicationDetailsPage({ params }: { params: Promise<{ id: string }> }) {
   const { user, isAuthenticated } = useAuthStore()
@@ -123,12 +124,15 @@ export default function ApplicationDetailsPage({ params }: { params: Promise<{ i
 
   // Format date without time
   const formatDateOnly = (dateString: string) => {
-    const options: Intl.DateTimeFormatOptions = {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
+    if (dateString && dateString.toString().trim() !== "") {
+      const options: Intl.DateTimeFormatOptions = {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+      }
+      return new Date(dateString.split("T")[0]).toLocaleDateString(undefined, options)
     }
-    return new Date(dateString).toLocaleDateString(undefined, options)
+    return "N/A"
   }
 
   // Get status badge
@@ -200,13 +204,13 @@ export default function ApplicationDetailsPage({ params }: { params: Promise<{ i
                   <div>
                     <CardTitle className="text-xl font-bold text-dark-gray">{application?.job?.title}</CardTitle>
                     <CardDescription className="text-gray-600 mt-1">
-                      {application?.job?.company} • {application?.job?.location}
+                      {application?.job?.company_name} • {application?.job?.location}
                     </CardDescription>
                   </div>
                 </div>
                 <div className="flex flex-col items-start md:items-end gap-2">
                   {getStatusBadge(application?.status)}
-                  <div className="text-sm text-gray-500">Applied on {formatDateOnly(application?.appliedDate)}</div>
+                  <div className="text-sm text-gray-500">Applied on {formatDateOnly(application?.applied_at)}</div>
                 </div>
               </div>
             </CardHeader>
@@ -396,7 +400,7 @@ export default function ApplicationDetailsPage({ params }: { params: Promise<{ i
 
                     <div className="flex items-center">
                       <div className="w-32 text-sm text-gray-500">Applied On:</div>
-                      <div className="font-medium">{formatDate(application?.appliedDate)}</div>
+                      <div className="font-medium">{formatDate(application?.applied_at)}</div>
                     </div>
 
                     <div className="flex items-center">
@@ -474,35 +478,26 @@ export default function ApplicationDetailsPage({ params }: { params: Promise<{ i
                     <div className="flex items-center justify-between">
                       <div className="flex items-center">
                         <FileText className="h-5 w-5 mr-2 text-gray-500" />
-                        <span className="font-medium">{application?.resume?.filename}</span>
+                        <span className="font-medium">{application?.resume_filename}</span>
                       </div>
                       <div className="text-sm text-gray-500">
-                        Last updated: {formatDateOnly(application?.resume?.lastUpdated)}
+                        Last updated: {formatDateOnly(application?.resume?.upload_date)}
                       </div>
                     </div>
                   </div>
-                  <div className="mt-4 flex gap-3">
-                    <Button variant="outline" size="sm" className="text-gray-700">
-                      <Download className="h-4 w-4 mr-2" />
-                      Download Resume
-                    </Button>
-                    <Button variant="outline" size="sm" className="text-gray-700">
-                      <ExternalLink className="h-4 w-4 mr-2" />
-                      View Resume
-                    </Button>
-                  </div>
+                  <ResumeActions base64File={application?.resume?.file} filename={application?.resume?.filename} />
                 </CardContent>
               </Card>
 
               {/* Cover Letter */}
-              {application?.coverLetter && (
+              {application?.cover_letter && (
                 <Card>
                   <CardHeader className="pb-2">
                     <CardTitle className="text-lg">Cover Letter</CardTitle>
                   </CardHeader>
                   <CardContent>
                     <div className="bg-light-gray p-4 rounded-md text-gray-700 whitespace-pre-line">
-                      {application?.coverLetter.content}
+                      {application?.cover_letter}
                     </div>
                   </CardContent>
                 </Card>
