@@ -34,6 +34,8 @@ export default function ApplicationList() {
         headers: user && user.token ? { Authorization: `Bearer ${user.token}` } : {},
       })
 
+      console.log(response.data) // Debugging line
+      
       if (response.data && response.data.applications) {
         setApplications(response.data.applications)
       } else {

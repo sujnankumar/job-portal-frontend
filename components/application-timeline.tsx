@@ -43,22 +43,22 @@ export default function ApplicationTimeline({ timeline }: ApplicationTimelinePro
 
   return (
     <div className="space-y-6">
-      {timeline.map((event, index) => (
+      {timeline?.map((event, index) => (
         <div key={index} className="relative pl-8">
           {/* Connector line */}
-          {index < timeline.length - 1 && (
+          {index < timeline?.length - 1 && (
             <div className="absolute left-[10px] top-[24px] bottom-[-24px] w-[2px] bg-gray-200"></div>
           )}
 
           {/* Event dot */}
           <div className="absolute left-0 top-0 rounded-full bg-white p-[2px] border-2 border-gray-200">
-            {getStatusIcon(event.status)}
+            {getStatusIcon(event?.status)}
           </div>
 
           {/* Event content */}
           <div>
-            <div className="font-medium">{event.description}</div>
-            <div className="text-sm text-gray-500">{formatDate(event.date)}</div>
+            <div className="font-medium">{event?.description}</div>
+            <div className="text-sm text-gray-500">{formatDate(event?.date)}</div>
           </div>
         </div>
       ))}
