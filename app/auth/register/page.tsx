@@ -20,7 +20,6 @@ export default function RegisterPage() {
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
-    jobPosition: "",
     email: "",
     password: "",
     confirmPassword: "",
@@ -32,7 +31,11 @@ export default function RegisterPage() {
   const { isAuthenticated, user, hydrated } = useAuthStore()
 
   const handleRoleChange = (value: string) => {
-    setRole(value as UserRole)
+    if (role === "applicant") {
+      setRole("employer")
+    } else {
+      setRole("applicant")
+    }
   }
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -80,9 +83,6 @@ export default function RegisterPage() {
       if (!formData.lastName.trim()) {
         newErrors.lastName = "Last name is required"
       }
-      if (!formData.jobPosition.trim()) {
-        newErrors.jobPosition = "Job position is required"
-      }
     }
     if (!formData.email.trim()) {
       newErrors.email = "Email is required"
@@ -113,6 +113,7 @@ export default function RegisterPage() {
     setIsLoading(true)
     try {
       let payload: any
+      console.log("Role:", role)
       if (role === "applicant") {
         payload = {
           user_type: "job_seeker",
@@ -126,7 +127,6 @@ export default function RegisterPage() {
           user_type: "employer",
           first_name: formData.firstName,
           last_name: formData.lastName,
-          job_position: formData.jobPosition,
           email: formData.email,
           password: formData.password,
         }
@@ -139,7 +139,6 @@ export default function RegisterPage() {
         password: formData.password,
       })
       const { access_token, token_type, onboarding } = response.data
-      console.log("Access Token Type:", token_type)
       const userRes = await api.get("/user/me", {
         headers: { Authorization: `Bearer ${access_token}` },
       })
@@ -253,18 +252,6 @@ export default function RegisterPage() {
                       />
                       {errors.lastName && <p className="text-red-500 text-xs mt-1">{errors.lastName}</p>}
                     </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="jobPosition">Job Position</Label>
-                    <Input
-                      id="jobPosition"
-                      name="jobPosition"
-                      placeholder="HR Manager"
-                      value={formData.jobPosition}
-                      onChange={handleChange}
-                    />
-                    {errors.jobPosition && <p className="text-red-500 text-xs mt-1">{errors.jobPosition}</p>}
                   </div>
                 </>
               )}

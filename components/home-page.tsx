@@ -1,3 +1,5 @@
+import { useState } from "react"
+import { useRouter } from "next/navigation"
 import { Search } from "lucide-react"
 import JobCategories from "@/components/job-categories"
 import FeaturedJobs from "@/components/featured-jobs"
@@ -8,6 +10,21 @@ import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
 export default function HomePage() {
+  const router = useRouter()
+
+  const [search, setSearch] = useState("")
+  const [location, setLocation] = useState("")
+  const [jobType, setJobType] = useState<string | undefined>(undefined)
+
+  const handleSearch = () => {
+    // Build query params
+    const params = new URLSearchParams()
+    if (search)   params.set("search", search)
+    if (location) params.set("location", location)
+    if (jobType)  params.set("jobType", jobType)
+
+    router.push(`/jobs?${params.toString()}`)
+  }
   return (
     <div className="flex flex-col space-y-10 pb-16">
       {/* Hero Section */}
@@ -23,38 +40,34 @@ export default function HomePage() {
 
             {/* Main Search Bar */}
             <div className="w-full max-w-4xl bg-white p-6 rounded-xl shadow-lg">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                <div className="col-span-1">
-                  <Input placeholder="Job title, keywords, or company" className="w-full h-12" />
-                </div>
-                <div className="col-span-1">
-                  <Select>
-                    <SelectTrigger className="h-12">
-                      <SelectValue placeholder="Location" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="anywhere">Anywhere</SelectItem>
-                      <SelectItem value="remote">Remote</SelectItem>
-                      <SelectItem value="newyork">New York</SelectItem>
-                      <SelectItem value="sanfrancisco">San Francisco</SelectItem>
-                      <SelectItem value="london">London</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="col-span-1">
-                  <Select>
-                    <SelectTrigger className="h-12">
-                      <SelectValue placeholder="Job Type" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="fulltime">Full-time</SelectItem>
-                      <SelectItem value="parttime">Part-time</SelectItem>
-                      <SelectItem value="contract">Contract</SelectItem>
-                      <SelectItem value="internship">Internship</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+          <Input
+            value={search}
+            onChange={(e) => setSearch(e.currentTarget.value)}
+            placeholder="Job title, keywords, or company"
+            className="w-full h-12"
+          />
+          <Input
+            value={location}
+            onChange={(e) => setLocation(e.currentTarget.value)}
+            placeholder="Location"
+            className="w-full h-12"
+          />
+          <Select
+            onValueChange={(v) => setJobType(v)}
+            value={jobType}
+          >
+            <SelectTrigger className="h-12">
+              <SelectValue placeholder="Job Type" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="fulltime">Full-time</SelectItem>
+              <SelectItem value="parttime">Part-time</SelectItem>
+              <SelectItem value="contract">Contract</SelectItem>
+              <SelectItem value="internship">Internship</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
 
               {/* Advanced Filters */}
               <div className="flex flex-col md:flex-row justify-between items-center">
@@ -64,7 +77,7 @@ export default function HomePage() {
                   <button className="hover:text-accent">+ Industry</button>
                   <button className="hover:text-accent">+ More Filters</button>
                 </div>
-                <Button className="mt-3 md:mt-0 w-full md:w-auto bg-accent hover:bg-accent/90 text-white">
+                <Button className="mt-3 md:mt-0 w-full md:w-auto bg-accent hover:bg-accent/90 text-white" onClick={handleSearch}                >
                   <Search className="mr-2 h-4 w-4" /> Search Jobs
                 </Button>
               </div>

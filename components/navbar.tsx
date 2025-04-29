@@ -29,15 +29,17 @@ export default function Navbar() {
     router.push("/")
   }
 
-  const isActive = (path: string) => {
-    return pathname === path
-  }
+  const isActive = (path: string) => pathname === path
 
   const navLinks = [
     { name: "Home", path: "/" },
     { name: "Jobs", path: "/jobs" },
-    ...(isAuthenticated && user?.role === "applicant" ? [{ name: "Applications", path: "/applications" }] : []),
-    ...(isAuthenticated && user?.role === "employer" ? [{ name: "Dashboard", path: "/employer/dashboard" }] : []),
+    ...(isAuthenticated && user?.role === "applicant"
+      ? [{ name: "Applications", path: "/applications" }, { name: "Dashboard", path: "/employer/dashboard" },]
+      : []),
+    ...(isAuthenticated && user?.role === "employer"
+      ? [{ name: "Dashboard", path: "/employer/dashboard" }]
+      : []),
   ]
 
   return (
@@ -46,7 +48,13 @@ export default function Navbar() {
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
           <Link href="/" className="flex items-center">
-            <Image src="/abstract-geometric-logo.png" alt="JobPortal Logo" width={40} height={40} className="mr-2" />
+            <Image
+              src="/abstract-geometric-logo.png"
+              alt="JobPortal Logo"
+              width={40}
+              height={40}
+              className="mr-2"
+            />
             <span className="text-xl font-bold text-dark-gray">JobPortal</span>
           </Link>
 
@@ -58,7 +66,7 @@ export default function Navbar() {
                 href={link.path}
                 className={cn(
                   "text-gray-600 hover:text-accent transition-colors",
-                  isActive(link.path) && "text-accent font-medium",
+                  isActive(link.path) && "text-accent font-medium"
                 )}
               >
                 {link.name}
@@ -70,10 +78,14 @@ export default function Navbar() {
           <div className="hidden md:flex items-center space-x-4">
             {isAuthenticated ? (
               <>
-                <Button variant="ghost" size="icon" className="relative">
-                  <Bell className="h-5 w-5" />
-                  <NotificationBadge count={3} />
-                </Button>
+                <Link href="/notifications">
+                  <Button variant="ghost" size="icon" className="relative">
+                    <NotificationBadge
+                      count={3}
+                      className="absolute -top-1 -right-1"
+                    />
+                  </Button>
+                </Link>
 
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
@@ -111,17 +123,26 @@ export default function Navbar() {
                     ) : (
                       <>
                         <DropdownMenuItem>
-                          <Link href="/employer/dashboard" className="flex w-full">
+                          <Link
+                            href="/employer/dashboard"
+                            className="flex w-full"
+                          >
                             Dashboard
                           </Link>
                         </DropdownMenuItem>
                         <DropdownMenuItem>
-                          <Link href="/employer/dashboard/post-job" className="flex w-full">
+                          <Link
+                            href="/employer/dashboard/post-job"
+                            className="flex w-full"
+                          >
                             Post a Job
                           </Link>
                         </DropdownMenuItem>
                         <DropdownMenuItem>
-                          <Link href="/employer/dashboard/settings" className="flex w-full">
+                          <Link
+                            href="/employer/dashboard/settings"
+                            className="flex w-full"
+                          >
                             Company Profile
                           </Link>
                         </DropdownMenuItem>
@@ -140,11 +161,12 @@ export default function Navbar() {
                   </DropdownMenuContent>
                 </DropdownMenu>
 
-                {/* Only show Post a Job button for employers */}
                 {user?.role === "employer" && (
-                  <Button className="bg-accent hover:bg-accent/90">
-                    <Link href="/employer/dashboard/post-job">Post a Job</Link>
-                  </Button>
+                  <Link href="/employer/dashboard/post-job">
+                    <Button className="bg-accent hover:bg-accent/90">
+                      Post a Job
+                    </Button>
+                  </Link>
                 )}
               </>
             ) : (
@@ -153,7 +175,9 @@ export default function Navbar() {
                   <Button variant="ghost">Sign In</Button>
                 </Link>
                 <Link href="/auth/register">
-                  <Button className="bg-accent hover:bg-accent/90">Register</Button>
+                  <Button className="bg-accent hover:bg-accent/90">
+                    Register
+                  </Button>
                 </Link>
               </>
             )}
@@ -161,7 +185,12 @@ export default function Navbar() {
 
           {/* Mobile Menu Button */}
           <div className="md:hidden">
-            <Button variant="ghost" size="icon" onClick={() => setIsMenuOpen(!isMenuOpen)} aria-label="Toggle menu">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setIsMenuOpen(!isMenuOpen)}
+              aria-label="Toggle menu"
+            >
               {isMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
             </Button>
           </div>
@@ -179,7 +208,7 @@ export default function Navbar() {
                   href={link.path}
                   className={cn(
                     "text-gray-600 hover:text-accent transition-colors py-2",
-                    isActive(link.path) && "text-accent font-medium",
+                    isActive(link.path) && "text-accent font-medium"
                   )}
                   onClick={() => setIsMenuOpen(false)}
                 >
@@ -190,6 +219,20 @@ export default function Navbar() {
 
             {isAuthenticated ? (
               <div className="flex flex-col space-y-4 pt-4 border-t border-gray-100">
+                {/* Notifications for mobile */}
+                <Link href="/notifications" onClick={() => setIsMenuOpen(false)}>
+                   Notifications <Button
+                    variant="ghost"
+                    size="icon"
+                    className="relative w-fit"
+                  >
+                    <NotificationBadge
+                      count={3}
+                      className="absolute -top-1 -right-1"
+                    />
+                  </Button>
+                </Link>
+
                 <div className="flex items-center">
                   <Image
                     src={user?.avatar || "/mystical-forest-spirit.png"}
@@ -207,36 +250,72 @@ export default function Navbar() {
                 <div className="space-y-2">
                   {user?.role === "applicant" ? (
                     <>
-                      <Link href="/profile" onClick={() => setIsMenuOpen(false)}>
-                        <Button variant="ghost" size="sm" className="w-full justify-start">
+                      <Link
+                        href="/profile"
+                        onClick={() => setIsMenuOpen(false)}
+                      >
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="w-full justify-start"
+                        >
                           Profile
                         </Button>
                       </Link>
-                      <Link href="/applications" onClick={() => setIsMenuOpen(false)}>
-                        <Button variant="ghost" size="sm" className="w-full justify-start">
+                      <Link
+                        href="/applications"
+                        onClick={() => setIsMenuOpen(false)}
+                      >
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="w-full justify-start"
+                        >
                           Applications
                         </Button>
                       </Link>
-                      <Link href="/saved-jobs" onClick={() => setIsMenuOpen(false)}>
-                        <Button variant="ghost" size="sm" className="w-full justify-start">
+                      <Link
+                        href="/saved-jobs"
+                        onClick={() => setIsMenuOpen(false)}
+                      >
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="w-full justify-start"
+                        >
                           Saved Jobs
                         </Button>
                       </Link>
                     </>
                   ) : (
                     <>
-                      <Link href="/employer/dashboard" onClick={() => setIsMenuOpen(false)}>
-                        <Button variant="ghost" size="sm" className="w-full justify-start">
+                      <Link
+                        href="/employer/dashboard"
+                        onClick={() => setIsMenuOpen(false)}
+                      >
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="w-full justify-start"
+                        >
                           Dashboard
                         </Button>
                       </Link>
-                      <Link href="/employer/dashboard/settings" onClick={() => setIsMenuOpen(false)}>
-                        <Button variant="ghost" size="sm" className="w-full justify-start">
+                      <Link
+                        href="/employer/dashboard/settings"
+                        onClick={() => setIsMenuOpen(false)}
+                      >
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="w-full justify-start"
+                        >
                           Company Profile
                         </Button>
                       </Link>
                     </>
                   )}
+
                   <Button
                     variant="ghost"
                     size="sm"
@@ -248,22 +327,34 @@ export default function Navbar() {
                   </Button>
                 </div>
 
-                {/* Only show Post a Job button for employers */}
                 {user?.role === "employer" && (
-                  <Link href="/employer/dashboard/post-job" onClick={() => setIsMenuOpen(false)}>
-                    <Button className="w-full bg-accent hover:bg-accent/90">Post a Job</Button>
+                  <Link
+                    href="/employer/dashboard/post-job"
+                    onClick={() => setIsMenuOpen(false)}
+                  >
+                    <Button className="w-full bg-accent hover:bg-accent/90">
+                      Post a Job
+                    </Button>
                   </Link>
                 )}
               </div>
             ) : (
               <div className="flex flex-col space-y-2 pt-4 border-t border-gray-100">
-                <Link href="/auth/login" onClick={() => setIsMenuOpen(false)}>
+                <Link
+                  href="/auth/login"
+                  onClick={() => setIsMenuOpen(false)}
+                >
                   <Button variant="ghost" className="w-full">
                     Sign In
                   </Button>
                 </Link>
-                <Link href="/auth/register" onClick={() => setIsMenuOpen(false)}>
-                  <Button className="w-full bg-accent hover:bg-accent/90">Register</Button>
+                <Link
+                  href="/auth/register"
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  <Button className="w-full bg-accent hover:bg-accent/90">
+                    Register
+                  </Button>
                 </Link>
               </div>
             )}
