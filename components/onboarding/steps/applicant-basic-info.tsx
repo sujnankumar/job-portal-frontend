@@ -56,7 +56,7 @@ export default function ApplicantBasicInfo({ data, onNext }: ApplicantBasicInfoP
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="md:col-span-2">
-          <Label htmlFor="headline">Professional Headline</Label>
+          <Label htmlFor="headline">Professional Headline <span className="text-red-500">*</span></Label>
           <Input
             id="headline"
             name="headline"
@@ -68,7 +68,7 @@ export default function ApplicantBasicInfo({ data, onNext }: ApplicantBasicInfoP
         </div>
 
         <div>
-          <Label htmlFor="phone">Phone Number</Label>
+          <Label htmlFor="phone">Phone Number <span className="text-red-500">*</span></Label>
           <Input
             id="phone"
             name="phone"
@@ -81,7 +81,7 @@ export default function ApplicantBasicInfo({ data, onNext }: ApplicantBasicInfoP
         </div>
 
         <div>
-          <Label htmlFor="location">Location</Label>
+          <Label htmlFor="location">Location <span className="text-red-500">*</span></Label>
           <Input
             id="location"
             name="location"
@@ -129,7 +129,7 @@ export default function ApplicantBasicInfo({ data, onNext }: ApplicantBasicInfoP
         </div>
 
         <div className="md:col-span-2">
-          <Label htmlFor="bio">Professional Bio</Label>
+          <Label htmlFor="bio">Professional Bio <span className="text-red-500">*</span></Label>
           <Textarea
             id="bio"
             name="bio"

@@ -76,21 +76,21 @@ export default function OnboardingForm({ userRole }: OnboardingFormProps) {
     const errors: string[] = []
 
     if (currentStepKey === "basicInfo") {
-      if (!stepData.jobPosition?.trim()) {
+      if (userRole === "employer" && !stepData.jobPosition?.trim()) {
         isValid = false
         errors.push("Please provide a Job Position")
       }
+      if (userRole === "applicant" && !stepData.headline?.trim()) {
+        isValid = false
+        errors.push("Please provide a Headline")
+      }
       if (!stepData.bio?.trim()) {
         isValid = false
-        errors.push("Please provide your Role Description")
-      }
-      if (
-        userRole === "employer" &&
-        stepData.isNewCompany &&
-        !stepData.companyName?.trim()
-      ) {
-        isValid = false
-        errors.push("Please provide a company name")
+        if (userRole === "employer") {
+          errors.push("Please provide your Role Description")
+        } else {
+          errors.push("Please provide a Professional Bio")
+        }
       }
     }
 
@@ -248,28 +248,19 @@ export default function OnboardingForm({ userRole }: OnboardingFormProps) {
         )}
 
         {CurrentStepComponent && (
-          <CurrentStepComponent onNext={handleNext} data={formData} />
+          <>
+            
+            <CurrentStepComponent onNext={handleNext} data={formData} />
+            
+          </>
         )}
-
-        <div className="flex justify-between mt-8">
           <Button
-            variant="outline"
-            onClick={handleBack}
-            disabled={currentStep === 0 || isSubmitting}
-          >
-            Back
-          </Button>
-
-          {process.env.NODE_ENV === "development" && (
-            <Button
               variant="outline"
-              onClick={() => completeOnboarding()}
-              className="ml-auto mr-2"
+              onClick={handleBack}
+              disabled={currentStep === 0 || isSubmitting}
             >
-              Skip Onboarding (Dev Only)
+              Back
             </Button>
-          )}
-        </div>
       </div>
     </div>
   )

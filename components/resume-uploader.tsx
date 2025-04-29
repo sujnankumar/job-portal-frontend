@@ -281,19 +281,6 @@ export default function ResumeUploader({ onConfirm }: { onConfirm?: (resume: { t
           </div>
         </div>
       )}
-      {/* Resume Highlighting Service */}
-      <div className="border rounded-md p-4 bg-light-cream">
-        <div className="flex justify-between items-start">
-          <div>
-            <h3 className="font-medium text-dark-gray">Resume Highlighting Service</h3>
-            <p className="text-sm text-gray-600 mt-1">
-              Our AI will analyze your resume and highlight key skills and experiences that match this job.
-            </p>
-            <p className="text-xs text-gray-500 mt-1">This will help your application stand out to recruiters.</p>
-          </div>
-          <Switch checked={highlightService} onCheckedChange={setHighlightService} />
-        </div>
-      </div>
       {/* Action buttons */}
       <div className="flex flex-col sm:flex-row gap-3 justify-end">
         <Button variant="outline" className="sm:w-auto" type="button" onClick={handleBackToJob}>

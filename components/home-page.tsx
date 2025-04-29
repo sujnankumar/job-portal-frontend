@@ -4,7 +4,6 @@ import { Search } from "lucide-react"
 import JobCategories from "@/components/job-categories"
 import FeaturedJobs from "@/components/featured-jobs"
 import SavedSearches from "@/components/saved-searches"
-import WalkInJobs from "@/components/walk-in-jobs"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -118,12 +117,6 @@ export default function HomePage() {
       <section className="container mx-auto max-w-6xl px-4">
         <h2 className="text-3xl font-bold text-dark-gray mb-8">Your Saved Searches</h2>
         <SavedSearches />
-      </section>
-
-      {/* Walk-in Jobs Shortcut */}
-      <section className="container mx-auto max-w-6xl px-4">
-        <h2 className="text-3xl font-bold text-dark-gray mb-8">Walk-in Interviews</h2>
-        <WalkInJobs />
       </section>
     </div>
   )
