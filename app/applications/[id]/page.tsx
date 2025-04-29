@@ -29,7 +29,7 @@ import {
   MapPin,
   Building,
   Briefcase,
-  DollarSign,
+  IndianRupee,
   Mail,
   Phone,
   Globe,
@@ -58,7 +58,7 @@ export default function ApplicationDetailsPage({ params }: { params: Promise<{ i
        setLoading(true);
        setError(""); // Clear previous errors
        try {
-         const response = await api.get(`/ga/application/${appId}`, {
+         const response = await api.get(`/ga/application/app_id/${appId}`, {
            headers: { Authorization: `Bearer ${token}` },
          });
    
@@ -167,12 +167,20 @@ export default function ApplicationDetailsPage({ params }: { params: Promise<{ i
     }
   }
 
-  const handleWithdrawApplication = () => {
-    console.log("Withdrawing application:", id)
+  const handleWithdrawApplication = async(appId: string, token: string) => {
+    console.log("Withdrawing application:", appId, token)
     setIsWithdrawDialogOpen(false)
-    // In a real app, you would make an API call here
-    // Then redirect to applications list
-    router.push("/applications")
+    const response = await api.post(`/application/delete_application/${appId}`,{}, {
+           headers: { Authorization: `Bearer ${token}` },
+         });
+    if (response.status === 200) {
+      console.log("Application withdrawn successfully")
+      router.push("/applications")
+    }
+    else {
+      console.error("Failed to withdraw application")
+      alert("Failed to withdraw application. Please try again.")
+    }
   }
 
   return (
@@ -218,10 +226,10 @@ export default function ApplicationDetailsPage({ params }: { params: Promise<{ i
               <div className="flex flex-wrap gap-3 text-sm">
                 <div className="flex items-center bg-light-gray px-3 py-1 rounded-full">
                   <Briefcase className="h-4 w-4 mr-1 text-gray-500" />
-                  {application?.job?.type}
+                  {application?.job?.employment_type}
                 </div>
                 <div className="flex items-center bg-light-gray px-3 py-1 rounded-full">
-                  <DollarSign className="h-4 w-4 mr-1 text-gray-500" />
+                  <IndianRupee className="h-4 w-4 mr-1 text-gray-500" />
                   {application?.job?.salary}
                 </div>
                 <div className="flex items-center bg-light-gray px-3 py-1 rounded-full">
@@ -230,7 +238,7 @@ export default function ApplicationDetailsPage({ params }: { params: Promise<{ i
                 </div>
                 <div className="flex items-center bg-light-gray px-3 py-1 rounded-full">
                   <Clock className="h-4 w-4 mr-1 text-gray-500" />
-                  Deadline: {formatDateOnly(application?.job?.deadline)}
+                  Deadline: {formatDateOnly(application?.job?.expires_at)}
                 </div>
               </div>
             </CardContent>
@@ -238,7 +246,7 @@ export default function ApplicationDetailsPage({ params }: { params: Promise<{ i
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => router.push(`/jobs/${application?.jobId}`)}
+                onClick={() => router.push(`/jobs/${application?.job_id}`)}
                 className="text-gray-700"
               >
                 <ExternalLink className="h-4 w-4 mr-2" />
@@ -264,9 +272,21 @@ export default function ApplicationDetailsPage({ params }: { params: Promise<{ i
                     <Button variant="outline" onClick={() => setIsWithdrawDialogOpen(false)}>
                       Cancel
                     </Button>
-                    <Button variant="destructive" onClick={handleWithdrawApplication}>
-                      Withdraw Application
-                    </Button>
+                    {(application?._id && user?.token) &&
+                      <Button
+                        variant="destructive"
+                        onClick={() => {
+                          if (application._id && user.token) {
+                            handleWithdrawApplication(application._id, user.token)
+                          } else {
+                            console.error("Withdraw failed: Application ID or token missing.");
+                            alert("Could not withdraw application due to missing information.");
+                          }
+                        }}
+                      >
+                        Withdraw Application
+                      </Button>
+                    }               
                   </DialogFooter>
                 </DialogContent>
               </Dialog>

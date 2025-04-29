@@ -27,7 +27,7 @@ export default function ApplicationTimeline({ timeline }: ApplicationTimelinePro
   const getStatusIcon = (status: string) => {
     switch (status) {
       case "applied":
-        return <Clock className="h-5 w-5 text-blue-500" />
+        return <CheckCircle2 className="h-5 w-5 text-green-500" />
       case "reviewed":
         return <CheckCircle className="h-5 w-5 text-yellow-500" />
       case "interview":

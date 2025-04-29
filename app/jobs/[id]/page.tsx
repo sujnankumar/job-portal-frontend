@@ -61,10 +61,6 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
             <JobDetail jobId={id} jobDetails={job} is_saved={isSaved} />
           </div>
         </div>
-        <div className="mt-8">
-          <h2 className="text-xl font-bold mb-4">Similar Jobs</h2>
-          <SimilarJobs jobId={id} />
-        </div>
       </div>
       <JobChat jobId={id} companyName={job.company} companyLogo={job.logo} jobTitle={job.title} />
     </OnboardingMiddleware>

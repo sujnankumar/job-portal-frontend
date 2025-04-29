@@ -7,20 +7,25 @@ import SavedSearches from "@/components/saved-searches"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Checkbox } from "@/components/ui/checkbox"
+import { ChevronDown } from "lucide-react"
 
 export default function HomePage() {
   const router = useRouter()
 
   const [search, setSearch] = useState("")
   const [location, setLocation] = useState("")
-  const [jobType, setJobType] = useState<string | undefined>(undefined)
+  const [jobTypes, setJobTypes] = useState<string[]>([])
+  const jobTypeOptions = ["Full-time", "Part-time", "Contract", "Internship"]
+
 
   const handleSearch = () => {
     // Build query params
     const params = new URLSearchParams()
     if (search)   params.set("search", search)
     if (location) params.set("location", location)
-    if (jobType)  params.set("jobType", jobType)
+    if (jobTypes)  jobTypes.forEach(type => params.append("jobType", type))
 
     router.push(`/jobs?${params.toString()}`)
   }
@@ -52,34 +57,39 @@ export default function HomePage() {
             placeholder="Location"
             className="w-full h-12"
           />
-          <Select
-            onValueChange={(v) => setJobType(v)}
-            value={jobType}
-          >
-            <SelectTrigger className="h-12">
-              <SelectValue placeholder="Job Type" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="fulltime">Full-time</SelectItem>
-              <SelectItem value="parttime">Part-time</SelectItem>
-              <SelectItem value="contract">Contract</SelectItem>
-              <SelectItem value="internship">Internship</SelectItem>
-            </SelectContent>
-          </Select>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" className="h-12 w-full justify-between">
+                {jobTypes.length > 0 ? jobTypes.join(", ") : "Select Job Types"}
+                <ChevronDown className="ml-2 h-4 w-4" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-60">
+              <div className="flex flex-col gap-2">
+                {jobTypeOptions.map((type) => (
+                  <label key={type} className="flex items-center space-x-2">
+                    <Checkbox
+                      checked={jobTypes.includes(type)}
+                      onCheckedChange={(checked) => {
+                        setJobTypes((prev) =>
+                          checked ? [...prev, type] : prev.filter((t) => t !== type)
+                        )
+                      }}
+                    />
+                    <span>{type}</span>
+                  </label>
+                ))}
+              </div>
+            </PopoverContent>
+          </Popover>
         </div>
 
               {/* Advanced Filters */}
-              <div className="flex flex-col md:flex-row justify-between items-center">
-                <div className="flex space-x-2 text-sm text-dark-gray">
-                  <button className="hover:text-accent">+ Salary</button>
-                  <button className="hover:text-accent">+ Experience</button>
-                  <button className="hover:text-accent">+ Industry</button>
-                  <button className="hover:text-accent">+ More Filters</button>
-                </div>
-                <Button className="mt-3 md:mt-0 w-full md:w-auto bg-accent hover:bg-accent/90 text-white" onClick={handleSearch}                >
+                <div className="flex justify-end">
+                  <Button className="mt-3 md:mt-0 w-auto bg-accent hover:bg-accent/90 text-white" onClick={handleSearch}>
                   <Search className="mr-2 h-4 w-4" /> Search Jobs
-                </Button>
-              </div>
+                  </Button>
+                </div>
             </div>
 
             {/* Boolean Search */}
