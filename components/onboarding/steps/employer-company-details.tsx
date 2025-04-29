@@ -17,6 +17,8 @@ interface CompanyDetailsData {
   companySize: string
   industry: string
   website: string
+  companyEmail: string // Added email
+  companyPhone: string
   logo: File | null
 }
 
@@ -32,6 +34,8 @@ export default function EmployerCompanyDetails({ data, onNext }: EmployerCompany
     companySize: data?.companySize || "",
     industry: data?.industry || "",
     website: data?.website || "",
+    companyEmail: data?.companyEmail || "", // Added email state
+    companyPhone: data?.companyPhone || "", // Added phone state
     logo: data?.logo || null,
   })
   const [dragActive, setDragActive] = useState(false)
@@ -206,6 +210,34 @@ export default function EmployerCompanyDetails({ data, onNext }: EmployerCompany
             name="website"
             placeholder="https://yourcompany.com"
             value={formData.website}
+            onChange={handleChange}
+            className="mt-1"
+          />
+        </div>
+
+        {/* Added Email Input */}
+        <div>
+          <Label htmlFor="companyEmail">Company Email <span className="text-red-500">*</span></Label>
+          <Input
+            id="companyEmail"
+            name="companyEmail"
+            type="email"
+            placeholder="e.g., contact@company.com"
+            value={formData.companyEmail}
+            onChange={handleChange}
+            className="mt-1"
+          />
+        </div>
+
+        {/* Added Phone Input */}
+        <div>
+          <Label htmlFor="companyPhone">Company Contact Phone <span className="text-red-500">*</span></Label>
+          <Input
+            id="companyPhone"
+            name="companyPhone"
+            type="tel"
+            placeholder="e.g., +1 123 456 7890"
+            value={formData.companyPhone}
             onChange={handleChange}
             className="mt-1"
           />

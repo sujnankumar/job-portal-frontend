@@ -140,7 +140,7 @@ export default function Navbar() {
                         </DropdownMenuItem>
                         <DropdownMenuItem>
                           <Link
-                            href="/employer/dashboard/settings"
+                            href="/company"
                             className="flex w-full"
                           >
                             Company Profile
@@ -302,7 +302,7 @@ export default function Navbar() {
                         </Button>
                       </Link>
                       <Link
-                        href="/employer/dashboard/settings"
+                        href="/company"
                         onClick={() => setIsMenuOpen(false)}
                       >
                         <Button

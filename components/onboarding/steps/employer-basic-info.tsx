@@ -1,27 +1,25 @@
 "use client"
 
 import type React from "react"
-import { useState } from "react"
+import { useState, useEffect } from "react" // Import useEffect
+import api from "@/lib/axios" // Import your configured axios instance
 
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { PlusCircle } from "lucide-react"
+import { PlusCircle, Loader2 } from "lucide-react" // Import Loader2 for loading state
 
-// Mock company data - in a real app, this would come from an API
-const MOCK_COMPANIES = [
-  { id: "1", name: "Acme Corporation" },
-  { id: "2", name: "Globex Industries" },
-  { id: "3", name: "Initech" },
-  { id: "4", name: "Umbrella Corporation" },
-  { id: "5", name: "Stark Industries" },
-]
+interface Company {
+  company_id: string; // Or number
+  company_name: string;
+}
 
 interface BasicInfoData {
   jobPosition: string
-  phone: string
+  businessPhone: string // Added phone
+  businessEmail: string // Added email
   location: string
   website: string
   linkedin: string
@@ -41,7 +39,8 @@ export default function EmployerBasicInfo({ data = {}, onNext }: EmployerBasicIn
   // Initialize data with default values if not provided
   const [formData, setFormData] = useState<BasicInfoData>({
     jobPosition: data.jobPosition || "",
-    phone: data.phone || "",
+    businessPhone: data?.businessPhone || "",
+    businessEmail: data?.businessEmail || "",
     location: data.location || "",
     website: data.website || "",
     linkedin: data.linkedin || "",
@@ -51,6 +50,37 @@ export default function EmployerBasicInfo({ data = {}, onNext }: EmployerBasicIn
     companyName: data.companyName || "",
     isNewCompany: data.isNewCompany || false,
   })
+
+  const [companies, setCompanies] = useState<Company[]>([]);
+  const [isLoadingCompanies, setIsLoadingCompanies] = useState(true);
+  const [companyError, setCompanyError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchCompanies = async () => {
+      setIsLoadingCompanies(true);
+      setCompanyError(null);
+      try {
+        // *** Replace with your actual API endpoint for fetching companies ***
+        const response = await api.get("/company/all"); // Example endpoint
+        if (Array.isArray(response.data)) {
+          setCompanies(response.data);
+        } else {
+          // Adjust based on your API response structure, e.g., response.data.companies
+          console.error("Unexpected company data structure:", response.data);
+          setCompanyError("Failed to load company list.");
+          setCompanies([]);
+        }
+      } catch (error) {
+        console.error("Error fetching companies:", error);
+        setCompanyError("Could not fetch company list. Please try again later.");
+        setCompanies([]);
+      } finally {
+        setIsLoadingCompanies(false);
+      }
+    };
+
+    fetchCompanies();
+  }, []); // Empty dependency array ensures this runs only once
 
   // Update the handleChange function to use local state
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -67,14 +97,16 @@ export default function EmployerBasicInfo({ data = {}, onNext }: EmployerBasicIn
       setFormData({
         ...formData,
         companyId: "",
+        companyName: "", // Reset company name when selecting 'new'
         isNewCompany: true,
       })
     } else {
-      const selectedCompany = MOCK_COMPANIES.find((company) => company.id === value)
+      // Find company from the fetched list, ensuring type consistency for comparison
+      const selectedCompany = companies.find((company) => String(company.company_id) === value)
       setFormData({
         ...formData,
         companyId: value,
-        companyName: selectedCompany?.name || "",
+        companyName: selectedCompany?.company_name || "", // Use fetched name
         isNewCompany: false,
       })
     }
@@ -105,24 +137,40 @@ export default function EmployerBasicInfo({ data = {}, onNext }: EmployerBasicIn
       <div className="space-y-4">
         <div className="space-y-2">
           <Label htmlFor="company">Company <span className="text-red-500">*</span></Label>
-          <Select value={formData.isNewCompany ? "new" : formData.companyId} onValueChange={handleCompanySelect}>
-            <SelectTrigger id="company">
-              <SelectValue placeholder="Select your company" />
-            </SelectTrigger>
-            <SelectContent>
-              {MOCK_COMPANIES.map((company) => (
-                <SelectItem key={company.id} value={company.id}>
-                  {company.name}
+          {/* Handle loading and error states for the Select */}
+          {isLoadingCompanies ? (
+            <div className="flex items-center justify-center h-10 border rounded-md bg-gray-50">
+              <Loader2 className="h-5 w-5 animate-spin text-gray-400" />
+            </div>
+          ) : companyError ? (
+            <div className="text-red-600 text-sm border border-red-200 p-2 rounded-md bg-red-50">
+              {companyError}
+            </div>
+          ) : (
+            <Select
+              value={formData.isNewCompany ? "new" : formData.companyId}
+              onValueChange={handleCompanySelect}
+              disabled={isLoadingCompanies || !!companyError} // Disable if loading or error
+            >
+              <SelectTrigger id="company">
+                <SelectValue placeholder="Select your company" />
+              </SelectTrigger>
+              <SelectContent>
+                {/* Map over fetched companies */}
+                {companies.map((company) => (
+                  <SelectItem key={company.company_id} value={String(company.company_id)}> {/* Ensure value is string */}
+                    {company.company_name}
+                  </SelectItem>
+                ))}
+                <SelectItem value="new" className="text-accent font-medium">
+                  <div className="flex items-center">
+                    <PlusCircle className="mr-2 h-4 w-4" />
+                    Add a new company
+                  </div>
                 </SelectItem>
-              ))}
-              <SelectItem value="new" className="text-accent font-medium">
-                <div className="flex items-center">
-                  <PlusCircle className="mr-2 h-4 w-4" />
-                  Add a new company
-                </div>
-              </SelectItem>
-            </SelectContent>
-          </Select>
+              </SelectContent>
+            </Select>
+          )}
         </div>
 
         {formData.isNewCompany && (
@@ -156,13 +204,26 @@ export default function EmployerBasicInfo({ data = {}, onNext }: EmployerBasicIn
         </div>
 
         <div>
-          <Label htmlFor="phone">Business Phone <span className="text-red-500">*</span></Label>
+          <Label htmlFor="businessPhone">Business Phone <span className="text-red-500">*</span></Label>
           <Input
-            id="phone"
-            name="phone"
+            id="businessPhone"
+            name="businessPhone"
             type="tel"
             placeholder="(555) 123-4567"
-            value={formData.phone}
+            value={formData.businessPhone}
+            onChange={handleChange}
+            className="mt-1"
+          />
+        </div>
+
+        <div>
+          <Label htmlFor="businessEmail">Contact Email <span className="text-red-500">*</span></Label>
+          <Input
+            id="businessEmail"
+            name="businessEmail"
+            type="email"
+            placeholder="e.g., contact@company.com"
+            value={formData.businessEmail}
             onChange={handleChange}
             className="mt-1"
           />

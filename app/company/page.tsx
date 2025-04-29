@@ -9,6 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import CompanyJobs from "@/components/company-jobs"
 import { useState, useEffect } from "react" // Import hooks
 import api from "@/lib/axios"
+import { useAuthStore } from "@/store/authStore"
 
 // Define an interface for the company data from the API
 interface CompanyData {
@@ -31,7 +32,9 @@ interface CompanyData {
   address?: string // Assuming address might come from API or needs a placeholder
 }
 
-export default function CompanyDetailPage({ params }: { params: { id: string } }) {
+export default function CompanyDetailsPage() {
+    const { user, isAuthenticated } = useAuthStore()
+
   const [company, setCompany] = useState<CompanyData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -40,9 +43,12 @@ export default function CompanyDetailPage({ params }: { params: { id: string } }
     const fetchCompanyData = async () => {
       setLoading(true)
       setError(null)
+      if (!user?.token) return
       try {
-        // Replace with your actual API endpoint
-        const response = await api.get(`/company/${params.id}`)
+        console.log(user.token)
+        const response = await api.get(`/company/details`, {
+            headers: { Authorization: `Bearer ${user.token}` },
+          });
         if (!response.data) {
           throw new Error("Failed to fetch company data")
         }
@@ -69,11 +75,8 @@ export default function CompanyDetailPage({ params }: { params: { id: string } }
         setLoading(false)
       }
     }
-
-    if (params.id) {
-      fetchCompanyData()
-    }
-  }, [params.id])
+    fetchCompanyData()
+  }, [isAuthenticated, user])
 
   if (loading) {
     return <div className="container mx-auto py-8 px-4 text-center">Loading company details...</div>
@@ -298,7 +301,7 @@ export default function CompanyDetailPage({ params }: { params: { id: string } }
       {/* Company Jobs */}
       <div className="mt-8">
         <h2 className="text-2xl font-bold text-dark-gray mb-6">Open Positions at {displayCompany.name}</h2>
-        <CompanyJobs companyId={params.id} /> {/* Pass the actual company ID */}
+        <CompanyJobs companyId={company.company_id} /> {/* Pass the actual company ID */}
       </div>
     </div>
   )
