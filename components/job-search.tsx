@@ -25,12 +25,7 @@ export default function JobSearch({ search, setSearch, location, setLocation, on
           </div>
         </div>
         <div className="md:col-span-1">
-          <div className="grid grid-cols-2 gap-2">
             <Button className="h-12 w-full bg-accent hover:bg-accent/90" onClick={onSearch}>Search</Button>
-            <Button variant="outline" className="h-12 w-full">
-              <Settings className="h-4 w-4" />
-            </Button>
-          </div>
         </div>
       </div>
     </div>

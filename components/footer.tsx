@@ -70,11 +70,6 @@ export default function Footer() {
                 </Link>
               </li>
               <li>
-                <Link href="/pricing" className="text-gray-600 hover:text-accent">
-                  Pricing
-                </Link>
-              </li>
-              <li>
                 <Link href="/resources" className="text-gray-600 hover:text-accent">
                   Resources
                 </Link>
@@ -102,20 +97,15 @@ export default function Footer() {
                 </Link>
               </li>
               <li>
-                <Link href="/faq" className="text-gray-600 hover:text-accent">
-                  FAQ
-                </Link>
-              </li>
-              <li>
                 <Link href="/privacy" className="text-gray-600 hover:text-accent">
                   Privacy Policy
                 </Link>
               </li>
-              <li>
-                <Link href="/terms" className="text-gray-600 hover:text-accent">
-                  Terms of Service
-                </Link>
-              </li>
+                <li>
+                  <Link href="/terms" className="text-gray-600 hover:text-accent">
+                    Terms of Service
+                  </Link>
+                </li>
             </ul>
           </div>
         </div>
@@ -124,20 +114,7 @@ export default function Footer() {
           <p className="text-gray-500 text-sm mb-4 md:mb-0">
             &copy; {new Date().getFullYear()} JobPortal. All rights reserved.
           </p>
-          <div className="flex items-center">
-            <span className="text-gray-500 text-sm mr-2">Subscribe to our newsletter:</span>
-            <div className="relative">
-              <input
-                type="email"
-                placeholder="Your email"
-                className="py-2 px-4 pr-10 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent"
-              />
-              <button className="absolute right-1 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-accent">
-                <Mail className="h-5 w-5" />
-              </button>
-            </div>
           </div>
-        </div>
       </div>
     </footer>
   )

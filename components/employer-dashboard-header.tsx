@@ -1,7 +1,7 @@
 import Image from "next/image"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import { PlusCircle, Settings } from "lucide-react"
+import { Info, Settings } from "lucide-react"
 
 interface EmployerDashboardHeaderProps {
   company: any
@@ -36,9 +36,9 @@ export default function EmployerDashboardHeader({ company, jobTitle }: EmployerD
               <Settings className="h-4 w-4 mr-1" /> Settings
             </Button>
           </Link>
-          <Link href="/employer/dashboard/post-job">
+          <Link href="/company">
             <Button className="bg-accent hover:bg-accent/90">
-              <PlusCircle className="h-4 w-4 mr-1" /> Post a New Job
+              <Info className="h-4 w-4 mr-1" /> Company Details
             </Button>
           </Link>
         </div>

@@ -1,69 +1,52 @@
 "use client"
 
-import type React from "react"
-
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import { MapPin, DollarSign, Clock, Bookmark, BookmarkCheck } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
+import api from "@/lib/axios"
 
-// Mock data for company jobs
-const companyJobs = [
-  {
-    id: "1",
-    title: "Senior Frontend Developer",
-    location: "San Francisco, CA (Remote)",
-    salary: "$120,000 - $160,000/year",
-    type: "Full-time",
-    posted: "2 days ago",
-    tags: ["React", "TypeScript", "Next.js"],
-    description:
-      "We're looking for a Senior Frontend Developer to join our team. You'll be responsible for building and maintaining user interfaces for our web applications. The ideal candidate has strong experience with React, TypeScript, and modern frontend development practices.",
-    isNew: true,
-  },
-  {
-    id: "2",
-    title: "Backend Engineer",
-    location: "San Francisco, CA",
-    salary: "$130,000 - $170,000/year",
-    type: "Full-time",
-    posted: "1 week ago",
-    tags: ["Node.js", "Python", "AWS", "Microservices"],
-    description:
-      "We're seeking a Backend Engineer to design, develop, and maintain our server-side applications. You'll work on API development, database design, and system integration. Strong knowledge of Node.js, Python, and AWS is required.",
-    isNew: false,
-  },
-  {
-    id: "3",
-    title: "Product Designer",
-    location: "San Francisco, CA (Hybrid)",
-    salary: "$100,000 - $140,000/year",
-    type: "Full-time",
-    posted: "3 days ago",
-    tags: ["UI/UX", "Figma", "Design Systems"],
-    description:
-      "We're looking for a Product Designer to create intuitive and engaging user experiences across our digital products. You'll be responsible for the entire design process from research to implementation. Experience with design systems and Figma is required.",
-    isNew: true,
-  },
-  {
-    id: "4",
-    title: "DevOps Engineer",
-    location: "Remote",
-    salary: "$125,000 - $165,000/year",
-    type: "Full-time",
-    posted: "2 weeks ago",
-    tags: ["Kubernetes", "Docker", "CI/CD", "Terraform"],
-    description:
-      "We're seeking a DevOps Engineer to help us build and maintain our cloud infrastructure. You'll be responsible for automation, continuous integration, deployment, and monitoring of our systems and applications.",
-    isNew: false,
-  },
-]
+interface Job {
+  job_id: string
+  title: string
+  location: string
+  location_type: string
+  employment_type: string
+  min_salary: string
+  max_salary: string
+  show_salary: boolean
+  description: string
+  skills: string[]
+  posted_at: string
+}
 
 export default function CompanyJobs({ companyId }: { companyId: string }) {
+  const [jobs, setJobs] = useState<Job[]>([])
   const [expandedJob, setExpandedJob] = useState<string | null>(null)
   const [savedJobs, setSavedJobs] = useState<string[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    const fetchJobs = async () => {
+      setLoading(true)
+      setError(null)
+      try {
+        const response = await api.get(`/job/company/${companyId}`)
+        console.log("Fetched jobs:", response.data)
+        setJobs(response.data)
+      } catch (err) {
+        setError("Failed to fetch jobs.")
+        console.error(err)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchJobs()
+  }, [companyId])
 
   const toggleExpand = (jobId: string) => {
     setExpandedJob(expandedJob === jobId ? null : jobId)
@@ -74,30 +57,39 @@ export default function CompanyJobs({ companyId }: { companyId: string }) {
     setSavedJobs((prev) => (prev.includes(jobId) ? prev.filter((id) => id !== jobId) : [...prev, jobId]))
   }
 
+  if (loading) {
+    return <div>Loading jobs...</div>
+  }
+
+  if (error) {
+    return <div className="text-red-500">{error}</div>
+  }
+
+  if (jobs.length === 0) {
+    return <div>No jobs found for this company.</div>
+  }
+
   return (
     <div className="space-y-4">
-      {companyJobs.map((job) => (
-        <div key={job.id} className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+      {jobs.map((job) => (
+        <div key={job.job_id} className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
           {/* Job Card Header */}
           <div
             className="p-5 cursor-pointer hover:bg-light-gray transition-colors"
-            onClick={() => toggleExpand(job.id)}
+            onClick={() => toggleExpand(job.job_id)}
           >
             <div>
               <div className="flex justify-between items-start">
                 <div>
-                  <div className="flex items-center">
-                    <h3 className="font-medium text-dark-gray">{job.title}</h3>
-                    {job.isNew && <Badge className="ml-2 bg-accent text-white">New</Badge>}
-                  </div>
+                  <h3 className="font-medium text-dark-gray">{job.title}</h3>
                 </div>
 
                 <button
-                  onClick={(e) => toggleSaveJob(job.id, e)}
+                  onClick={(e) => toggleSaveJob(job.job_id, e)}
                   className="text-gray-400 hover:text-accent"
-                  aria-label={savedJobs.includes(job.id) ? "Unsave job" : "Save job"}
+                  aria-label={savedJobs.includes(job.job_id) ? "Unsave job" : "Save job"}
                 >
-                  {savedJobs.includes(job.id) ? (
+                  {savedJobs.includes(job.job_id) ? (
                     <BookmarkCheck className="h-5 w-5 text-accent" />
                   ) : (
                     <Bookmark className="h-5 w-5" />
@@ -108,32 +100,36 @@ export default function CompanyJobs({ companyId }: { companyId: string }) {
               <div className="mt-3 flex flex-wrap gap-y-2 gap-x-3 text-xs text-gray-600">
                 <div className="flex items-center">
                   <MapPin className="h-3.5 w-3.5 mr-1" />
-                  {job.location}
+                  {job.location} ({job.location_type})
                 </div>
                 <div className="flex items-center">
                   <DollarSign className="h-3.5 w-3.5 mr-1" />
-                  {job.salary}
+                  {job.show_salary
+                    ? `$${job.min_salary} - $${job.max_salary}`
+                    : "Salary not disclosed"}
                 </div>
                 <div className="flex items-center">
                   <Clock className="h-3.5 w-3.5 mr-1" />
-                  {job.type}
+                  {job.employment_type}
                 </div>
               </div>
 
               <div className="mt-3 flex flex-wrap gap-1.5">
-                {job.tags.slice(0, 3).map((tag) => (
-                  <Badge key={tag} variant="outline" className="bg-light-gray text-xs">
-                    {tag}
+                {job.skills.slice(0, 3).map((skill) => (
+                  <Badge key={skill} variant="outline" className="bg-light-gray text-xs">
+                    {skill}
                   </Badge>
                 ))}
-                {job.tags.length > 3 && (
+                {job.skills.length > 3 && (
                   <Badge variant="outline" className="bg-light-gray text-xs">
-                    +{job.tags.length - 3} more
+                    +{job.skills.length - 3} more
                   </Badge>
                 )}
               </div>
 
-              <div className="mt-3 text-xs text-gray-500">Posted {job.posted}</div>
+              <div className="mt-3 text-xs text-gray-500">
+                Posted on {new Date(job.posted_at).toLocaleDateString()}
+              </div>
             </div>
           </div>
 
@@ -141,7 +137,7 @@ export default function CompanyJobs({ companyId }: { companyId: string }) {
           <div
             className={cn(
               "overflow-hidden transition-all duration-300",
-              expandedJob === job.id ? "max-h-96" : "max-h-0",
+              expandedJob === job.job_id ? "max-h-96" : "max-h-0",
             )}
           >
             <div className="border-t border-gray-100 p-5 bg-light-gray">
@@ -149,9 +145,9 @@ export default function CompanyJobs({ companyId }: { companyId: string }) {
 
               <div className="flex flex-col sm:flex-row gap-3 justify-between items-center">
                 <div className="flex flex-wrap gap-1.5">
-                  {job.tags.map((tag) => (
-                    <Badge key={tag} variant="outline" className="bg-white text-xs">
-                      {tag}
+                  {job.skills.map((skill) => (
+                    <Badge key={skill} variant="outline" className="bg-white text-xs">
+                      {skill}
                     </Badge>
                   ))}
                 </div>
@@ -162,12 +158,12 @@ export default function CompanyJobs({ companyId }: { companyId: string }) {
                     className="flex-1 sm:flex-initial"
                     onClick={(e) => {
                       e.stopPropagation()
-                      toggleSaveJob(job.id, e)
+                      toggleSaveJob(job.job_id, e)
                     }}
                   >
-                    {savedJobs.includes(job.id) ? "Saved" : "Save"}
+                    {savedJobs.includes(job.job_id) ? "Saved" : "Save"}
                   </Button>
-                  <Link href={`/jobs/${job.id}`} className="flex-1 sm:flex-initial">
+                  <Link href={`/jobs/${job.job_id}`} className="flex-1 sm:flex-initial">
                     <Button className="w-full bg-accent hover:bg-accent/90">View Job</Button>
                   </Link>
                 </div>
