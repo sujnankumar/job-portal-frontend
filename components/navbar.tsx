@@ -35,10 +35,17 @@ export default function Navbar() {
     { name: "Home", path: "/" },
     { name: "Jobs", path: "/jobs" },
     ...(isAuthenticated && user?.role === "applicant"
-      ? [{ name: "Applications", path: "/applications" }, { name: "Dashboard", path: "/dashboard" },]
+      ? [
+          { name: "Applications", path: "/applications" },
+          { name: "Dashboard", path: "/dashboard" },
+          { name: "Chat", path: "/chat" },
+        ]
       : []),
     ...(isAuthenticated && user?.role === "employer"
-      ? [{ name: "Dashboard", path: "/employer/dashboard" }]
+      ? [
+          { name: "Dashboard", path: "/employer/dashboard" },
+          { name: "Chat", path: "/employer/chat" },
+        ]
       : []),
   ]
 

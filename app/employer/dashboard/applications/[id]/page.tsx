@@ -41,16 +41,17 @@ export default function ApplicationDetailPage({ params }: { params: { id: string
   const application = {
     id: params.id,
     candidate: {
+      id: "candidate-123", // Example ID, replace with actual data structure
       name: "John Smith",
       email: "john.smith@example.com",
       phone: "(555) 123-4567",
       location: "San Francisco, CA",
       avatar: "/mystical-forest-spirit.png",
       website: "johnsmith.dev",
-      linkedin: "linkedin.com/in/johnsmith",
       github: "github.com/johnsmith",
     },
     job: {
+      id: "job-789", // Example ID, replace with actual data structure
       title: "Senior Frontend Developer",
       location: "San Francisco, CA (Remote)",
       department: "Engineering",
@@ -373,12 +374,17 @@ export default function ApplicationDetailPage({ params }: { params: { id: string
 
               <TabsContent value="coverLetter" className="bg-white rounded-b-xl shadow-sm p-6 border border-t-0">
                 <div className="bg-light-gray p-6 rounded-lg">
-                  <div className="whitespace-pre-line text-gray-700">{application.coverLetter}</div>
+                  {/* TODO: Display cover letter content here */}
+                  <p className="text-gray-700 whitespace-pre-wrap">{application.coverLetter}</p>
                 </div>
               </TabsContent>
 
               <TabsContent value="interview" className="bg-white rounded-b-xl shadow-sm p-6 border border-t-0">
-                <InterviewScheduler candidateName={application.candidate.name} />
+                <InterviewScheduler
+                  candidateName={application.candidate.name}
+                  candidateId={application.candidate.id}
+                  jobId={application.job.id}
+                />
               </TabsContent>
             </Tabs>
           </div>
