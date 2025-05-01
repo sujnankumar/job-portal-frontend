@@ -177,34 +177,52 @@ export default function OnboardingForm({ userRole }: OnboardingFormProps) {
   const handleSubmit = async (finalData: any) => {
     setIsSubmitting(true)
     try {
-      console.log("Submitting onboarding data:", finalData)
       await new Promise((r) => setTimeout(r, 1500))
-
-      // Final validation across all steps
-      let allValid = true
-      for (const step of steps) {
-        const key = step.key
-        const data = finalData[key] || finalData
-        // repeat validation logic… (omitted for brevity)
+      let logoFileId = null
+      let logoFile = null
+      if (userRole === "employer" && finalData.logo && finalData.logo instanceof File) {
+        logoFile = finalData.logo
       }
-      if (allValid) {
-        completeOnboarding()
-        if (user) {
-          const response = await api.post(
-            "/auth/onboarding",
-            finalData,
-            {
-              headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${user.token}`,
-              },
-            }
-          )
-          if (!response.data) throw new Error("Failed to complete onboarding")
-          console.log("Onboarding completed:", response.data)
-        } else {
-          router.push("/auth/login")
+      let dataToSend = { ...finalData }
+      if (logoFile) {
+        // Upload logo first
+        const logoForm = new FormData()
+        logoForm.append("file", logoFile)
+        const logoRes = await api.post("/auth/onboarding/logo", logoForm, {
+          headers: { Authorization: `Bearer ${user?.token}` ,
+                    "Content-Type": "multipart/form-data"}
+        })
+        logoFileId = logoRes.data.logo_file_id
+        // Remove logo file from data, add logo_file_id
+        dataToSend = {
+          ...finalData,
+          companyDetails: { ...finalData.companyDetails },
         }
+        delete dataToSend.companyDetails.logo
+        dataToSend.companyDetails.logo_file_id = logoFileId
+      }
+      // Flatten companyDetails into root for backend compatibility
+      if (dataToSend.companyDetails) {
+        dataToSend = { ...dataToSend, ...dataToSend.companyDetails }
+        delete dataToSend.companyDetails
+      }
+      if (user) {
+        console.log(dataToSend)
+        const response = await api.post(
+          "/auth/onboarding",
+          dataToSend,
+          {
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${user.token}`,
+            },
+          }
+        )
+        if (!response.data) throw new Error("Failed to complete onboarding")
+        completeOnboarding()
+        console.log("Onboarding completed:", response.data)
+      } else {
+        router.push("/auth/login")
       }
       const redirect = userRole === "applicant" ? "/dashboard" : "/employer/dashboard"
       router.push(redirect)
