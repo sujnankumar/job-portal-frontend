@@ -10,6 +10,7 @@ import FeaturedJobs from "@/components/featured-jobs"
 import SavedSearches from "@/components/saved-searches"
 import ApplicationList from "@/components/application-list"
 import OnboardingMiddleware from "@/components/auth/onboarding-middleware";
+import JobListings from "@/components/job-listings"
 
 
 export default function ApplicantDashboardPage() {
@@ -49,10 +50,8 @@ export default function ApplicantDashboardPage() {
             </TabsContent>
 
             <TabsContent value="saved" className="p-6">
-              <div className="text-center py-8">
-                <p className="text-gray-500 mb-4">You haven't saved any jobs yet.</p>
-                <button className="text-accent hover:underline">Browse jobs to start saving</button>
-              </div>
+              {/* Replace hardcoded text with JobListings component for saved jobs */}
+              <JobListings savedJobsOnly={true} />
             </TabsContent>
           </Tabs>
 

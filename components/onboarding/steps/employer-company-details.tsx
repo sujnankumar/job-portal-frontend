@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useRef } from "react" // Add useRef
 import { FileUp, File, X, CheckCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -39,6 +39,7 @@ export default function EmployerCompanyDetails({ data, onNext }: EmployerCompany
     logo: data?.logo || null,
   })
   const [dragActive, setDragActive] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null) // Add ref for file input
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target
@@ -130,6 +131,11 @@ export default function EmployerCompanyDetails({ data, onNext }: EmployerCompany
 
   const handleSubmit = () => {
     onNext(formData)
+  }
+
+  const handleButtonClick = () => {
+    // Programmatically click the hidden file input
+    fileInputRef.current?.click()
   }
 
   return (
@@ -268,11 +274,17 @@ export default function EmployerCompanyDetails({ data, onNext }: EmployerCompany
               </h3>
               <p className="text-sm text-gray-500 mb-4">Supported formats: JPG, PNG, SVG (Max 2MB)</p>
               <label htmlFor="logo-upload">
-                <Button className="bg-primary hover:bg-primary/90" type="button">
+                {/* Trigger file input click via ref */}
+                <Button
+                  type="button" // Add type="button" back to prevent form submission
+                  className="bg-primary hover:bg-primary/90"
+                  onClick={handleButtonClick} // Add onClick handler
+                >
                   Choose File
                 </Button>
                 <input
                   id="logo-upload"
+                  ref={fileInputRef} // Assign ref
                   type="file"
                   className="hidden"
                   accept=".jpg,.jpeg,.png,.svg"

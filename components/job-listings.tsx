@@ -14,13 +14,14 @@ import api from "@/lib/axios"
 import { useAuthStore } from "@/store/authStore"
 
 interface JobListingsProps {
-  filters: JobFiltersState
+  filters?: JobFiltersState // Make filters optional
+  savedJobsOnly?: boolean // Add savedJobsOnly prop
 }
 
-export default function JobListings({ filters }: JobListingsProps) {
+export default function JobListings({ filters = {}, savedJobsOnly = false }: JobListingsProps) {
   const [expandedJob, setExpandedJob] = useState<string | null>(null)
   const [savedJobs, setSavedJobs] = useState<string[]>([])
-  const [jobs, setJobs] = useState<any[]>([])
+  const [allJobs, setAllJobs] = useState<any[]>([]) // Store all fetched jobs
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
   const [saveError, setSaveError] = useState("")
@@ -33,12 +34,13 @@ export default function JobListings({ filters }: JobListingsProps) {
       setError("")
       try {
         const res = await api.get("/job/list")
-        setJobs(res.data)
+        setAllJobs(res.data) // Store all jobs
         console.log("Jobs fetched:", res.data)
       } catch (err: any) {
         setError("Failed to load jobs. Please try again later.")
       } finally {
-        setLoading(false)
+        // Keep loading true until saved jobs are also fetched if needed
+        if (!savedJobsOnly) setLoading(false)
       }
     }
     fetchJobs()
@@ -46,21 +48,25 @@ export default function JobListings({ filters }: JobListingsProps) {
 
   useEffect(() => {
     const fetchSavedJobs = async () => {
-      if (!user || user.role !== "applicant" || !user.token) return
+      if (!user || user.role !== "applicant" || !user.token) {
+        if (savedJobsOnly) setLoading(false) // Stop loading if not logged in and showing saved
+        return
+      }
       try {
         const res = await api.get("/sj/saved-jobs", {
           headers: {
             Authorization: `Bearer ${user.token}`,
           },
         })
-        // Assuming res.data is an array of saved job objects with job_id
         setSavedJobs((res.data.saved_jobs || []).map((job: any) => job.job_id))
       } catch (err) {
-        // Optionally handle error
+        if (savedJobsOnly) setError("Failed to load saved jobs.")
+      } finally {
+        if (savedJobsOnly) setLoading(false) // Stop loading after saved jobs fetch
       }
     }
     fetchSavedJobs()
-  }, [user])
+  }, [user, savedJobsOnly])
 
   const toggleExpand = (jobId: string) => {
     setExpandedJob(expandedJob === jobId ? null : jobId)
@@ -103,31 +109,39 @@ export default function JobListings({ filters }: JobListingsProps) {
     }
   }
 
-  // Filtering logic
-  const filteredJobs = jobs.filter((job) => {
-    // Job Type
-    if (filters.jobTypes.length > 0 && !filters.jobTypes.includes(job.employment_type)) return false
-    // Experience
-    if (filters.experienceLevels.length > 0 && !filters.experienceLevels.includes(job.experience_level)) return false
-    // Location Type
-    if (filters.locationTypes && filters.locationTypes.length > 0 && !filters.locationTypes.includes(job.location_type)) return false
-    // Salary
-    // if (job.min_salary < filters.salaryRange[0] || job.max_salary > filters.salaryRange[1]) return false
-    // Location
-    if (filters.location && !job.location?.toLowerCase().includes(filters.location.toLowerCase())) return false
-    // Industry
-    if (filters.industries.length > 0 && !filters.industries.includes(job.industry)) return false
-    // Skills
-    if (filters.skills.length > 0 && !filters.skills.every(skill => job.skills?.includes(skill))) return false
-    // Search (title, keywords, company)
-    if (filters.search && filters.search.trim() !== "") {
-      const searchLower = filters.search.toLowerCase()
-      if (
-        !(job.title?.toLowerCase().includes(searchLower) ||
-          job.company?.toLowerCase().includes(searchLower) ||
-          (job.tags && job.tags.some((tag: string) => tag.toLowerCase().includes(searchLower))))
-      ) {
-        return false
+  // Determine which jobs to display based on savedJobsOnly prop
+  const jobsToDisplay = savedJobsOnly
+    ? allJobs.filter((job) => savedJobs.includes(job.job_id))
+    : allJobs
+
+  // Filtering logic applied to jobsToDisplay
+  const filteredJobs = jobsToDisplay.filter((job) => {
+    // Apply filters only if they exist
+    if (filters) {
+      // Job Type
+      if (filters.jobTypes && filters.jobTypes.length > 0 && !filters.jobTypes.includes(job.employment_type)) return false
+      // Experience
+      if (filters.experienceLevels && filters.experienceLevels.length > 0 && !filters.experienceLevels.includes(job.experience_level)) return false
+      // Location Type
+      if (filters.locationTypes && filters.locationTypes.length > 0 && !filters.locationTypes.includes(job.location_type)) return false
+      // Salary
+      // if (job.min_salary < filters.salaryRange[0] || job.max_salary > filters.salaryRange[1]) return false
+      // Location
+      if (filters.location && !job.location?.toLowerCase().includes(filters.location.toLowerCase())) return false
+      // Industry
+      if (filters.industries && filters.industries.length > 0 && !filters.industries.includes(job.industry)) return false
+      // Skills
+      if (filters.skills && filters.skills.length > 0 && !filters.skills.every(skill => job.skills?.includes(skill))) return false
+      // Search (title, keywords, company)
+      if (filters.search && filters.search.trim() !== "") {
+        const searchLower = filters.search.toLowerCase()
+        if (
+          !(job.title?.toLowerCase().includes(searchLower) ||
+            job.company?.toLowerCase().includes(searchLower) ||
+            (job.tags && job.tags.some((tag: string) => tag.toLowerCase().includes(searchLower))))
+        ) {
+          return false
+        }
       }
     }
     return true
@@ -147,9 +161,12 @@ export default function JobListings({ filters }: JobListingsProps) {
       {filteredJobs.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-16 bg-white rounded-xl shadow-sm border border-gray-100">
           <img src="/placeholder-logo.svg" alt="No jobs" className="w-20 h-20 mb-4 opacity-60" />
-          <h2 className="text-xl font-semibold text-gray-700 mb-2">No jobs available right now</h2>
-          <p className="text-gray-500 text-sm mb-2">We're sorry, there are currently no job postings.</p>
-          <p className="text-gray-400 text-xs">Please check back later or adjust your filters.</p>
+          <h2 className="text-xl font-semibold text-gray-700 mb-2">
+            {savedJobsOnly ? "You haven't saved any jobs yet" : "No jobs match your criteria"}
+          </h2>
+          <p className="text-gray-500 text-sm mb-2">
+            {savedJobsOnly ? "Start saving jobs you're interested in!" : "Try adjusting your filters or check back later."}
+          </p>
         </div>
       ) : (
         filteredJobs.map((job, index) => (
