@@ -33,9 +33,20 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import InterviewScheduler from "@/components/interview-scheduler"
 import ResumeActions from "@/components/resume-actions"
+import EmployerJobChat from "@/components/employer-job-chat-open"
 
 interface JobApplicationsProps {
   jobId: string
+}
+
+interface Candidate {
+  id: string;
+  name: string;
+  avatar: string;
+}
+
+interface JobApplication {
+  candidate: Candidate;
 }
 
 export default function JobApplications({ jobId }: JobApplicationsProps) {
@@ -47,7 +58,38 @@ export default function JobApplications({ jobId }: JobApplicationsProps) {
   const [searchTerm, setSearchTerm] = useState("")
   const [statusFilter, setStatusFilter] = useState("all")
   const [selectedApplication, setSelectedApplication] = useState<string | null>(null)
-  const [chatOpen, setChatOpen] = useState<Record<string, boolean>>({})
+
+  // Multi-chat state: array of open chats with applicantId, jobId, etc.
+  const [openChats, setOpenChats] = useState<{
+    applicantId: string,
+    jobId: string,
+    applicantName: string,
+    applicantAvatar: string,
+    jobTitle: string
+  }[]>([])
+
+  
+
+  const openChat = (app: JobApplication) => {
+    setOpenChats((prev) =>
+      prev.find((c) => c.applicantId === app.candidate.id)
+        ? prev
+        : [
+            ...prev,
+            {
+              applicantId: app.candidate.id,
+              jobId: job.id, // Assuming job state is populated and has an id
+              applicantName: app.candidate.name,
+              applicantAvatar: app.candidate.avatar,
+              jobTitle: job.title, // Assuming job state is populated and has a title
+            },
+          ]
+    )
+  }
+
+  const closeChat = (applicantId: string) => {
+    setOpenChats((prev) => prev.filter((c) => c.applicantId !== applicantId))
+  }
 
   // Add state for dialog open, resume base64, loading, and error
   const [dialogOpenMap, setDialogOpenMap] = useState<Record<string, boolean>>({})
@@ -104,13 +146,6 @@ export default function JobApplications({ jobId }: JobApplicationsProps) {
       default:
         return null
     }
-  }
-
-  const toggleChat = (appId: string) => {
-    setChatOpen((prev) => ({
-      ...prev,
-      [appId]: !prev[appId],
-    }))
   }
 
   // Function to fetch resume when dialog opens
@@ -363,7 +398,13 @@ export default function JobApplications({ jobId }: JobApplicationsProps) {
                           <Download className="h-4 w-4 mr-1" /> Loading Resume...
                         </Button>
                       )}
-                      <Button variant="outline" onClick={() => toggleChat(app.id)}>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="ml-auto"
+                        onClick={() => openChat(app)}
+                        disabled={openChats.some((c) => c.applicantId === app.candidate.id)}
+                      >
                         <MessageSquare className="h-4 w-4 mr-1" /> Chat
                       </Button>
                     </div>
@@ -394,64 +435,36 @@ export default function JobApplications({ jobId }: JobApplicationsProps) {
                 <Button size="sm" className="bg-red-500 hover:bg-red-600 text-white">
                   <XCircle className="h-3.5 w-3.5 mr-1" /> Reject
                 </Button>
-
-                <Button variant="outline" size="sm" className="ml-auto" onClick={() => toggleChat(app.id)}>
-                  <MessageSquare className="h-3.5 w-3.5 mr-1" /> Chat
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="ml-auto"
+                  onClick={() => openChat(app)}
+                  disabled={openChats.some((c) => c.applicantId === app.candidate.id)}
+                >
+                  <MessageSquare className="h-4 w-4 mr-1" /> Chat
                 </Button>
               </div>
-
-              <Dialog open={chatOpen[app.id]} onOpenChange={() => toggleChat(app.id)}>
-                <DialogTrigger asChild>
-                  {/* <Button variant="outline" size="sm" className="ml-auto">
-                    <MessageSquare className="h-3.5 w-3.5 mr-1" /> Chat
-                  </Button> */}
-                </DialogTrigger>
-                <DialogContent className="max-w-lg">
-                  <div>
-                    <div className="flex justify-between items-center mb-3">
-                      <h4 className="font-medium text-dark-gray">Chat with {app.candidate.name}</h4>
-                    </div>
-                    <div className="h-48 overflow-y-auto border rounded-md p-3 mb-3 bg-light-gray">
-                      <div className="flex justify-start mb-2">
-                        <div className="bg-white rounded-lg p-2 max-w-[80%] shadow-sm">
-                          <p className="text-sm">
-                            Hello! Thanks for your application. Do you have any questions about the role?
-                          </p>
-                          <p className="text-xs text-gray-500 mt-1">10:30 AM</p>
-                        </div>
-                      </div>
-                      <div className="flex justify-end mb-2">
-                        <div className="bg-accent text-white rounded-lg p-2 max-w-[80%] shadow-sm">
-                          <p className="text-sm">
-                            Hi! Yes, I was wondering about the tech stack you're currently using and the team structure.
-                          </p>
-                          <p className="text-xs text-white/70 mt-1">10:32 AM</p>
-                        </div>
-                      </div>
-                      <div className="flex justify-start">
-                        <div className="bg-white rounded-lg p-2 max-w-[80%] shadow-sm">
-                          <p className="text-sm">
-                            We're using React, TypeScript, and Next.js for frontend, with Node.js and PostgreSQL for
-                            backend. The team consists of 5 frontend devs, 4 backend devs, 2 designers, and a product
-                            manager.
-                          </p>
-                          <p className="text-xs text-gray-500 mt-1">10:35 AM</p>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="flex gap-2">
-                      <Input placeholder="Type a message..." className="flex-1" />
-                      <Button className="bg-accent hover:bg-accent/90">
-                        <Send className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-                </DialogContent>
-              </Dialog>
             </div>
           ))
         )}
+        
       </div>
+
+      {/* Render all open chat modals, stacked horizontally */}
+      {openChats.map((chat, idx) => (
+        <EmployerJobChat
+          key={chat.applicantId}
+          jobId={chat.jobId}
+          applicantId={chat.applicantId}
+          applicantName={chat.applicantName}
+          applicantAvatar={chat.applicantAvatar}
+          jobTitle={chat.jobTitle}
+          onClose={() => closeChat(chat.applicantId)}
+          // Position each modal with a horizontal offset
+          style={{ right: 24 + idx * 400, bottom: 24, position: 'fixed', zIndex: 50 }}
+        />
+      ))}
     </div>
   )
 }

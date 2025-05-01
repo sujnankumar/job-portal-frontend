@@ -62,7 +62,7 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
           </div>
         </div>
       </div>
-      <JobChat jobId={id} companyName={job.company} companyLogo={job.logo} jobTitle={job.title} />
+      <JobChat jobId={id} employerId={job.employer_id} companyName={job.company} companyLogo={job.logo} jobTitle={job.title} />
     </OnboardingMiddleware>
   )
 }

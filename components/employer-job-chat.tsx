@@ -1,7 +1,5 @@
 "use client"
-
 import type React from "react"
-
 import { useState, useRef, useEffect, useCallback } from "react"
 import Image from "next/image"
 import { Send, X, Paperclip, ChevronDown, ChevronUp, MinusCircle } from "lucide-react"
@@ -20,15 +18,15 @@ interface Message {
   read: boolean
 }
 
-interface JobChatProps {
+interface EmployerJobChatProps {
   jobId: string
-  employerId: string // <-- add employerId prop
-  companyName: string
-  companyLogo: string
+  applicantId: string
+  applicantName: string
+  applicantAvatar: string
   jobTitle: string
 }
 
-export default function JobChat({ jobId, employerId, companyName, companyLogo, jobTitle }: JobChatProps) {
+export default function EmployerJobChat({ jobId, applicantId, applicantName, applicantAvatar, jobTitle }: EmployerJobChatProps) {
   const { user } = useAuthStore()
   const [isOpen, setIsOpen] = useState(false)
   const [isMinimized, setIsMinimized] = useState(false)
@@ -38,14 +36,14 @@ export default function JobChat({ jobId, employerId, companyName, companyLogo, j
   const [loading, setLoading] = useState(true)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
-  // Setup WebSocket for real-time chat with employer
+  // Setup WebSocket for real-time chat with applicant
   const { send } = useChatSocket({
-    recipientId: employerId ?? null,
+    recipientId: applicantId ?? null,
     token: user?.token || null,
     onMessage: (incomingMsg: any) => {
       if (incomingMsg && incomingMsg.id && incomingMsg.sender_id && incomingMsg.text && incomingMsg.time) {
         const formattedMessage: Message = {
-          id: incomingMsg.id, // keep for compatibility
+          id: incomingMsg.id,
           sender_id: incomingMsg.sender_id,
           text: incomingMsg.text,
           timestamp: new Date(incomingMsg.time),
@@ -56,18 +54,16 @@ export default function JobChat({ jobId, employerId, companyName, companyLogo, j
     },
   })
 
-  // Scroll to bottom when messages change or chat opens
   useEffect(() => {
     if (isOpen && !isMinimized) {
       messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
     }
   }, [messages, isOpen, isMinimized])
 
-  // Fetch previous messages when modal opens
   useEffect(() => {
-    if (!isOpen || !employerId || !user?.token) return
+    if (!isOpen || !applicantId || !user?.token) return
     setLoading(true)
-    api.get(`/chat/chat/messages/${employerId}`, { headers: { Authorization: `Bearer ${user.token}` } })
+    api.get(`/chat/chat/messages/${applicantId}`, { headers: { Authorization: `Bearer ${user.token}` } })
       .then(res => {
         setMessages(res.data.map((msg: any) => ({
           id: msg.id,
@@ -79,15 +75,14 @@ export default function JobChat({ jobId, employerId, companyName, companyLogo, j
         setInitialized(res.data.length > 0)
         setLoading(false)
       })
-  }, [isOpen, employerId, user?.token])
+  }, [isOpen, applicantId, user?.token])
 
-  // Only send initial message if no messages found from API
   useEffect(() => {
     if (
       isOpen &&
       !initialized &&
       user?.id &&
-      !loading && // wait for loading to finish
+      !loading &&
       messages.length === 0
     ) {
       setInitialized(true)
@@ -97,7 +92,7 @@ export default function JobChat({ jobId, employerId, companyName, companyLogo, j
   const handleSendMessage = useCallback(() => {
     if (message.trim() === "") return;
     send({ text: message, job_id: jobId });
-    setMessage(""); // Only clear input, don't add to messages here
+    setMessage("");
   }, [message, jobId, send])
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -106,14 +101,14 @@ export default function JobChat({ jobId, employerId, companyName, companyLogo, j
       handleSendMessage()
     }
   }
-
+  
   if (!isOpen) {
     return (
       <Button
         onClick={() => setIsOpen(true)}
         className="fixed bottom-6 right-6 bg-accent hover:bg-accent/90 shadow-lg z-50"
       >
-        Chat with Employer
+        Chat with Applicant
       </Button>
     )
   }
@@ -133,15 +128,15 @@ export default function JobChat({ jobId, employerId, companyName, companyLogo, j
         <div className="flex items-center">
           <div className="w-8 h-8 bg-light-gray rounded-full overflow-hidden mr-2 border border-gray-200">
             <Image
-              src={companyLogo || "/placeholder.svg"}
-              alt={companyName}
+              src={applicantAvatar || "/placeholder-user.jpg"}
+              alt={applicantName}
               width={32}
               height={32}
               className="object-contain"
             />
           </div>
           <div>
-            <div className="font-medium text-dark-gray">{companyName}</div>
+            <div className="font-medium text-dark-gray">{applicantName}</div>
             <div className="text-xs text-gray-500 truncate max-w-[180px]">{jobTitle}</div>
           </div>
         </div>
@@ -180,12 +175,6 @@ export default function JobChat({ jobId, employerId, companyName, companyLogo, j
 
       {!isMinimized && (
         <>
-          {/* Show initial greeting for applicants if no messages */}
-          {user?.role === "applicant" && messages.length === 0 && (
-            <div className="px-4 pt-4 pb-2 text-center text-sm text-gray-600">
-              Hello! Thanks for your interest in the {jobTitle} position. How can I help you today?
-            </div>
-          )}
           {/* Chat Messages */}
           <div className="flex-1 overflow-y-auto p-4 space-y-4">
             {loading ? (
@@ -202,8 +191,8 @@ export default function JobChat({ jobId, employerId, companyName, companyLogo, j
                   {msg.sender_id !== user?.id && (
                     <div className="w-8 h-8 bg-light-gray rounded-full overflow-hidden mr-2 flex-shrink-0 border border-gray-200">
                       <Image
-                        src={companyLogo || "/placeholder.svg"}
-                        alt={companyName}
+                        src={applicantAvatar || "/placeholder-user.jpg"}
+                        alt={applicantName}
                         width={32}
                         height={32}
                         className="object-contain"
