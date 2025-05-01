@@ -142,7 +142,15 @@ export default function ResumeUploader({ onConfirm }: { onConfirm?: (resume: { t
   }
 
   // Profile Resume Option
-  const showProfileOption = !loadingProfileResume && profileResume;
+  if (loadingProfileResume) {
+    return (
+      <div className="flex items-center justify-center min-h-[200px] text-gray-500 text-base">
+        Checking for profile resume... loading.........
+      </div>
+    )
+  }
+
+  const showProfileOption = profileResume;
 
   return (
     <div className="space-y-6">
@@ -207,10 +215,10 @@ export default function ResumeUploader({ onConfirm }: { onConfirm?: (resume: { t
       {!showProfileOption && (
         <div
           className={cn(
-            "border rounded-md p-4 flex items-center gap-4 cursor-pointer transition-colors border-red-500 bg-red-50"
+            "border rounded-md p-4 flex items-center gap-4 cursor-pointer transition-colors border-green-500 bg-red-50"
           )}
         >
-          <span className="inline-block w-4 h-4 rounded-full border-2 border-red-500 bg-red-500 mr-2" />
+          <span className="inline-block w-4 h-4 rounded-full border-2 border-green-500 bg-green-500 mr-2" />
           <label className="cursor-pointer select-none">Upload Resume</label>
         </div>
       )}
