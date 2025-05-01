@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import Image from "next/image"
 import Link from "next/link"
-import { MapPin, DollarSign, Clock, Briefcase, Building, Calendar, Share2, Bookmark, BookmarkCheck } from "lucide-react"
+import { MapPin, DollarSign, Clock, Briefcase, Building, Calendar, Share2, Bookmark, BookmarkCheck, X, Facebook, Twitter, Send, Copy, MessageCircle } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -12,11 +12,9 @@ import MapEmbed from "@/components/map-embed"
 import { useAuthStore } from "@/store/authStore"
 import api from "@/lib/axios"
 
-
 interface JobDetails {
   skills: string[];
-  // benefits?: string[]; // Explicitly define the type for benefits
-  [key: string]: any; // Add other properties as needed
+  [key: string]: any;
 }
 
 export default function JobDetail({ jobId, jobDetails, is_saved }: { jobId: string; jobDetails: JobDetails; is_saved: boolean }) {
@@ -24,8 +22,11 @@ export default function JobDetail({ jobId, jobDetails, is_saved }: { jobId: stri
   const [saveError, setSaveError] = useState("")
   const [saveSuccess, setSaveSuccess] = useState("")
   const [isApplied, setIsApplied] = useState(false)
+  const [showShareModal, setShowShareModal] = useState(false)
+  const [copySuccess, setCopySuccess] = useState("")
   const user = useAuthStore((state) => state.user)
   const job = jobDetails
+  const shareUrl = typeof window !== "undefined" ? window.location.href : ""
 
   useEffect(() => {
     const checkApplied = async () => {
@@ -79,8 +80,63 @@ export default function JobDetail({ jobId, jobDetails, is_saved }: { jobId: stri
     }
   }
 
+  const handleCopy = () => {
+    if (navigator.clipboard && shareUrl) {
+      navigator.clipboard.writeText(shareUrl)
+      setCopySuccess("Link copied!")
+      setTimeout(() => setCopySuccess(""), 1500)
+    }
+  }
+
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+      {/* Share Modal */}
+      {showShareModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="bg-white rounded-xl shadow-lg p-6 w-[350px] relative animate-fadeIn">
+            <button
+              className="absolute top-3 right-3 text-gray-400 hover:text-gray-700"
+              onClick={() => setShowShareModal(false)}
+              aria-label="Close"
+            >
+              <X className="w-5 h-5" />
+            </button>
+            <h2 className="text-lg font-semibold mb-4">Share Job Link</h2>
+            <div className="mb-3 text-sm text-gray-700">Share this link via</div>
+            <div className="flex gap-3 mb-4 justify-center">
+              <a href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`} target="_blank" rel="noopener noreferrer" className="bg-blue-100 hover:bg-blue-200 rounded-full p-2" title="Share on Facebook">
+                <Facebook className="w-5 h-5 text-blue-600" />
+              </a>
+              <a href={`https://twitter.com/intent/tweet?url=${encodeURIComponent(shareUrl)}`} target="_blank" rel="noopener noreferrer" className="bg-blue-100 hover:bg-blue-200 rounded-full p-2" title="Share on Twitter">
+                <Twitter className="w-5 h-5 text-sky-500" />
+              </a>
+              <a href={`https://wa.me/?text=${encodeURIComponent(shareUrl)}`} target="_blank" rel="noopener noreferrer" className="bg-green-100 hover:bg-green-200 rounded-full p-2" title="Share on WhatsApp">
+                <MessageCircle className="w-5 h-5 text-green-600" />
+              </a>
+              <a href={`https://t.me/share/url?url=${encodeURIComponent(shareUrl)}`} target="_blank" rel="noopener noreferrer" className="bg-cyan-100 hover:bg-cyan-200 rounded-full p-2" title="Share on Telegram">
+                <Send className="w-5 h-5 text-cyan-600" />
+              </a>
+            </div>
+            <div className="mb-2 text-sm text-gray-700">Or copy link</div>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={shareUrl}
+                readOnly
+                className="flex-1 px-2 py-1 border rounded bg-gray-100 text-xs text-gray-700"
+                aria-label="Job Share Link"
+              />
+              <button
+                onClick={handleCopy}
+                className="bg-purple-600 hover:bg-purple-700 text-white px-3 py-1 rounded text-xs flex items-center gap-1"
+              >
+                <Copy className="w-4 h-4" /> Copy
+              </button>
+            </div>
+            {copySuccess && <div className="text-green-600 text-xs mt-2">{copySuccess}</div>}
+          </div>
+        </div>
+      )}
       {/* Job Header */}
       <div className="p-6 border-b border-gray-100">
         <div className="flex items-start gap-4">
@@ -158,7 +214,7 @@ export default function JobDetail({ jobId, jobDetails, is_saved }: { jobId: stri
             )}
           </Button>
 
-          <Button variant="outline">
+          <Button variant="outline" onClick={() => setShowShareModal(true)}>
             <Share2 className="h-4 w-4 mr-2" />
             Share
           </Button>
