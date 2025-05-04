@@ -29,10 +29,13 @@ export const useNotificationStore = create<NotificationState>((set) => ({
       unreadCount: notifications.filter((n) => !n.read).length,
     }),
   addNotification: (notification) =>
-    set((state) => ({
-      notifications: [notification, ...state.notifications],
-      unreadCount: state.unreadCount + 1,
-    })),
+    set((state) => {
+      const isUnread = !notification.read;
+      return {
+        notifications: [notification, ...state.notifications],
+        unreadCount: state.unreadCount + (isUnread ? 1 : 0),
+      };
+    }),
   markAsRead: async (id: string) => {
     set((state) => {
       const notifications = state.notifications.map((n) =>
@@ -44,7 +47,10 @@ export const useNotificationStore = create<NotificationState>((set) => ({
       };
     });
     try {
-      const token = typeof window !== "undefined" ? JSON.parse(localStorage.getItem("auth-storage") || '{}').state?.user?.token : null;
+      const token =
+        typeof window !== "undefined"
+          ? JSON.parse(localStorage.getItem("auth-storage") || '{}')?.state?.user?.token
+          : null;
       if (token) {
         await api.post(`/notifications/mark-read/${id}`, null, { params: { token } });
       }
@@ -56,7 +62,10 @@ export const useNotificationStore = create<NotificationState>((set) => ({
       unreadCount: 0,
     }));
     try {
-      const token = typeof window !== "undefined" ? JSON.parse(localStorage.getItem("auth-storage") || '{}').state?.user?.token : null;
+      const token =
+        typeof window !== "undefined"
+          ? JSON.parse(localStorage.getItem("auth-storage") || '{}')?.state?.user?.token
+          : null;
       if (token) {
         await api.post("/notifications/mark-all-read", null, { params: { token } });
       }

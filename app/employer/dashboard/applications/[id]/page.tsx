@@ -24,22 +24,25 @@ import {
   Award,
 } from "lucide-react"
 import InterviewScheduler from "@/components/interview-scheduler"
+import React from "react"
 
-export default function ApplicationDetailPage({ params }: { params: { id: string } }) {
-  const { user, isAuthenticated } = useAuthStore()
+export default function ApplicationDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const actualParams = React.use(params)
+  const { user, isAuthenticated, hydrated } = useAuthStore()
   const router = useRouter()
 
   useEffect(() => {
+    if (!hydrated) return;
     if (isAuthenticated && user?.role === "applicant") {
       router.push("/dashboard")
     } else if (!isAuthenticated) {
       router.push("/auth/login")
     }
-  }, [isAuthenticated, user, router])
+  }, [hydrated, isAuthenticated, user, router])
 
   // In a real app, you would fetch the application details based on the id
   const application = {
-    id: params.id,
+    id: actualParams.id,
     candidate: {
       id: "candidate-123", // Example ID, replace with actual data structure
       name: "John Smith",

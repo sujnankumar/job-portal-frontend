@@ -30,8 +30,15 @@ export function useNotificationSocket({
     ws.onclose = () => {
       if (onClose) onClose()
     }
+    // --- Add ping interval ---
+    const pingInterval = setInterval(() => {
+      if (ws.readyState === WebSocket.OPEN) {
+        ws.send("ping")
+      }
+    }, 25000) // 25 seconds
     return () => {
       ws.close()
+      clearInterval(pingInterval)
     }
   }, [token])
 

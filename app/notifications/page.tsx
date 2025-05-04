@@ -7,7 +7,7 @@ import { useNotificationSocket } from "@/hooks/use-notification-socket"
 import Link from "next/link"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Bell, CheckCircle2, Mail, AlertTriangle, Briefcase } from "lucide-react"
+import { Bell, CheckCircle2, Mail, AlertTriangle, Briefcase, CalendarClock } from "lucide-react"
 
 export default function NotificationsPage() {
   const { user } = useAuthStore()
@@ -29,6 +29,7 @@ export default function NotificationsPage() {
   useNotificationSocket({
     token: user?.token || null,
     onNotification: (notification) => {
+      if (notification.type === "ping" || !notification.id) return;
       addNotification(notification)
     }
   })
@@ -53,7 +54,7 @@ export default function NotificationsPage() {
         </div>
       ) : (
         <ul className="space-y-4">
-          {notifications.map((notification) => (
+          {notifications.filter(n => n && n.id).map((notification) => (
             <li
               key={notification.id}
               className={`flex items-start gap-3 p-4 rounded-xl border shadow-sm transition bg-white hover:bg-light-gray/70 ${notification.read ? 'opacity-70' : 'border-accent/60'}`}
@@ -63,6 +64,7 @@ export default function NotificationsPage() {
                 {notification.type === "message" && <Mail className="h-6 w-6 text-blue-500" />}
                 {notification.type === "alert" && <AlertTriangle className="h-6 w-6 text-yellow-500" />}
                 {notification.type === "job" && <CheckCircle2 className="h-6 w-6 text-green-500" />}
+                {notification.type === "interview" && <CalendarClock className="h-6 w-6 text-purple-500" />}
               </span>
               <Link
                 href={notification.link}

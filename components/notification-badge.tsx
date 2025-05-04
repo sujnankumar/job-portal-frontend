@@ -38,9 +38,16 @@ export default function NotificationBadge() {
   useNotificationSocket({
     token: hydrated ? user?.token || null : null,
     onNotification: (notification) => {
+      if (notification.type === "ping" || !notification.id) return;
       addNotification(notification)
     }
   })
+
+  // Show up to 3 notifications: prefer unread, fill with read if needed
+  const sortedNotifications = [
+    ...notifications.filter(n => n && n.id && !n.read),
+    ...notifications.filter(n => n && n.id && n.read)
+  ].slice(0, 3)
 
   return (
     <DropdownMenu>
@@ -64,10 +71,10 @@ export default function NotificationBadge() {
           )}
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
-        {notifications.length === 0 ? (
+        {sortedNotifications.length === 0 ? (
           <div className="py-4 text-center text-sm text-gray-500">No notifications</div>
         ) : (
-          notifications.map((notification) => (
+          sortedNotifications.map((notification) => (
             <DropdownMenuItem key={notification.id} className="p-0">
               <Link
                 href={notification.link || "#"}
