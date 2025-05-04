@@ -154,7 +154,19 @@ export default function EmployerChatPage() {
                   <div className="font-medium truncate">{r.name}</div>
                   <div className="text-xs text-gray-500 truncate">{r.lastMessage}</div>
                 </div>
-                <div className="text-xs text-gray-400 whitespace-nowrap">{r.lastMessageTime}</div>
+                  <div className="text-xs text-gray-400 whitespace-nowrap">
+                    {r.lastMessageTime
+                      ? (() => {
+                          const timeNum = Number(r.lastMessageTime);
+                          const date = !isNaN(timeNum)
+                            ? new Date(timeNum > 1e12 ? timeNum : timeNum * 1000)
+                            : new Date(r.lastMessageTime);
+                          return isNaN(date.getTime())
+                            ? ""
+                            : date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+                        })()
+                      : ""}
+                  </div>
               </li>
             ))}
           </ul>

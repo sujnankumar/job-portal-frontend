@@ -14,101 +14,33 @@ import {
 } from "@/components/ui/dropdown-menu"
 import Link from "next/link"
 import { useAuthStore } from "@/store/authStore"
-
-interface Notification {
-  id: string
-  type: "application" | "message" | "job" | "alert"
-  title: string
-  description: string
-  time: string
-  read: boolean
-  link: string
-}
+import api from "@/lib/axios"
+import { useNotificationSocket } from "@/hooks/use-notification-socket"
+import { useNotificationStore } from "@/store/notificationStore"
 
 export default function NotificationBadge() {
-  const [notifications, setNotifications] = useState<Notification[]>([])
-  const [unreadCount, setUnreadCount] = useState(0)
-  const { user } = useAuthStore()
+  const { user, hydrated } = useAuthStore()
+  const notifications = useNotificationStore((s) => s.notifications)
+  const unreadCount = useNotificationStore((s) => s.unreadCount)
+  const setNotifications = useNotificationStore((s) => s.setNotifications)
+  const addNotification = useNotificationStore((s) => s.addNotification)
+  const markAsRead = useNotificationStore((s) => s.markAsRead)
+  const markAllAsRead = useNotificationStore((s) => s.markAllAsRead)
 
-  // Mock fetching notifications
   useEffect(() => {
-    // In a real app, you would fetch notifications from an API
-    const mockNotifications: Notification[] =
-      user?.role === "employer"
-        ? [
-            {
-              id: "1",
-              type: "application",
-              title: "New Application",
-              description: "John Smith applied for Senior Frontend Developer",
-              time: "10 minutes ago",
-              read: false,
-              link: "/employer/dashboard/applications/1",
-            },
-            {
-              id: "2",
-              type: "job",
-              title: "Job Expiring Soon",
-              description: "Your UX/UI Designer job posting expires in 2 days",
-              time: "2 hours ago",
-              read: false,
-              link: "/employer/dashboard/jobs/2",
-            },
-            {
-              id: "3",
-              type: "message",
-              title: "New Message",
-              description: "Emily Johnson sent you a message about the interview",
-              time: "Yesterday",
-              read: true,
-              link: "/employer/dashboard/messages/3",
-            },
-          ]
-        : [
-            {
-              id: "1",
-              type: "job",
-              title: "New Job Match",
-              description: "Senior Frontend Developer at Tech Innovations Inc.",
-              time: "10 minutes ago",
-              read: false,
-              link: "/jobs/1",
-            },
-            {
-              id: "2",
-              type: "application",
-              title: "Application Status",
-              description: "Your application for UX/UI Designer has been viewed",
-              time: "2 hours ago",
-              read: false,
-              link: "/applications",
-            },
-            {
-              id: "3",
-              type: "message",
-              title: "Interview Invitation",
-              description: "Tech Innovations Inc. invited you for an interview",
-              time: "Yesterday",
-              read: true,
-              link: "/applications",
-            },
-          ]
+    if (!hydrated || !user?.token) return
+    api.get("/notifications/", { params: { token: user.token } })
+      .then(res => {
+        setNotifications(res.data)
+      })
+  }, [hydrated, user?.token, setNotifications])
 
-    setNotifications(mockNotifications)
-    setUnreadCount(mockNotifications.filter((n) => !n.read).length)
-  }, [user])
-
-  const markAsRead = (id: string) => {
-    setNotifications((prev) =>
-      prev.map((notification) => (notification.id === id ? { ...notification, read: true } : notification)),
-    )
-    setUnreadCount((prev) => Math.max(0, prev - 1))
-  }
-
-  const markAllAsRead = () => {
-    setNotifications((prev) => prev.map((notification) => ({ ...notification, read: true })))
-    setUnreadCount(0)
-  }
+  useNotificationSocket({
+    token: hydrated ? user?.token || null : null,
+    onNotification: (notification) => {
+      addNotification(notification)
+    }
+  })
 
   return (
     <DropdownMenu>
@@ -138,7 +70,7 @@ export default function NotificationBadge() {
           notifications.map((notification) => (
             <DropdownMenuItem key={notification.id} className="p-0">
               <Link
-                href={notification.link}
+                href={notification.link || "#"}
                 className="flex w-full px-2 py-2 hover:bg-light-gray"
                 onClick={() => markAsRead(notification.id)}
               >
