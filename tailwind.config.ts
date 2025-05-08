@@ -20,9 +20,9 @@ const config = {
     },
     extend: {
       colors: {
-        primary: "#f2c744",
-        accent: "#f2b749",
-        "light-cream": "#f2e6d0",
+        primary: "#8f5caf", // Milka purple
+        accent: "#6a4097", // Darker purple for accents
+        "light-cream": "#f8f4ff", // Light purple tint
         "light-gray": "#f2f2f2",
         "dark-gray": "#404040",
         border: "hsl(var(--border))",
