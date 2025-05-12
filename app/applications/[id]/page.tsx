@@ -44,6 +44,7 @@ import ApplicationTimeline from "@/components/application-timeline"
 import api from "@/lib/axios"
 import { set } from "date-fns"
 import ResumeActions from "@/components/resume-actions"
+import ContactRecruiterChatModal from "@/components/contact-recruiter-chat-modal"
 
 export default function ApplicationDetailsPage({ params }: { params: Promise<{ id: string }> }) {
   const { user, isAuthenticated } = useAuthStore()
@@ -53,6 +54,7 @@ export default function ApplicationDetailsPage({ params }: { params: Promise<{ i
   const [error, setError] = useState("")
   const [loading, setLoading] = useState(true)
   const [id, setId] = useState("")
+  const [showChat, setShowChat] = useState(false)
 
   const fetchApplication = async (appId: string, token: string) => {
        setLoading(true);
@@ -182,6 +184,13 @@ export default function ApplicationDetailsPage({ params }: { params: Promise<{ i
       alert("Failed to withdraw application. Please try again.")
     }
   }
+
+  // Extract job and employer info for chat modal
+  const jobId = application?.job_id || application?.job?._id || ""
+  const employerId = application?.job?.employer_id || application?.job?.employer || ""
+  const companyName = application?.job?.company_name || application?.job?.company || ""
+  const companyLogo = application?.job?.logo || "/placeholder.svg"
+  const jobTitle = application?.job?.title || ""
 
   return (
     <OnboardingMiddleware>
@@ -542,7 +551,7 @@ export default function ApplicationDetailsPage({ params }: { params: Promise<{ i
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button variant="outline" className="text-gray-700">
+                  <Button variant="outline" className="text-gray-700" onClick={() => setShowChat(true)} disabled={showChat}>
                     <MessageSquare className="h-4 w-4 mr-2" />
                     Contact Recruiter
                   </Button>
@@ -557,6 +566,16 @@ export default function ApplicationDetailsPage({ params }: { params: Promise<{ i
               Back to Applications
             </Button>
           </div>
+          {/* Chat Modal */}
+          <ContactRecruiterChatModal
+            jobId={jobId}
+            employerId={employerId}
+            companyName={companyName}
+            companyLogo={companyLogo}
+            jobTitle={jobTitle}
+            open={showChat}
+            onClose={() => setShowChat(false)}
+          />
         </div>
       </ProtectedRoute>
     </OnboardingMiddleware>

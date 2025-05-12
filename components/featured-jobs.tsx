@@ -17,6 +17,7 @@ interface Job {
   max_salary?: number | null; // Optional or null
   employment_type: string;
   logo?: string | null; // Optional or null
+  logo_url?: string | null; // Optional or null
   posted_at: string; // Expecting ISO string from API
   tags?: string[] | null; // Optional or null
 }
@@ -92,13 +93,13 @@ export default function FeaturedJobs() {
             <div className="w-12 h-12 bg-light-gray flex-shrink-0 rounded-md overflow-hidden border border-gray-200">
               <Image
                 // Use a placeholder if logo is missing
-                src={job.logo || "/placeholder.svg"}
+                src={job.logo_url || "/company_placeholder.jpeg"}
                 width={48}
                 height={48}
                 alt={`${job.company_name} logo`}
                 className="object-contain" // Ensure image fits well
                 // Add error handling for images if needed
-                onError={(e) => { e.currentTarget.src = '/placeholder.svg'; }}
+                onError={(e) => { e.currentTarget.src = '/company_placeholder.jpeg'; }}
               />
             </div>
             <div className="flex-1 min-w-0">

@@ -18,7 +18,7 @@ interface JobListingsProps {
   savedJobsOnly?: boolean // Add savedJobsOnly prop
 }
 
-export default function JobListings({ filters = {}, savedJobsOnly = false }: JobListingsProps) {
+export default function JobListings({ filters, savedJobsOnly = false }: JobListingsProps) {
   const [expandedJob, setExpandedJob] = useState<string | null>(null)
   const [savedJobs, setSavedJobs] = useState<string[]>([])
   const [allJobs, setAllJobs] = useState<any[]>([]) // Store all fetched jobs
@@ -160,7 +160,7 @@ export default function JobListings({ filters = {}, savedJobsOnly = false }: Job
       {saveSuccess && <div className="text-center text-green-600 text-sm">{saveSuccess}</div>}
       {filteredJobs.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-16 bg-white rounded-xl shadow-sm border border-gray-100">
-          <img src="/placeholder-logo.svg" alt="No jobs" className="w-20 h-20 mb-4 opacity-60" />
+          <img src="/job_placeholder.jpeg" alt="No jobs" className="w-20 h-20 mb-4 opacity-60" />
           <h2 className="text-xl font-semibold text-gray-700 mb-2">
             {savedJobsOnly ? "You haven't saved any jobs yet" : "No jobs match your criteria"}
           </h2>
@@ -181,7 +181,7 @@ export default function JobListings({ filters = {}, savedJobsOnly = false }: Job
                 <div className="flex items-start gap-4">
                   <div className="w-12 h-12 bg-light-gray flex-shrink-0 rounded-md overflow-hidden border border-gray-200">
                     <Image
-                      src={job.logo || "/placeholder.svg"}
+                      src={job.logo_url || "/company_placeholder.jpeg"}
                       width={48}
                       height={48}
                       alt={`${job.company} logo`}
