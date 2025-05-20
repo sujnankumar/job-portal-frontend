@@ -109,7 +109,7 @@ export default function Navbar() {
               height={40}
               className="mr-2"
             />
-            <span className="text-xl font-bold text-dark-gray">JobPortal</span>
+            <span className="text-xl font-bold text-dark-gray font-sans">JobPortal</span>
           </Link>
 
           {/* Desktop Navigation */}
@@ -119,15 +119,18 @@ export default function Navbar() {
                 key={link.path}
                 href={link.path}
                 className={cn(
-                  "text-gray-600 hover:text-accent transition-colors relative py-1 group",
-                  isActive(link.path) && "text-accent font-medium"
+                  "text-gray-700 font-semibold font-sans px-3 py-2 rounded-md transition-all duration-200 relative group overflow-hidden",
+                  isActive(link.path) && "text-accent"
                 )}
               >
-                {link.name}
+                <span className="relative z-10">{link.name}</span>
+                {/* Animated underline and box on hover/active */}
                 <span
                   className={cn(
-                    "absolute bottom-0 left-0 w-0 h-0.5 bg-accent transition-all duration-300 group-hover:w-full",
-                    isActive(link.path) && "w-full"
+                    "absolute left-0 bottom-0 h-full w-full rounded-md -z-1 transition-all duration-300 pointer-events-none",
+                    isActive(link.path)
+                      ? "bg-accent/10 border-b-2 border-accent w-full"
+                      : "group-hover:bg-accent/10 group-hover:border-b-2 group-hover:border-accent group-hover:w-full w-0"
                   )}
                 />
               </Link>
@@ -154,14 +157,16 @@ export default function Navbar() {
                 </Link>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon" className="rounded-full transition-all duration-300 hover:bg-gray-100 hover:scale-105">
-                      <Image
-                        src={user?.avatar || "/mystical-forest-spirit.png"}
-                        width={32}
-                        height={32}
-                        className="rounded-full"
-                        alt="Profile"
-                      />
+                    <Button variant="ghost" size="icon" className="rounded-full transition-all duration-300 hover:bg-gray-100 hover:scale-105 p-0 border-2 border-accent/60 shadow-md focus:ring-2 focus:ring-accent/40">
+                      <div className="w-10 h-10 rounded-full overflow-hidden flex items-center justify-center bg-gradient-to-br from-accent/20 to-primary/10 border border-accent/30">
+                        <Image
+                          src={user?.avatar || "/mystical-forest-spirit.png"}
+                          width={40}
+                          height={40}
+                          className="object-cover w-full h-full rounded-full"
+                          alt="Profile"
+                        />
+                      </div>
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="w-56 mt-1 rounded-xl shadow-lg border border-gray-200">
