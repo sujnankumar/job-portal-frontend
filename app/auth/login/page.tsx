@@ -62,6 +62,7 @@ export default function LoginPage() {
       const response = await api.post("/auth/login", {
         email: formData.email,
         password: formData.password,
+        remember_me: formData.rememberMe
       })
       const { access_token, token_type, onboarding } = response.data
       console.log("Type of access token:", token_type)
