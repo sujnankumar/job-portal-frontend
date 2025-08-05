@@ -33,6 +33,7 @@ export default function EditApplicationPage() {
     // Add more fields as needed
   })
   const [error, setError] = useState("")
+  const [errors, setErrors] = useState<Record<string, string>>({})
 
   useEffect(() => {
     if (!hydrated) return
@@ -74,12 +75,60 @@ export default function EditApplicationPage() {
   }, [jobId, hydrated, user])
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) {
-    setForm({ ...form, [e.target.name]: e.target.value })
+    const { name, value } = e.target
+    setForm({ ...form, [name]: value })
+    // Clear error when field is edited
+    if (errors[name]) {
+      setErrors({
+        ...errors,
+        [name]: "",
+      })
+    }
+  }
+
+  const validateForm = () => {
+    const newErrors: Record<string, string> = {}
+    
+    if (!form.name?.trim()) {
+      newErrors.name = "Name is required"
+    }
+    
+    if (!form.email?.trim()) {
+      newErrors.email = "Email is required"
+    } else if (!/\S+@\S+\.\S+/.test(form.email)) {
+      newErrors.email = "Email is invalid"
+    }
+    
+    if (form.phone && !/^[\+]?[0-9\s\-\(\)]{10,}$/.test(form.phone.replace(/\s/g, ""))) {
+      newErrors.phone = "Please enter a valid phone number"
+    }
+    
+    if (form.website && !/^https?:\/\/[^\s]+$/.test(form.website)) {
+      newErrors.website = "Please enter a valid website URL (including http:// or https://)"
+    }
+    
+    if (form.linkedin && !/^(https?:\/\/)?(www\.)?linkedin\.com\/in\/[a-zA-Z0-9\-]+\/?$/.test(form.linkedin)) {
+      newErrors.linkedin = "Please enter a valid LinkedIn profile URL"
+    }
+    
+    if (!form.coverLetter?.trim()) {
+      newErrors.coverLetter = "Cover letter is required"
+    } else if (form.coverLetter.trim().length < 50) {
+      newErrors.coverLetter = "Cover letter must be at least 50 characters"
+    }
+    
+    setErrors(newErrors)
+    return Object.keys(newErrors).length === 0
   }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setError("")
+    
+    if (!validateForm()) {
+      return
+    }
+    
     setLoading(true)
     if (!user || !user.token) {
       setError("You must be logged in to edit an application.")
@@ -117,6 +166,7 @@ export default function EditApplicationPage() {
             onChange={handleChange}
             rows={5}
           />
+          {errors.coverLetter && <p className="text-red-500 text-xs mt-1">{errors.coverLetter}</p>}
         </div>
         {/* Status */}
         <div>
@@ -157,6 +207,7 @@ export default function EditApplicationPage() {
             value={form.name}
             onChange={handleChange}
           />
+          {errors.name && <p className="text-red-500 text-xs mt-1">{errors.name}</p>}
         </div>
         <div>
           <label htmlFor="email" className="block mb-1 font-medium">Email</label>
@@ -167,6 +218,7 @@ export default function EditApplicationPage() {
             value={form.email}
             onChange={handleChange}
           />
+          {errors.email && <p className="text-red-500 text-xs mt-1">{errors.email}</p>}
         </div>
         <div>
           <label htmlFor="phone" className="block mb-1 font-medium">Phone</label>
@@ -176,6 +228,7 @@ export default function EditApplicationPage() {
             value={form.phone}
             onChange={handleChange}
           />
+          {errors.phone && <p className="text-red-500 text-xs mt-1">{errors.phone}</p>}
         </div>
         <div>
           <label htmlFor="website" className="block mb-1 font-medium">Website</label>
@@ -185,6 +238,7 @@ export default function EditApplicationPage() {
             value={form.website}
             onChange={handleChange}
           />
+          {errors.website && <p className="text-red-500 text-xs mt-1">{errors.website}</p>}
         </div>
         <div>
           <label htmlFor="linkedin" className="block mb-1 font-medium">LinkedIn</label>
@@ -194,6 +248,7 @@ export default function EditApplicationPage() {
             value={form.linkedin}
             onChange={handleChange}
           />
+          {errors.linkedin && <p className="text-red-500 text-xs mt-1">{errors.linkedin}</p>}
         </div>
         {/* Resume Filename (read-only) */}
         <div>

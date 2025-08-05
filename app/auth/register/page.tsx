@@ -137,6 +137,7 @@ export default function RegisterPage() {
       const response = await api.post("/auth/login", {
         email: formData.email,
         password: formData.password,
+        remember_me: true,
       })
       const { access_token, token_type, onboarding } = response.data
       const userRes = await api.get("/user/me", {

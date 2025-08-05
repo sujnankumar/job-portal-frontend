@@ -42,6 +42,7 @@ export default function JobPostingForm() {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState("")
   const [success, setSuccess] = useState("")
+  const [errors, setErrors] = useState<Record<string, string>>({})
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target
@@ -49,6 +50,13 @@ export default function JobPostingForm() {
       ...formData,
       [name]: value,
     })
+    // Clear error when field is edited
+    if (errors[name]) {
+      setErrors({
+        ...errors,
+        [name]: "",
+      })
+    }
   }
 
   const handleSelectChange = (name: string, value: string) => {
@@ -90,11 +98,85 @@ export default function JobPostingForm() {
     })
   }
 
+  const validateForm = () => {
+    const newErrors: Record<string, string> = {}
+    
+    // Required fields validation
+    if (!formData.title.trim()) {
+      newErrors.title = "Job title is required"
+    }
+    
+    if (!formData.department.trim()) {
+      newErrors.department = "Department is required"
+    }
+    
+    if (!formData.location.trim()) {
+      newErrors.location = "Location is required"
+    }
+    
+    if (!formData.description.trim()) {
+      newErrors.description = "Job description is required"
+    } else if (formData.description.trim().length < 50) {
+      newErrors.description = "Job description must be at least 50 characters"
+    }
+    
+    if (!formData.requirements.trim()) {
+      newErrors.requirements = "Requirements are required"
+    } else if (formData.requirements.trim().length < 30) {
+      newErrors.requirements = "Requirements must be at least 30 characters"
+    }
+    
+    if (!formData.experienceLevel) {
+      newErrors.experienceLevel = "Experience level is required"
+    }
+    
+    if (!formData.jobCategory) {
+      newErrors.jobCategory = "Job category is required"
+    }
+    
+    // Skills validation
+    const validSkills = formData.skills.filter(skill => skill.trim() !== "")
+    if (validSkills.length === 0) {
+      newErrors.skills = "At least one skill is required"
+    }
+    
+    // Salary validation
+    if (formData.showSalary) {
+      if (!formData.minSalary || isNaN(Number(formData.minSalary))) {
+        newErrors.minSalary = "Valid minimum salary is required"
+      }
+      if (!formData.maxSalary || isNaN(Number(formData.maxSalary))) {
+        newErrors.maxSalary = "Valid maximum salary is required"
+      }
+      if (formData.minSalary && formData.maxSalary && Number(formData.minSalary) >= Number(formData.maxSalary)) {
+        newErrors.maxSalary = "Maximum salary must be greater than minimum salary"
+      }
+    }
+    
+    // Application deadline validation
+    if (formData.applicationDeadline) {
+      const deadlineDate = new Date(formData.applicationDeadline)
+      const today = new Date()
+      today.setHours(0, 0, 0, 0)
+      if (deadlineDate < today) {
+        newErrors.applicationDeadline = "Application deadline cannot be in the past"
+      }
+    }
+    
+    setErrors(newErrors)
+    return Object.keys(newErrors).length === 0
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setIsLoading(true)
     setError("")
     setSuccess("")
+    
+    if (!validateForm()) {
+      return
+    }
+    
+    setIsLoading(true)
     try {
       const token = loginUser?.token
       if (!token) {
@@ -174,6 +256,7 @@ export default function JobPostingForm() {
                 placeholder="e.g. Senior Frontend Developer"
                 required
               />
+              {errors.title && <p className="text-red-500 text-xs mt-1">{errors.title}</p>}
             </div>
 
             <div className="space-y-2">
@@ -188,6 +271,7 @@ export default function JobPostingForm() {
                 placeholder="e.g. Engineering, Marketing, Sales"
                 required
               />
+              {errors.department && <p className="text-red-500 text-xs mt-1">{errors.department}</p>}
             </div>
 
             <div className="space-y-2">
@@ -202,6 +286,7 @@ export default function JobPostingForm() {
                 placeholder="e.g. San Francisco, CA"
                 required
               />
+              {errors.location && <p className="text-red-500 text-xs mt-1">{errors.location}</p>}
             </div>
 
             <div className="space-y-2">
@@ -263,6 +348,7 @@ export default function JobPostingForm() {
                   <SelectItem value="Executive">Executive</SelectItem>
                 </SelectContent>
               </Select>
+              {errors.experienceLevel && <p className="text-red-500 text-xs mt-1">{errors.experienceLevel}</p>}
             </div>
 
             <div className="space-y-2">
@@ -290,6 +376,7 @@ export default function JobPostingForm() {
                   <SelectItem value="Other">Other</SelectItem>
                 </SelectContent>
               </Select>
+              {errors.jobCategory && <p className="text-red-500 text-xs mt-1">{errors.jobCategory}</p>}
             </div>
 
             <div className="space-y-2">
@@ -304,6 +391,7 @@ export default function JobPostingForm() {
                   onChange={handleChange}
                   className="pl-9"
                 />
+                {errors.applicationDeadline && <p className="text-red-500 text-xs mt-1">{errors.applicationDeadline}</p>}
               </div>
             </div>
           </div>
@@ -338,6 +426,7 @@ export default function JobPostingForm() {
                   placeholder="e.g. 80000"
                   disabled={!formData.showSalary}
                 />
+                {errors.minSalary && <p className="text-red-500 text-xs mt-1">{errors.minSalary}</p>}
               </div>
 
               <div className="space-y-2">
@@ -351,6 +440,7 @@ export default function JobPostingForm() {
                   placeholder="e.g. 120000"
                   disabled={!formData.showSalary}
                 />
+                {errors.maxSalary && <p className="text-red-500 text-xs mt-1">{errors.maxSalary}</p>}
               </div>
             </div>
           </div>
@@ -413,6 +503,7 @@ export default function JobPostingForm() {
               className="min-h-[200px]"
               required
             />
+            {errors.description && <p className="text-red-500 text-xs mt-1">{errors.description}</p>}
           </div>
 
           <div className="space-y-4 pt-4 border-t">
@@ -443,6 +534,7 @@ export default function JobPostingForm() {
               <Button type="button" variant="outline" size="sm" onClick={addSkill}>
                 <Plus className="h-4 w-4 mr-1" /> Add Skill
               </Button>
+              {errors.skills && <p className="text-red-500 text-xs mt-1">{errors.skills}</p>}
             </div>
           </div>
         </TabsContent>
@@ -461,6 +553,7 @@ export default function JobPostingForm() {
               className="min-h-[200px]"
               required
             />
+            {errors.requirements && <p className="text-red-500 text-xs mt-1">{errors.requirements}</p>}
             <p className="text-xs text-gray-500">
               Tip: Use bullet points for better readability. Start each point on a new line with a dash (-).
             </p>

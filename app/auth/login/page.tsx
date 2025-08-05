@@ -26,6 +26,7 @@ export default function LoginPage() {
   })
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState("")
+  const [errors, setErrors] = useState<Record<string, string>>({})
 
   const { isAuthenticated, user, hydrated } = useAuthStore()
 
@@ -43,6 +44,13 @@ export default function LoginPage() {
       ...formData,
       [name]: value,
     })
+    // Clear error when field is edited
+    if (errors[name]) {
+      setErrors({
+        ...errors,
+        [name]: "",
+      })
+    }
   }
 
   const handleCheckboxChange = (checked: boolean) => {
@@ -52,10 +60,34 @@ export default function LoginPage() {
     })
   }
 
+  const validateForm = () => {
+    const newErrors: Record<string, string> = {}
+    
+    if (!formData.email.trim()) {
+      newErrors.email = "Email is required"
+    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
+      newErrors.email = "Email is invalid"
+    }
+    
+    if (!formData.password) {
+      newErrors.password = "Password is required"
+    } else if (formData.password.length < 6) {
+      newErrors.password = "Password must be at least 6 characters"
+    }
+    
+    setErrors(newErrors)
+    return Object.keys(newErrors).length === 0
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setIsLoading(true)
     setError("")
+    
+    if (!validateForm()) {
+      return
+    }
+    
+    setIsLoading(true)
 
     try {
       // Call the backend login API
@@ -163,6 +195,7 @@ export default function LoginPage() {
                   onChange={handleChange}
                   required
                 />
+                {errors.email && <p className="text-red-500 text-xs mt-1">{errors.email}</p>}
               </div>
 
               <div className="space-y-2">
@@ -181,6 +214,7 @@ export default function LoginPage() {
                   onChange={handleChange}
                   required
                 />
+                {errors.password && <p className="text-red-500 text-xs mt-1">{errors.password}</p>}
               </div>
 
               <div className="flex items-center space-x-2">
