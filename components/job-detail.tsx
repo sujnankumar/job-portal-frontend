@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import Image from "next/image"
 import Link from "next/link"
-import { MapPin, DollarSign, Clock, Briefcase, Building, Calendar, Share2, Bookmark, BookmarkCheck, X, Facebook, Twitter, Send, Copy, MessageCircle } from "lucide-react"
+import { MapPin, DollarSign, Clock, Briefcase, Building, Calendar, Share2, Bookmark, BookmarkCheck, X, Facebook, Twitter, Send, Copy, MessageCircle, Loader2 } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -24,6 +24,8 @@ export default function JobDetail({ jobId, jobDetails, is_saved }: { jobId: stri
   const [isApplied, setIsApplied] = useState(false)
   const [showShareModal, setShowShareModal] = useState(false)
   const [copySuccess, setCopySuccess] = useState("")
+  const [logoUrl, setLogoUrl] = useState<string | null>(null)
+  const [logoLoading, setLogoLoading] = useState(false)
   const user = useAuthStore((state) => state.user)
   const job = jobDetails
   const shareUrl = typeof window !== "undefined" ? window.location.href : ""
@@ -42,6 +44,48 @@ export default function JobDetail({ jobId, jobDetails, is_saved }: { jobId: stri
     }
     checkApplied()
   }, [jobId, user?.token])
+
+  // Fetch company logo
+  useEffect(() => {
+    const fetchCompanyLogo = async () => {
+      if (!job.company_details?.company_id) {
+        setLogoUrl(null)
+        return
+      }
+
+      setLogoLoading(true)
+      try {
+        const res = await api.get(`/company/logo/company/${job.company_details.company_id}`, {
+          responseType: "blob",
+        })
+        const url = URL.createObjectURL(res.data)
+        setLogoUrl(url)
+      } catch (error) {
+        console.error("Failed to fetch company logo:", error)
+        setLogoUrl(null)
+      } finally {
+        setLogoLoading(false)
+      }
+    }
+
+    fetchCompanyLogo()
+
+    // Cleanup function to revoke object URL
+    return () => {
+      if (logoUrl) {
+        URL.revokeObjectURL(logoUrl)
+      }
+    }
+  }, [job.company_details?.company_id])
+
+  // Cleanup logo URL when component unmounts
+  useEffect(() => {
+    return () => {
+      if (logoUrl) {
+        URL.revokeObjectURL(logoUrl)
+      }
+    }
+  }, [logoUrl])
 
   const toggleSave = async (e: React.MouseEvent) => {
     e.stopPropagation && e.stopPropagation()
@@ -141,13 +185,19 @@ export default function JobDetail({ jobId, jobDetails, is_saved }: { jobId: stri
       <div className="p-6 border-b border-gray-100">
         <div className="flex items-start gap-4">
           <div className="w-16 h-16 bg-light-gray flex-shrink-0 rounded-md overflow-hidden border border-gray-200">
-            <Image
-              src={job.logo || "/placeholder.svg"}
-              alt={job.company_details?.company_name || "Company logo"}
-              width={64}
-              height={64}
-              className="object-contain"
-            />
+            {logoLoading ? (
+              <div className="w-full h-full flex items-center justify-center">
+                <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+              </div>
+            ) : (
+              <Image
+                src={logoUrl || job.logo || "/placeholder.svg"}
+                alt={job.company_details?.company_name || "Company logo"}
+                width={64}
+                height={64}
+                className="w-full h-full object-cover"
+              />
+            )}
           </div>
 
           <div className="flex-1 min-w-0">
@@ -300,13 +350,19 @@ export default function JobDetail({ jobId, jobDetails, is_saved }: { jobId: stri
           <TabsContent value="company" className="space-y-6">
             <div className="flex items-start gap-4 mb-6">
               <div className="w-16 h-16 bg-light-gray flex-shrink-0 rounded-md overflow-hidden border border-gray-200">
-                <Image
-                  src={job.logo || "/placeholder.svg"}
-                  alt={job.company_details?.company_name || "Company logo"}
-                  width={64}
-                  height={64}
-                  className="object-contain"
-                />
+                {logoLoading ? (
+                  <div className="w-full h-full flex items-center justify-center">
+                    <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+                  </div>
+                ) : (
+                  <Image
+                    src={logoUrl || job.logo || "/placeholder.svg"}
+                    alt={job.company_details?.company_name || "Company logo"}
+                    width={64}
+                    height={64}
+                    className="w-full h-full object-cover"
+                  />
+                )}
               </div>
 
               <div>
@@ -396,13 +452,19 @@ export default function JobDetail({ jobId, jobDetails, is_saved }: { jobId: stri
             <CardContent className="p-4">
               <div className="flex items-start gap-4 mb-4">
                 <div className="w-16 h-16 bg-light-gray flex-shrink-0 rounded-md overflow-hidden border border-gray-200">
-                  <Image
-                    src={job.logo || "/placeholder.svg"}
-                    alt={job.company_details?.company_name || "Company logo"}
-                    width={64}
-                    height={64}
-                    className="object-contain"
-                  />
+                  {logoLoading ? (
+                    <div className="w-full h-full flex items-center justify-center">
+                      <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+                    </div>
+                  ) : (
+                    <Image
+                      src={logoUrl || job.logo || "/placeholder.svg"}
+                      alt={job.company_details?.company_name || "Company logo"}
+                      width={64}
+                      height={64}
+                      className="w-full h-full object-cover"
+                    />
+                  )}
                 </div>
 
                 <div>

@@ -4,7 +4,8 @@ import { useState, useEffect } from "react"
 import Link from "next/link"
 import Image from "next/image"
 import { usePathname, useRouter } from "next/navigation"
-import { Menu, X, Bell, LogOut, Crown, Unlock, Briefcase, Rocket, Flame } from "lucide-react"
+import { Menu, X, Bell, LogOut, Crown, Unlock, Briefcase, Rocket, Flame, Loader2 } from "lucide-react"
+import axios from "@/lib/axios"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -21,6 +22,8 @@ import { useAuthStore } from "@/store/authStore"
 export default function Navbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [scrolled, setScrolled] = useState(false)
+  const [profileUrl, setProfileUrl] = useState<string | null>(null)
+  const [profileLoading, setProfileLoading] = useState(false)
   const pathname = usePathname()
   const router = useRouter()
   const { user, isAuthenticated, logout } = useAuthStore()
@@ -65,6 +68,80 @@ export default function Navbar() {
     window.addEventListener("scroll", handleScroll)
     return () => window.removeEventListener("scroll", handleScroll)
   }, [])
+
+  // Fetch profile photo or company logo
+  useEffect(() => {
+    const fetchProfileImage = async () => {
+      if (!isAuthenticated || !user?.token) {
+        setProfileUrl(null)
+        return
+      }
+
+      setProfileLoading(true)
+      try {
+        let res
+        if (user?.role === "employer") {
+          // For employers, fetch company logo
+          // First get user details to get company info
+          const userRes = await axios.get("/user/me", {
+            headers: {
+              Authorization: `Bearer ${user.token}`,
+            },
+          })
+          const userData = userRes.data
+          
+          if (userData.company_id) {
+            // Fetch company logo using the logo_id
+            res = await axios.get(`/company/logo/company/${userData.company_id}`, {
+              responseType: "blob",
+              headers: {
+                Authorization: `Bearer ${user.token}`,
+              },
+            })
+          } else {
+            // No logo_file_id, use default
+            setProfileUrl(null)
+            setProfileLoading(false)
+            return
+          }
+        } else {
+          // For applicants, fetch profile photo
+          res = await axios.get("/profile/profile_photo", {
+            responseType: "blob",
+            headers: {
+              Authorization: `Bearer ${user.token}`,
+            },
+          })
+        }
+        
+        const url = URL.createObjectURL(res.data)
+        setProfileUrl(url)
+      } catch (error) {
+        console.error("Failed to fetch profile image:", error)
+        setProfileUrl(null)
+      } finally {
+        setProfileLoading(false)
+      }
+    }
+
+    fetchProfileImage()
+
+    // Cleanup function to revoke object URL
+    return () => {
+      if (profileUrl) {
+        URL.revokeObjectURL(profileUrl)
+      }
+    }
+  }, [isAuthenticated, user?.token, user?.role])
+
+  // Cleanup profile URL when component unmounts
+  useEffect(() => {
+    return () => {
+      if (profileUrl) {
+        URL.revokeObjectURL(profileUrl)
+      }
+    }
+  }, [profileUrl])
 
   const handleLogout = () => {
     logout()
@@ -159,13 +236,17 @@ export default function Navbar() {
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" size="icon" className="rounded-full transition-all duration-300 hover:bg-gray-100 hover:scale-105 p-0 border-2 border-accent/60 shadow-md focus:ring-2 focus:ring-accent/40">
                       <div className="w-10 h-10 rounded-full overflow-hidden flex items-center justify-center bg-gradient-to-br from-accent/20 to-primary/10 border border-accent/30">
-                        <Image
-                          src={user?.avatar || "/mystical-forest-spirit.png"}
-                          width={40}
-                          height={40}
-                          className="object-cover w-full h-full rounded-full"
-                          alt="Profile"
-                        />
+                        {profileLoading ? (
+                          <Loader2 className="h-5 w-5 animate-spin text-accent" />
+                        ) : (
+                          <Image
+                            src={profileUrl || (user?.role === "employer" ? "/abstract-circuit-board.png" : user?.avatar || "/mystical-forest-spirit.png")}
+                            width={40}
+                            height={40}
+                            className="object-cover w-full h-full rounded-full"
+                            alt={user?.role === "employer" ? "Company Logo" : "Profile"}
+                          />
+                        )}
                       </div>
                     </Button>
                   </DropdownMenuTrigger>
@@ -278,13 +359,19 @@ export default function Navbar() {
             {isAuthenticated ? (
               <div className="flex flex-col space-y-4 pt-4 border-t border-gray-100">
                 <div className="flex items-center">
-                  <Image
-                    src={user?.avatar || "/mystical-forest-spirit.png"}
-                    width={40}
-                    height={40}
-                    className="rounded-full mr-3"
-                    alt="Profile"
-                  />
+                  <div className="w-10 h-10 rounded-full overflow-hidden mr-3 flex items-center justify-center bg-gradient-to-br from-accent/20 to-primary/10 border border-accent/30">
+                    {profileLoading ? (
+                      <Loader2 className="h-5 w-5 animate-spin text-accent" />
+                    ) : (
+                      <Image
+                        src={profileUrl || (user?.role === "employer" ? "/abstract-circuit-board.png" : user?.avatar || "/mystical-forest-spirit.png")}
+                        width={40}
+                        height={40}
+                        className="object-cover w-full h-full rounded-full"
+                        alt={user?.role === "employer" ? "Company Logo" : "Profile"}
+                      />
+                    )}
+                  </div>
                   <div>
                     <p className="font-medium">{user?.name}</p>
                     <p className="text-sm text-gray-500">{user?.email}</p>

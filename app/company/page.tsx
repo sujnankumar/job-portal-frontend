@@ -2,7 +2,7 @@
 
 import Image from "next/image"
 import Link from "next/link"
-import { MapPin, Briefcase, Users, Calendar, ExternalLink, Star, Mail, Phone } from "lucide-react"
+import { MapPin, Briefcase, Users, Calendar, ExternalLink, Star, Mail, Phone, Loader2 } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -38,6 +38,8 @@ export default function CompanyDetailsPage() {
   const [company, setCompany] = useState<CompanyData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [logoUrl, setLogoUrl] = useState<string | null>(null)
+  const [logoLoading, setLogoLoading] = useState(false)
 
   useEffect(() => {
     const fetchCompanyData = async () => {
@@ -77,6 +79,48 @@ export default function CompanyDetailsPage() {
     }
     fetchCompanyData()
   }, [isAuthenticated, user])
+
+  // Fetch company logo
+  useEffect(() => {
+    const fetchCompanyLogo = async () => {
+      if (!company?.company_id) {
+        setLogoUrl(null)
+        return
+      }
+
+      setLogoLoading(true)
+      try {
+        const res = await api.get(`/company/logo/company/${company.company_id}`, {
+          responseType: "blob",
+        })
+        const url = URL.createObjectURL(res.data)
+        setLogoUrl(url)
+      } catch (error) {
+        console.error("Failed to fetch company logo:", error)
+        setLogoUrl(null)
+      } finally {
+        setLogoLoading(false)
+      }
+    }
+
+    fetchCompanyLogo()
+
+    // Cleanup function to revoke object URL
+    return () => {
+      if (logoUrl) {
+        URL.revokeObjectURL(logoUrl)
+      }
+    }
+  }, [company?.company_id])
+
+  // Cleanup logo URL when component unmounts
+  useEffect(() => {
+    return () => {
+      if (logoUrl) {
+        URL.revokeObjectURL(logoUrl)
+      }
+    }
+  }, [logoUrl])
 
   if (loading) {
     return <div className="container mx-auto py-8 px-4 text-center">Loading company details...</div>
@@ -129,13 +173,17 @@ export default function CompanyDetailsPage() {
         </div>
 
         <div className="absolute -bottom-12 left-8 w-24 h-24 bg-white rounded-xl shadow-md border border-gray-100 flex items-center justify-center p-2">
-          <Image
-            src={displayCompany.logo} // Use fetched data
-            alt={`${displayCompany.name} logo`}
-            width={80}
-            height={80}
-            className="object-contain"
-          />
+          {logoLoading ? (
+            <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+          ) : (
+            <Image
+              src={logoUrl || displayCompany.logo} // Use fetched logo or fallback to API data
+              alt={`${displayCompany.name} logo`}
+              width={80}
+              height={80}
+              className="w-full h-full object-cover rounded-lg"
+            />
+          )}
         </div>
       </div>
 
