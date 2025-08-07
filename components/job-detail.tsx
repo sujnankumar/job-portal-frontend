@@ -26,6 +26,8 @@ export default function JobDetail({ jobId, jobDetails, is_saved }: { jobId: stri
   const [copySuccess, setCopySuccess] = useState("")
   const [logoUrl, setLogoUrl] = useState<string | null>(null)
   const [logoLoading, setLogoLoading] = useState(false)
+  const [companyDetails, setCompanyDetails] = useState<any>(null)
+  const [companyLoading, setCompanyLoading] = useState(false)
   const user = useAuthStore((state) => state.user)
   const job = jobDetails
   const shareUrl = typeof window !== "undefined" ? window.location.href : ""
@@ -45,17 +47,40 @@ export default function JobDetail({ jobId, jobDetails, is_saved }: { jobId: stri
     checkApplied()
   }, [jobId, user?.token])
 
+  // Fetch company details
+  useEffect(() => {
+    const fetchCompanyDetails = async () => {
+      if (!job.company_id) {
+        setCompanyDetails(null)
+        return
+      }
+
+      setCompanyLoading(true)
+      try {
+        const res = await api.get(`/company/${job.company_id}`)
+        setCompanyDetails(res.data)
+      } catch (error) {
+        console.error("Failed to fetch company details:", error)
+        setCompanyDetails(null)
+      } finally {
+        setCompanyLoading(false)
+      }
+    }
+
+    fetchCompanyDetails()
+  }, [job.company_id])
+
   // Fetch company logo
   useEffect(() => {
     const fetchCompanyLogo = async () => {
-      if (!job.company_details?.company_id) {
+      if (!companyDetails?.logo) {
         setLogoUrl(null)
         return
       }
 
       setLogoLoading(true)
       try {
-        const res = await api.get(`/company/logo/company/${job.company_details.company_id}`, {
+        const res = await api.get(`/company/logo/${companyDetails.logo}`, {
           responseType: "blob",
         })
         const url = URL.createObjectURL(res.data)
@@ -76,7 +101,7 @@ export default function JobDetail({ jobId, jobDetails, is_saved }: { jobId: stri
         URL.revokeObjectURL(logoUrl)
       }
     }
-  }, [job.company_details?.company_id])
+  }, [companyDetails?.logo])
 
   // Cleanup logo URL when component unmounts
   useEffect(() => {
@@ -191,8 +216,8 @@ export default function JobDetail({ jobId, jobDetails, is_saved }: { jobId: stri
               </div>
             ) : (
               <Image
-                src={logoUrl || job.logo || "/placeholder.svg"}
-                alt={job.company_details?.company_name || "Company logo"}
+                src={logoUrl || job.logo_url || "/company_placeholder.jpeg"}
+                alt={companyDetails?.company_name || job.company || "Company logo"}
                 width={64}
                 height={64}
                 className="w-full h-full object-cover"
@@ -202,7 +227,19 @@ export default function JobDetail({ jobId, jobDetails, is_saved }: { jobId: stri
 
           <div className="flex-1 min-w-0">
             {job.title && <h1 className="text-2xl font-bold text-dark-gray mb-1">{job.title}</h1>}
-            {job.company_details?.company_name && <span className="text-accent">{job.company_details.company_name}</span>}
+            <p className="text-lg text-accent mb-1">
+              {companyLoading ? (
+                <span className="inline-flex items-center gap-1">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Loading company...
+                </span>
+              ) : (
+                companyDetails?.company_name || job.company || "Company"
+              )}
+            </p>
+            {!companyLoading && companyDetails?.industry && (
+              <p className="text-sm text-gray-500 mb-2">{companyDetails.industry}</p>
+            )}
             <div className="mt-3 flex flex-wrap gap-y-2 gap-x-4 text-sm text-gray-600">
               {job.location && (
                 <div className="flex items-center">
@@ -285,8 +322,19 @@ export default function JobDetail({ jobId, jobDetails, is_saved }: { jobId: stri
           <TabsContent value="description" className="space-y-6">
             <div className="space-y-4">
               {job.description && (
-                <div className="prose max-w-none" dangerouslySetInnerHTML={{ __html: job.description }} />
+                <div>
+                  <h3 className="text-lg font-semibold text-dark-gray mb-3">Job Description</h3>
+                  <div className="prose max-w-none" dangerouslySetInnerHTML={{ __html: job.description }} />
+                </div>
               )}
+              
+              {job.requirements && (
+                <div className="mt-8">
+                  <h3 className="text-lg font-semibold text-dark-gray mb-3">Requirements</h3>
+                  <div className="prose max-w-none" dangerouslySetInnerHTML={{ __html: job.requirements }} />
+                </div>
+              )}
+              
               {job.skills && job.skills.length > 0 && (
                 <div className="mt-6">
                   <h3 className="text-lg font-semibold text-dark-gray mb-3">Required Skills</h3>
@@ -356,8 +404,8 @@ export default function JobDetail({ jobId, jobDetails, is_saved }: { jobId: stri
                   </div>
                 ) : (
                   <Image
-                    src={logoUrl || job.logo || "/placeholder.svg"}
-                    alt={job.company_details?.company_name || "Company logo"}
+                    src={logoUrl || job.logo_url || "/company_placeholder.jpeg"}
+                    alt={companyDetails?.company_name || job.company || "Company logo"}
                     width={64}
                     height={64}
                     className="w-full h-full object-cover"
@@ -365,20 +413,25 @@ export default function JobDetail({ jobId, jobDetails, is_saved }: { jobId: stri
                 )}
               </div>
 
-              <div>
-                {job.company_details?.company_name && (
-                  <h3 className="text-xl font-semibold text-dark-gray mb-1">{job.company_details.company_name}</h3>
-                )}
-                {job.company_details?.company_id && (
-                  <Link href={`/companies/${job.company_details.company_id}`} className="text-accent hover:underline text-sm">
+              <div className="flex-1">
+                <h3 className="text-lg font-semibold text-dark-gray mb-1">
+                  {companyDetails?.company_name || job.company || "Company"}
+                </h3>
+                {companyDetails?.company_id && (
+                  <Link href={`/companies/${companyDetails.company_id}`} className="text-accent hover:underline text-sm">
                     View Company Profile
                   </Link>
+                )}
+                {companyDetails?.industry && (
+                  <p className="text-sm text-gray-500 mt-1">{companyDetails.industry}</p>
+                )}
+                {companyDetails?.employee_count && (
+                  <p className="text-sm text-gray-500">{companyDetails.employee_count} employees</p>
                 )}
               </div>
             </div>
 
             <div className="space-y-4">
-              {job.company_details?.description && <p className="text-gray-700">{job.company_details?.description}</p>}
               {job.benefits && (
                 <div className="mt-6">
                   <h3 className="text-lg font-semibold text-dark-gray mb-3">Benefits & Perks</h3>
@@ -388,8 +441,8 @@ export default function JobDetail({ jobId, jobDetails, is_saved }: { jobId: stri
             </div>
 
             <div className="mt-6 flex gap-3">
-              {job.company_details?.company_id && (
-                <Link href={`/companies/${job.company_details.company_id}`}>
+              {companyDetails?.company_id && (
+                <Link href={`/companies/${companyDetails.company_id}`}>
                   <Button variant="outline">View All Jobs</Button>
                 </Link>
               )}
@@ -429,8 +482,19 @@ export default function JobDetail({ jobId, jobDetails, is_saved }: { jobId: stri
           {/* Left Column - Job Description */}
           <div className="space-y-6">
             {job.description && (
-              <div className="prose max-w-none" dangerouslySetInnerHTML={{ __html: job.description }} />
+              <div>
+                <h3 className="text-lg font-semibold text-dark-gray mb-3">Job Description</h3>
+                <div className="prose max-w-none" dangerouslySetInnerHTML={{ __html: job.description }} />
+              </div>
             )}
+            
+            {job.requirements && (
+              <div className="mt-8">
+                <h3 className="text-lg font-semibold text-dark-gray mb-3">Requirements</h3>
+                <div className="prose max-w-none" dangerouslySetInnerHTML={{ __html: job.requirements }} />
+              </div>
+            )}
+            
             {job.skills && job.skills.length > 0 && (
               <div className="mt-6">
                 <h3 className="text-lg font-semibold text-dark-gray mb-3">Required Skills</h3>
@@ -458,8 +522,8 @@ export default function JobDetail({ jobId, jobDetails, is_saved }: { jobId: stri
                     </div>
                   ) : (
                     <Image
-                      src={logoUrl || job.logo || "/placeholder.svg"}
-                      alt={job.company_details?.company_name || "Company logo"}
+                      src={logoUrl || job.logo_url || "/company_placeholder.jpeg"}
+                      alt={companyDetails?.company_name || job.company || "Company logo"}
                       width={64}
                       height={64}
                       className="w-full h-full object-cover"
@@ -467,22 +531,27 @@ export default function JobDetail({ jobId, jobDetails, is_saved }: { jobId: stri
                   )}
                 </div>
 
-                <div>
-                  {job.company_details?.company_name && (
-                    <h3 className="text-xl font-semibold text-dark-gray mb-1">{job.company_details.company_name}</h3>
-                  )}
-                  {job.company_details?.company_id && (
-                    <Link href={`/companies/${job.company_details.company_id}`} className="text-accent hover:underline text-sm">
+                <div className="flex-1">
+                  <h3 className="text-lg font-semibold text-dark-gray mb-1">
+                    {companyDetails?.company_name || job.company || "Company"}
+                  </h3>
+                  {companyDetails?.company_id && (
+                    <Link href={`/companies/${companyDetails.company_id}`} className="text-accent hover:underline text-sm">
                       View Company Profile
                     </Link>
+                  )}
+                  {companyDetails?.industry && (
+                    <p className="text-sm text-gray-500 mt-1">{companyDetails.industry}</p>
+                  )}
+                  {companyDetails?.employee_count && (
+                    <p className="text-sm text-gray-500">{companyDetails.employee_count} employees</p>
                   )}
                 </div>
               </div>
 
-              {job.company_details?.description && <p className="text-gray-700 mb-4">{job.company_details.description}</p>}
               <div className="flex flex-col gap-2">
-                {job.company_details?.company_id && (
-                  <Link href={`/companies/${job.company_details.company_id}`}>
+                {companyDetails?.company_id && (
+                  <Link href={`/companies/${companyDetails.company_id}`}>
                     <Button variant="outline" className="w-full">
                       View All Jobs
                     </Button>

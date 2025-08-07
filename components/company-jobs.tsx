@@ -20,9 +20,13 @@ interface Job {
   description: string
   skills: string[]
   posted_at: string
+  department?: string
+  experience_level?: string
+  job_category?: string
+  application_deadline?: string
 }
 
-export default function CompanyJobs({ companyId }: { companyId: string }) {
+export default function CompanyJobs({ companyId, companyName }: { companyId: string, companyName: string }) {
   const [jobs, setJobs] = useState<Job[]>([])
   const [expandedJob, setExpandedJob] = useState<string | null>(null)
   const [savedJobs, setSavedJobs] = useState<string[]>([])
@@ -34,9 +38,14 @@ export default function CompanyJobs({ companyId }: { companyId: string }) {
       setLoading(true)
       setError(null)
       try {
-        const response = await api.get(`/job/company/${companyId}`)
+        const response = await api.get(`/job/jobs/by_company/${companyId}`)
         console.log("Fetched jobs:", response.data)
-        setJobs(response.data)
+        // Handle the response structure with jobs array
+        if (response.data && response.data.jobs) {
+          setJobs(response.data.jobs)
+        } else {
+          setJobs([])
+        }
       } catch (err) {
         setError("Failed to fetch jobs.")
         console.error(err)
@@ -80,13 +89,16 @@ export default function CompanyJobs({ companyId }: { companyId: string }) {
           >
             <div>
               <div className="flex justify-between items-start">
-                <div>
+                <div className="flex-1">
                   <h3 className="font-medium text-dark-gray">{job.title}</h3>
+                  {job.department && (
+                    <p className="text-sm text-gray-500 mt-1">{job.department}</p>
+                  )}
                 </div>
 
                 <button
                   onClick={(e) => toggleSaveJob(job.job_id, e)}
-                  className="text-gray-400 hover:text-accent"
+                  className="text-gray-400 hover:text-accent ml-4"
                   aria-label={savedJobs.includes(job.job_id) ? "Unsave job" : "Save job"}
                 >
                   {savedJobs.includes(job.job_id) ? (
@@ -105,13 +117,18 @@ export default function CompanyJobs({ companyId }: { companyId: string }) {
                 <div className="flex items-center">
                   <DollarSign className="h-3.5 w-3.5 mr-1" />
                   {job.show_salary
-                    ? `$${job.min_salary} - $${job.max_salary}`
+                    ? `₹${parseInt(job.min_salary).toLocaleString()} - ₹${parseInt(job.max_salary).toLocaleString()}`
                     : "Salary not disclosed"}
                 </div>
                 <div className="flex items-center">
                   <Clock className="h-3.5 w-3.5 mr-1" />
                   {job.employment_type}
                 </div>
+                {job.experience_level && (
+                  <div className="flex items-center">
+                    <span className="text-xs">📋 {job.experience_level}</span>
+                  </div>
+                )}
               </div>
 
               <div className="mt-3 flex flex-wrap gap-1.5">
@@ -127,8 +144,13 @@ export default function CompanyJobs({ companyId }: { companyId: string }) {
                 )}
               </div>
 
-              <div className="mt-3 text-xs text-gray-500">
-                Posted on {new Date(job.posted_at).toLocaleDateString()}
+              <div className="mt-3 text-xs text-gray-500 flex justify-between items-center">
+                <span>Posted on {new Date(job.posted_at).toLocaleDateString()}</span>
+                {job.application_deadline && (
+                  <span className="text-red-600 font-medium">
+                    Deadline: {new Date(job.application_deadline).toLocaleDateString()}
+                  </span>
+                )}
               </div>
             </div>
           </div>
@@ -174,7 +196,16 @@ export default function CompanyJobs({ companyId }: { companyId: string }) {
       ))}
 
       <div className="flex justify-center mt-8">
-        <Button variant="outline">View All Jobs</Button>
+        <Button
+          variant="outline"
+          onClick={() => {
+            if (jobs.length > 0) {
+              window.location.href = `/jobs?search=${companyName}`;
+            }
+          }}
+        >
+          View All Jobs
+        </Button>
       </div>
     </div>
   )

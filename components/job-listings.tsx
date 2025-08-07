@@ -28,6 +28,22 @@ export default function JobListings({ filters, savedJobsOnly = false }: JobListi
   const [saveSuccess, setSaveSuccess] = useState("")
   const user = useAuthStore((state) => state.user)
 
+  // Function to truncate HTML content
+  const truncateHtml = (html: string, maxLength: number = 150) => {
+    if (!html) return ""
+    
+    // Remove HTML tags for length calculation
+    const textContent = html.replace(/<[^>]*>/g, '')
+    
+    if (textContent.length <= maxLength) {
+      return html
+    }
+    
+    // Truncate the text and add ellipsis
+    const truncatedText = textContent.substring(0, maxLength).trim()
+    return truncatedText + "..."
+  }
+
   useEffect(() => {
     const fetchJobs = async () => {
       setLoading(true)
@@ -185,7 +201,7 @@ export default function JobListings({ filters, savedJobsOnly = false }: JobListi
                       width={48}
                       height={48}
                       alt={`${job.company} logo`}
-                      className="object-contain"
+                      className="w-full h-full object-contain"
                     />
                   </div>
 
@@ -257,9 +273,27 @@ export default function JobListings({ filters, savedJobsOnly = false }: JobListi
                 )}
               >
                 <div className="border-t border-gray-100 p-5 bg-light-gray">
-                  <div className="text-gray-700 mb-4">{job.description}</div>
+                  <div className="space-y-4">
+                    {job.description && (
+                      <div>
+                        <h4 className="font-medium text-dark-gray mb-2">Job Description</h4>
+                        <div className="text-gray-700 text-sm">
+                          {truncateHtml(job.description, 200)}
+                        </div>
+                      </div>
+                    )}
+                    
+                    {job.requirements && (
+                      <div>
+                        <h4 className="font-medium text-dark-gray mb-2">Requirements</h4>
+                        <div className="text-gray-700 text-sm">
+                          {truncateHtml(job.requirements, 150)}
+                        </div>
+                      </div>
+                    )}
+                  </div>
 
-                  <div className="flex flex-col sm:flex-row gap-3 justify-between items-center">
+                  <div className="flex flex-col sm:flex-row gap-3 justify-between items-center mt-4">
                     <div className="flex flex-wrap gap-1.5">
                       {(job.tags || []).map((tag: string) => (
                         <Badge key={tag} variant="outline" className="bg-white text-xs">
@@ -280,7 +314,7 @@ export default function JobListings({ filters, savedJobsOnly = false }: JobListi
                         {savedJobs.includes(job.job_id) ? "Saved" : "Save"}
                       </Button>
                       <Link href={`/jobs/${job.job_id}`} className="flex-1 sm:flex-initial">
-                        <Button className="w-full bg-accent hover:bg-accent/90">View Job</Button>
+                        <Button className="w-full bg-accent hover:bg-accent/90">View Full Details</Button>
                       </Link>
                     </div>
                   </div>

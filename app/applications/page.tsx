@@ -22,9 +22,12 @@ export default function ApplicationsPage() {
   return (
     <OnboardingMiddleware>
       <ProtectedRoute allowedRoles={["applicant"]}>
-        <div className="container mx-auto py-8 px-4">
-          <h1 className="text-2xl font-bold mb-6">My Applications</h1>
-          <ApplicationList />
+        <div className="container mx-auto max-w-6xl py-8 px-4">
+          <h1 className="text-3xl font-bold text-dark-gray mb-6">My Applications</h1>
+          
+          <div className="bg-white rounded-xl shadow-md p-6">
+            <ApplicationList />
+          </div>
         </div>
       </ProtectedRoute>
     </OnboardingMiddleware>

@@ -1,14 +1,24 @@
+"use client"
+
 import type { Metadata } from "next"
+import { useState } from "react"
 import CompanySearch from "@/components/company-search"
 import CompanyListings from "@/components/company-listings"
 import { Separator } from "@/components/ui/separator"
 
-export const metadata: Metadata = {
-  title: "Companies | JobPortal",
-  description: "Browse and search for companies hiring on JobPortal",
+export interface SearchFilters {
+  searchQuery: string
+  industry: string
+  location: string
 }
 
 export default function CompaniesPage() {
+  const [searchFilters, setSearchFilters] = useState<SearchFilters>({
+    searchQuery: "",
+    industry: "All Industries",
+    location: ""
+  })
+
   return (
     <div className="container mx-auto py-8 px-4">
       <div className="mb-8">
@@ -18,9 +28,12 @@ export default function CompaniesPage() {
         </p>
       </div>
 
-      <CompanySearch />
+      <CompanySearch 
+        searchFilters={searchFilters}
+        onSearchFiltersChange={setSearchFilters}
+      />
       <Separator className="my-6" />
-      <CompanyListings />
+      <CompanyListings searchFilters={searchFilters} />
     </div>
   )
 }

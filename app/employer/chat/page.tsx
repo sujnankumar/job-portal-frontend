@@ -12,6 +12,8 @@ interface ChatUser {
   id: string
   name: string
   avatar?: string
+  avatarUrl?: string | null // Add for blob URL
+  avatarLoading?: boolean   // Add loading state
   lastMessage: string
   lastMessageTime: string
 }
@@ -25,6 +27,8 @@ interface Message {
 }
 
 export default function EmployerChatPage() {
+  console.log("EmployerChatPage component rendering")
+  
   const { user } = useAuthStore()
   const [recipients, setRecipients] = useState<ChatUser[]>([])
   const [selectedId, setSelectedId] = useState<string | null>(null)
@@ -39,9 +43,30 @@ export default function EmployerChatPage() {
   const [showScrollDown, setShowScrollDown] = useState(false)
   const messagesContainerRef = useRef<HTMLDivElement>(null)
 
+  // Fetch token from user store
   useEffect(() => {
+    console.log("useEffect triggered, user:", user)
+    console.log("user?.token:", user?.token)
+    console.log("user?.role:", user?.role)
+    console.log("Fetching token from user store")
     setToken(user?.token || null)
-  }, [user?.token])
+  }, [user])
+
+  // Function to fetch profile photo for a user
+  const fetchProfilePhoto = async (userId: string): Promise<string | null> => {
+    if (!token) return null
+    try {
+      const response = await api.get(`/chat/chat/profile-photo/${userId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+        responseType: "blob",
+      })
+      return URL.createObjectURL(response.data)
+    } catch (error) {
+      // Log error but don't show it to user - we'll show fallback avatar
+      console.log("No profile photo found for user:", userId)
+      return null
+    }
+  }
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
@@ -61,15 +86,53 @@ export default function EmployerChatPage() {
     }
   }, [])
 
+  // Fetch recipients with profile photos
   useEffect(() => {
     if (!token) return
     setLoading(true)
+    
     api.get("/chat/chat/recipients", { headers: { Authorization: `Bearer ${token}` } })
-      .then(res => {
-        setRecipients(res.data)
+      .then(async (res) => {
+        const recipientsData = res.data
+        
+        // Set initial state with loading flags
+        const recipientsWithLoading = recipientsData.map((recipient: ChatUser) => ({
+          ...recipient,
+          avatarUrl: null,
+          avatarLoading: true
+        }))
+        setRecipients(recipientsWithLoading)
+        
+        // Fetch profile photos for each recipient
+        const recipientsWithPhotos = await Promise.all(
+          recipientsData.map(async (recipient: ChatUser) => {
+            const avatarUrl = await fetchProfilePhoto(recipient.id)
+            return {
+              ...recipient,
+              avatarUrl,
+              avatarLoading: false
+            }
+          })
+        )
+        
+        setRecipients(recipientsWithPhotos)
+      })
+      .catch((error) => {
+        console.error("Failed to fetch recipients:", error)
       })
       .finally(() => setLoading(false))
   }, [token])
+
+  // Cleanup function to revoke object URLs
+  useEffect(() => {
+    return () => {
+      recipients.forEach(recipient => {
+        if (recipient.avatarUrl) {
+          URL.revokeObjectURL(recipient.avatarUrl)
+        }
+      })
+    }
+  }, [recipients])
 
   useEffect(() => {
     if (!selectedId || !token) return
@@ -149,7 +212,27 @@ export default function EmployerChatPage() {
                 )}
                 onClick={() => setSelectedId(r.id)}
               >
-                <Image src={r.avatar || "/placeholder-user.jpg"} width={40} height={40} className="rounded-full" alt={r.name} />
+                <div className="w-10 h-10 rounded-full overflow-hidden bg-gray-200 flex items-center justify-center flex-shrink-0 border border-gray-300">
+                  {r.avatarLoading ? (
+                    <div className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    <>
+                      {r.avatarUrl ? (
+                        <Image 
+                          src={r.avatarUrl} 
+                          width={40} 
+                          height={40} 
+                          className="w-full h-full object-cover" 
+                          alt={r.name} 
+                        />
+                      ) : (
+                        <div className="w-full h-full bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center text-white font-semibold text-sm">
+                          {r.name.charAt(0).toUpperCase()}
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
                 <div className="flex-1 min-w-0">
                   <div className="font-medium truncate">{r.name}</div>
                   <div className="text-xs text-gray-500 truncate">{r.lastMessage}</div>

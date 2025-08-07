@@ -55,6 +55,9 @@ export default function ApplicationDetailsPage({ params }: { params: Promise<{ i
   const [loading, setLoading] = useState(true)
   const [id, setId] = useState("")
   const [showChat, setShowChat] = useState(false)
+  const [showInterviewDetails, setShowInterviewDetails] = useState(false)
+  const [interviewDetails, setInterviewDetails] = useState<any>(null)
+  const [loadingInterview, setLoadingInterview] = useState(false)
 
   const fetchApplication = async (appId: string, token: string) => {
        setLoading(true);
@@ -182,6 +185,25 @@ export default function ApplicationDetailsPage({ params }: { params: Promise<{ i
     else {
       console.error("Failed to withdraw application")
       alert("Failed to withdraw application. Please try again.")
+    }
+  }
+
+  // Fetch interview details
+  const fetchInterviewDetails = async () => {
+    if (!user?.token || !application?.job_id) return
+    
+    setLoadingInterview(true)
+    try {
+      const response = await api.get(`/interview/details/${application.job_id}`, {
+        headers: { Authorization: `Bearer ${user.token}` }
+      })
+      setInterviewDetails(response.data)
+      setShowInterviewDetails(true)
+    } catch (err: any) {
+      console.error("Error fetching interview details:", err)
+      alert("Failed to load interview details. Please try again.")
+    } finally {
+      setLoadingInterview(false)
     }
   }
 
@@ -440,6 +462,29 @@ export default function ApplicationDetailsPage({ params }: { params: Promise<{ i
                           : "No Timeline Available"}
                       </div>
                     </div>
+
+                    {/* Interview Details Button */}
+                    {application?.status === "interview" && (
+                      <div className="flex items-center pt-2">
+                        <div className="w-32"></div>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={fetchInterviewDetails}
+                          disabled={loadingInterview}
+                          className="text-blue-600 border-blue-200 hover:bg-blue-50"
+                        >
+                          {loadingInterview ? (
+                            "Loading..."
+                          ) : (
+                            <>
+                              <Calendar className="h-4 w-4 mr-2" />
+                              View Interview Details
+                            </>
+                          )}
+                        </Button>
+                      </div>
+                    )}
                   </div>
                 </CardContent>
               </Card>
@@ -566,6 +611,120 @@ export default function ApplicationDetailsPage({ params }: { params: Promise<{ i
               Back to Applications
             </Button>
           </div>
+          
+          {/* Interview Details Modal */}
+          <Dialog open={showInterviewDetails} onOpenChange={setShowInterviewDetails}>
+            <DialogContent className="max-w-2xl">
+              <DialogHeader>
+                <DialogTitle className="flex items-center">
+                  <Calendar className="h-5 w-5 mr-2 text-blue-600" />
+                  Interview Details
+                </DialogTitle>
+                <DialogDescription>
+                  Complete information about your scheduled interview
+                </DialogDescription>
+              </DialogHeader>
+              
+              {interviewDetails && (
+                <div className="space-y-6 mt-4">
+                  {/* Basic Interview Information */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                      <div className="text-sm text-gray-500">Interview Date & Time</div>
+                      <div className="font-medium">{formatDate(interviewDetails.scheduled_time)}</div>
+                    </div>
+                    <div className="space-y-1">
+                      <div className="text-sm text-gray-500">Interview Type</div>
+                      <div className="font-medium capitalize">{interviewDetails.details?.interviewType || "Not specified"}</div>
+                    </div>
+                    <div className="space-y-1">
+                      <div className="text-sm text-gray-500">Duration</div>
+                      <div className="font-medium">{interviewDetails.details?.duration || "Not specified"}</div>
+                    </div>
+                    <div className="space-y-1">
+                      <div className="text-sm text-gray-500">Status</div>
+                      <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+                        Scheduled
+                      </Badge>
+                    </div>
+                  </div>
+
+                  <Separator />
+
+                  {/* Interviewers */}
+                  {interviewDetails.details?.interviewers && (
+                    <div className="space-y-2">
+                      <div className="text-sm text-gray-500">Interviewers</div>
+                      <div className="space-y-1">
+                        {Array.isArray(interviewDetails.details.interviewers) ? (
+                          interviewDetails.details.interviewers.map((interviewer: string, index: number) => (
+                            <div key={index} className="flex items-center">
+                              <Building className="h-4 w-4 mr-2 text-gray-400" />
+                              <span className="font-medium">{interviewer}</span>
+                            </div>
+                          ))
+                        ) : (
+                          <div className="flex items-center">
+                            <Building className="h-4 w-4 mr-2 text-gray-400" />
+                            <span className="font-medium">{interviewDetails.details.interviewers}</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Zoom Link for Video Interviews */}
+                  {interviewDetails.zoom_link && (
+                    <div className="space-y-2">
+                      <div className="text-sm text-gray-500">Meeting Link</div>
+                      <div className="bg-blue-50 p-3 rounded-md">
+                        <a 
+                          href={interviewDetails.zoom_link} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="text-blue-600 hover:text-blue-800 underline break-all"
+                        >
+                          {interviewDetails.zoom_link}
+                        </a>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Notes/Instructions */}
+                  {interviewDetails.details?.notes && (
+                    <div className="space-y-2">
+                      <div className="text-sm text-gray-500">Additional Notes</div>
+                      <div className="bg-gray-50 p-3 rounded-md text-gray-700 whitespace-pre-line">
+                        {interviewDetails.details.notes}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Interview ID for Reference */}
+                  <div className="pt-2 border-t">
+                    <div className="text-xs text-gray-400">Interview ID: {interviewDetails.id}</div>
+                  </div>
+                </div>
+              )}
+              
+              <DialogFooter className="mt-6">
+                <Button variant="outline" onClick={() => setShowInterviewDetails(false)}>
+                  Close
+                </Button>
+                <Button 
+                  onClick={() => {
+                    // Add to calendar functionality can be implemented here
+                    alert("Add to calendar functionality can be implemented here")
+                  }}
+                  className="bg-blue-600 hover:bg-blue-700"
+                >
+                  <Calendar className="h-4 w-4 mr-2" />
+                  Add to Calendar
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
           {/* Chat Modal */}
           <ContactRecruiterChatModal
             jobId={jobId}

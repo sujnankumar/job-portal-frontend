@@ -37,25 +37,33 @@ export default function CompanyDetailPage({ params }: { params: { id: string } }
   const [error, setError] = useState<string | null>(null)
   const [logoUrl, setLogoUrl] = useState<string | null>(null)
   const [logoLoading, setLogoLoading] = useState(false)
+  const [openPositions, setOpenPositions] = useState(0)
 
   useEffect(() => {
     const fetchCompanyData = async () => {
       setLoading(true)
       setError(null)
       try {
-        // Replace with your actual API endpoint
-        const response = await api.get(`/company/${params.id}`)
-        if (!response.data) {
+        // Fetch company data and jobs count in parallel
+        const [companyResponse, jobsResponse] = await Promise.all([
+          api.get(`/company/${params.id}`),
+          api.get(`/job/jobs/by_company/${params.id}`)
+        ])
+        
+        if (!companyResponse.data) {
           throw new Error("Failed to fetch company data")
         }
-        const data: CompanyData = await response.data
+        
+        const data: CompanyData = companyResponse.data
+        const jobsCount = jobsResponse.data?.jobs?.length || 0
+        setOpenPositions(jobsCount)
 
         // Add placeholder/default values for fields not present in the API response
         const enrichedData: CompanyData = {
           ...data,
           coverImage: data.coverImage || "/san-francisco-street-grid.png", // Placeholder
           website: data.website || "#", // Placeholder or fetch logic
-          openPositions: data.openPositions || 0, // Placeholder or fetch logic
+          openPositions: jobsCount, // Use actual count from jobs API
           rating: data.rating || 0, // Placeholder or fetch logic
           benefits: data.benefits || [
             "Benefit info not available", // Placeholder
@@ -317,8 +325,8 @@ export default function CompanyDetailPage({ params }: { params: { id: string } }
 
             <div className="space-y-3">
               <Button className="w-full bg-accent hover:bg-accent/90" asChild>
-                <Link href={`/jobs?company=${displayCompany.id}`} className="w-full">
-                  View All Jobs ({displayCompany.openPositions})
+                <Link href={`/jobs?search=${encodeURIComponent(displayCompany.name)}`} className="w-full">
+                  View All Jobs ({openPositions})
                 </Link>
               </Button>
 
@@ -346,7 +354,7 @@ export default function CompanyDetailPage({ params }: { params: { id: string } }
       {/* Company Jobs */}
       <div className="mt-8">
         <h2 className="text-2xl font-bold text-dark-gray mb-6">Open Positions at {displayCompany.name}</h2>
-        <CompanyJobs companyId={params.id} /> {/* Pass the actual company ID */}
+        <CompanyJobs companyId={params.id} companyName={company.company_name}/> {/* Pass the actual company ID */}
       </div>
     </div>
   )
