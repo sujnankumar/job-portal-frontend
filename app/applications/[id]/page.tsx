@@ -515,7 +515,7 @@ export default function ApplicationDetailsPage({ params }: { params: Promise<{ i
                       <div className="flex items-start">
                         <div className="w-32 text-sm text-gray-500 mt-0.5">Interviewers:</div>
                         <div>
-                          {application?.interview.interviewers.map((interviewer, index) => (
+                          {application?.interview.interviewers.map((interviewer: string, index: number) => (
                             <div key={index} className="font-medium">
                               {interviewer}
                             </div>
