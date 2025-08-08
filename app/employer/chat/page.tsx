@@ -6,6 +6,7 @@ import Image from "next/image"
 import cn from "classnames"
 import { useChatSocket } from "@/hooks/use-chat-socket"
 import api from "@/lib/axios"
+import { formatChatTime } from "@/lib/utils"
 import { ChevronDown } from "lucide-react"
 
 interface ChatUser {
@@ -246,7 +247,7 @@ export default function EmployerChatPage() {
                             : new Date(r.lastMessageTime);
                           return isNaN(date.getTime())
                             ? ""
-                            : date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+                            : formatChatTime(date);
                         })()
                       : ""}
                   </div>
@@ -283,7 +284,7 @@ export default function EmployerChatPage() {
               }}
             >
               {msg.text}
-              <div className="text-[10px] text-right text-gray-400 mt-1">{msg.time?.slice(11, 16)}</div>
+              <div className="text-[10px] text-right text-gray-400 mt-1">{formatChatTime(msg.time)}</div>
             </div>
           )) : (
             <div className="text-gray-400 text-center mt-10">{selectedId ? "No messages yet." : "Select a chat to start messaging."}</div>

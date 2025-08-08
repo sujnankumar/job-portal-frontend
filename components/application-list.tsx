@@ -14,6 +14,7 @@ import { Calendar as CalendarComponent } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { format } from "date-fns"
 import api from "@/lib/axios"
+import { formatDate } from "@/lib/utils"
 import { useAuthStore } from "@/store/authStore"
 
 interface Application {
@@ -124,12 +125,6 @@ export default function ApplicationList() {
 
     return matchesSearch && matchesStatus && matchesDate
   })
-
-  // Utilities
-  const formatDate = (dateString: string) => {
-    const options: Intl.DateTimeFormatOptions = { year: "numeric", month: "long", day: "numeric" }
-    return new Date(dateString).toLocaleDateString(undefined, options)
-  }
 
   const getStatusBadge = (status: string) => {
     switch (status) {

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react"
 import api from "@/lib/axios"
 import { useAuthStore } from "@/store/authStore"
+import { formatDate } from "@/lib/utils"
 import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -257,7 +258,7 @@ export default function JobApplications({ jobId }: JobApplicationsProps) {
                 <div className="md:ml-auto flex flex-col md:flex-row items-start md:items-center gap-3">
                   <div className="text-right">
                     <div className="text-xs text-gray-500">
-                      Applied: {new Date(app.appliedDate).toLocaleDateString()}
+                      Applied: {formatDate(app.appliedDate)}
                     </div>
                     {getStatusBadge(app.status)}
                   </div>
@@ -274,7 +275,7 @@ export default function JobApplications({ jobId }: JobApplicationsProps) {
                   <div>
                     <span className="font-medium text-blue-700">Interview Scheduled: </span>
                     <span className="text-blue-600">
-                      {new Date(app.interviewDate).toLocaleDateString()} at {app.interviewTime}
+                      {formatDate(app.interviewDate)} at {app.interviewTime}
                     </span>
                   </div>
                 </div>

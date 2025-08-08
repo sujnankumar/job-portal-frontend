@@ -5,7 +5,7 @@ import Link from "next/link"
 import { MapPin, DollarSign, Clock, Bookmark, BookmarkCheck } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { cn } from "@/lib/utils"
+import { cn, formatDate } from "@/lib/utils"
 import api from "@/lib/axios"
 
 interface Job {
@@ -145,10 +145,10 @@ export default function CompanyJobs({ companyId, companyName }: { companyId: str
               </div>
 
               <div className="mt-3 text-xs text-gray-500 flex justify-between items-center">
-                <span>Posted on {new Date(job.posted_at).toLocaleDateString()}</span>
+                <span>Posted on {formatDate(job.posted_at)}</span>
                 {job.application_deadline && (
                   <span className="text-red-600 font-medium">
-                    Deadline: {new Date(job.application_deadline).toLocaleDateString()}
+                    Deadline: {formatDate(job.application_deadline)}
                   </span>
                 )}
               </div>

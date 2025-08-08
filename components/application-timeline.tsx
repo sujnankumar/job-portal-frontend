@@ -1,4 +1,5 @@
 import { CheckCircle, Clock, AlertCircle, CheckCircle2, XCircle } from "lucide-react"
+import { formatDateTime } from "@/lib/utils"
 
 interface TimelineEvent {
   date: string
@@ -11,18 +12,6 @@ interface ApplicationTimelineProps {
 }
 
 export default function ApplicationTimeline({ timeline }: ApplicationTimelineProps) {
-  // Format date to readable string
-  const formatDate = (dateString: string) => {
-    const options: Intl.DateTimeFormatOptions = {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    }
-    return new Date(dateString).toLocaleDateString(undefined, options)
-  }
-
   // Get icon based on status
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -58,7 +47,7 @@ export default function ApplicationTimeline({ timeline }: ApplicationTimelinePro
           {/* Event content */}
           <div>
             <div className="font-medium">{event?.description}</div>
-            <div className="text-sm text-gray-500">{formatDate(event?.date)}</div>
+            <div className="text-sm text-gray-500">{formatDateTime(event?.date)}</div>
           </div>
         </div>
       ))}

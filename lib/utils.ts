@@ -5,11 +5,96 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
+// IST Timezone offset (+5:30)
+const IST_OFFSET = 5.5 * 60 * 60 * 1000; // 5.5 hours in milliseconds
+
+/**
+ * Convert any date to IST timezone
+ */
+export function toIST(date: string | Date | number): Date {
+  const inputDate = new Date(date);
+  // Get UTC time and add IST offset
+  const utcTime = inputDate.getTime() + (inputDate.getTimezoneOffset() * 60000);
+  return new Date(utcTime + IST_OFFSET);
+}
+
+/**
+ * Format date in IST with default format
+ */
 export function formatDate(date: string | Date): string {
-  return new Date(date).toLocaleDateString("en-US", {
+  const istDate = toIST(date);
+  return istDate.toLocaleDateString("en-IN", {
     year: "numeric",
     month: "long",
     day: "numeric",
+    timeZone: "Asia/Kolkata"
+  })
+}
+
+/**
+ * Format date and time in IST
+ */
+export function formatDateTime(date: string | Date): string {
+  const istDate = toIST(date);
+  return istDate.toLocaleString("en-IN", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: "Asia/Kolkata"
+  })
+}
+
+/**
+ * Format time only in IST
+ */
+export function formatTime(date: string | Date): string {
+  const istDate = toIST(date);
+  return istDate.toLocaleTimeString("en-IN", {
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: "Asia/Kolkata"
+  })
+}
+
+/**
+ * Format date for display with IST timezone indicator
+ */
+export function formatDateWithTimezone(date: string | Date): string {
+  const istDate = toIST(date);
+  return istDate.toLocaleString("en-IN", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: "Asia/Kolkata"
+  }) + " IST"
+}
+
+/**
+ * Format time for chat messages (assumes timestamp is already in IST from backend)
+ */
+export function formatChatTime(date: string | Date): string {
+  const inputDate = new Date(date);
+  return inputDate.toLocaleTimeString("en-IN", {
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: "Asia/Kolkata"
+  })
+}
+
+/**
+ * Format date for short display (MMM DD, YYYY)
+ */
+export function formatDateShort(date: string | Date): string {
+  const istDate = toIST(date);
+  return istDate.toLocaleDateString("en-IN", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    timeZone: "Asia/Kolkata"
   })
 }
 
@@ -19,8 +104,8 @@ export function truncateText(text: string, maxLength: number): string {
 }
 
 export function calculateDaysAgo(date: string | Date): string {
-  const now = new Date()
-  const pastDate = new Date(date)
+  const now = toIST(new Date())
+  const pastDate = toIST(date)
   const diffTime = Math.abs(now.getTime() - pastDate.getTime())
   const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24))
 
@@ -60,8 +145,8 @@ export function formatSalaryRange(min?: number | null, max?: number | null): str
 }
 
 export function formatRelativeTime(dateInput: string | Date | number): string {
-  const date = new Date(dateInput);
-  const now = new Date();
+  const date = toIST(dateInput);
+  const now = toIST(new Date());
   const seconds = Math.round((now.getTime() - date.getTime()) / 1000);
 
   const minute = 60;

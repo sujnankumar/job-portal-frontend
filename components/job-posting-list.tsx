@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react"
 import api from "@/lib/axios"
 import { useAuthStore } from "@/store/authStore"
+import { formatDate } from "@/lib/utils"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -144,7 +145,7 @@ export default function JobPostingList({ onSelectJob }: JobPostingListProps) {
                           {job.title}
                         </button>
                         <div className="text-xs text-gray-500">
-                          Posted: {new Date(job.postedDate).toLocaleDateString()}
+                          Posted: {formatDate(job.postedDate)}
                         </div>
                       </td>
                       <td className="px-4 py-4 text-sm text-gray-600">{job.location}</td>

@@ -8,9 +8,35 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent } from "@/components/ui/card"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 import MapEmbed from "@/components/map-embed"
 import { useAuthStore } from "@/store/authStore"
 import api from "@/lib/axios"
+import { formatDate, formatDateShort, toIST } from "@/lib/utils"
+
+// Simple markdown to HTML converter for display
+const markdownToHtml = (markdown: string) => {
+  if (!markdown) return ""
+  
+  return markdown
+    .replace(/^### (.*$)/gim, '<h3 class="text-lg font-semibold text-dark-gray mb-2 mt-4">$1</h3>')
+    .replace(/^## (.*$)/gim, '<h2 class="text-xl font-semibold text-dark-gray mb-3 mt-4">$1</h2>')
+    .replace(/^# (.*$)/gim, '<h1 class="text-2xl font-bold text-dark-gray mb-4 mt-4">$1</h1>')
+    .replace(/^\* (.*$)/gim, '<li class="ml-4">$1</li>')
+    .replace(/^- (.*$)/gim, '<li class="ml-4">$1</li>')
+    .replace(/\*\*(.*)\*\*/gim, '<strong class="font-semibold">$1</strong>')
+    .replace(/\*(.*)\*/gim, '<em class="italic">$1</em>')
+    .replace(/\n\n/gim, '</p><p class="mb-3">')
+    .replace(/^\n/gim, '')
+    .replace(/^(?!<[h|l])/gim, '<p class="mb-3">')
+    .replace(/(<li.*<\/li>)/gim, '<ul class="list-disc ml-6 mb-3">$1</ul>')
+    .replace(/<\/ul>\s*<ul[^>]*>/gim, '')
+}
 
 interface JobDetails {
   skills: string[];
@@ -22,6 +48,7 @@ export default function JobDetail({ jobId, jobDetails, is_saved }: { jobId: stri
   const [saveError, setSaveError] = useState("")
   const [saveSuccess, setSaveSuccess] = useState("")
   const [isApplied, setIsApplied] = useState(false)
+  const [applicationData, setApplicationData] = useState<any>(null)
   const [showShareModal, setShowShareModal] = useState(false)
   const [copySuccess, setCopySuccess] = useState("")
   const [logoUrl, setLogoUrl] = useState<string | null>(null)
@@ -40,6 +67,20 @@ export default function JobDetail({ jobId, jobDetails, is_saved }: { jobId: stri
           headers: { Authorization: `Bearer ${user.token}` }
         })
         setIsApplied(res.data.is_applied)
+        
+        // If applied, fetch application details
+        if (res.data.is_applied) {
+          try {
+            const appRes = await api.get(`/ga/application/job_id/${jobId}`, {
+              headers: { Authorization: `Bearer ${user.token}` }
+            })
+            // console.log("Fetched Application:", appRes.data)
+            // console.log("Job Details:", job)
+            setApplicationData(appRes.data)
+          } catch (appErr) {
+            console.error("Error fetching application details:", appErr)
+          }
+        }
       } catch (err) {
         // Optionally handle error
       }
@@ -157,6 +198,30 @@ export default function JobDetail({ jobId, jobDetails, is_saved }: { jobId: stri
     }
   }
 
+  const canEditApplication = () => {
+    if (!applicationData) return { canEdit: false, reason: "Application data not available" }
+    // console.log("Checking application data:", applicationData.application)
+    // Check if application is rejected or withdrawn
+    if (applicationData.application.status === "rejected" || applicationData.application.status === "withdrawn" || applicationData.application.status === "interview") {
+      return { 
+        canEdit: false, 
+        reason: `Cannot edit ${applicationData.application.status === "interview"?"interview scheduled":applicationData.application.status} application` 
+      }
+    }
+    
+    // Check if job deadline has passed
+    const deadline = toIST(job.expires_at)
+    const now = toIST(new Date())
+    if (deadline < now) {
+      return { 
+        canEdit: false, 
+        reason: "Application deadline has passed" 
+      }
+    }
+    
+    return { canEdit: true, reason: "" }
+  }
+
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
       {/* Share Modal */}
@@ -260,11 +325,7 @@ export default function JobDetail({ jobId, jobDetails, is_saved }: { jobId: stri
               {job.posted_at && (
                 <div className="flex items-center">
                   <Clock className="h-4 w-4 mr-1" />
-                  {new Date(job.posted_at).toLocaleDateString("en-US", {
-                    year: "numeric",
-                    month: "long",
-                    day: "numeric",
-                  })}
+                  {formatDate(job.posted_at)}
                 </div>
               )}
             </div>
@@ -277,9 +338,33 @@ export default function JobDetail({ jobId, jobDetails, is_saved }: { jobId: stri
               <Button className="bg-gray-400 cursor-not-allowed" disabled>
                 Applied
               </Button>
-              <Link href={`/applications/edit/${jobId}`}>
-                <Button variant="outline">Edit Application</Button>
-              </Link>
+              <TooltipProvider>
+                {(() => {
+                  const editStatus = canEditApplication()
+                  if (editStatus.canEdit) {
+                    return (
+                      <Link href={`/applications/edit/${jobId}`}>
+                        <Button variant="outline">Edit Application</Button>
+                      </Link>
+                    )
+                  } else {
+                    return (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div>
+                            <Button variant="outline" disabled className="cursor-not-allowed">
+                              Edit Application
+                            </Button>
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>{editStatus.reason}</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    )
+                  }
+                })()}
+              </TooltipProvider>
             </>
           ) : (
             <Link href={`/apply/${jobId}`}>
@@ -324,14 +409,14 @@ export default function JobDetail({ jobId, jobDetails, is_saved }: { jobId: stri
               {job.description && (
                 <div>
                   <h3 className="text-lg font-semibold text-dark-gray mb-3">Job Description</h3>
-                  <div className="prose max-w-none" dangerouslySetInnerHTML={{ __html: job.description }} />
+                  <div className="prose max-w-none" dangerouslySetInnerHTML={{ __html: markdownToHtml(job.description) }} />
                 </div>
               )}
               
               {job.requirements && (
                 <div className="mt-8">
                   <h3 className="text-lg font-semibold text-dark-gray mb-3">Requirements</h3>
-                  <div className="prose max-w-none" dangerouslySetInnerHTML={{ __html: job.requirements }} />
+                  <div className="prose max-w-none" dangerouslySetInnerHTML={{ __html: markdownToHtml(job.requirements) }} />
                 </div>
               )}
               
@@ -373,11 +458,7 @@ export default function JobDetail({ jobId, jobDetails, is_saved }: { jobId: stri
                       <Calendar className="h-5 w-5 mr-2 text-gray-400 mt-0.5" />
                       <div>
                         <div className="font-medium text-dark-gray">Application Deadline</div>
-                        {new Date(job.expires_at).toLocaleDateString("en-US", {
-                          year: "numeric",
-                          month: "long",
-                          day: "numeric",
-                        })}
+                        {formatDate(job.expires_at)}
                       </div>
                     </div>
                   )}
@@ -484,14 +565,14 @@ export default function JobDetail({ jobId, jobDetails, is_saved }: { jobId: stri
             {job.description && (
               <div>
                 <h3 className="text-lg font-semibold text-dark-gray mb-3">Job Description</h3>
-                <div className="prose max-w-none" dangerouslySetInnerHTML={{ __html: job.description }} />
+                <div className="prose max-w-none" dangerouslySetInnerHTML={{ __html: markdownToHtml(job.description) }} />
               </div>
             )}
             
             {job.requirements && (
               <div className="mt-8">
                 <h3 className="text-lg font-semibold text-dark-gray mb-3">Requirements</h3>
-                <div className="prose max-w-none" dangerouslySetInnerHTML={{ __html: job.requirements }} />
+                <div className="prose max-w-none" dangerouslySetInnerHTML={{ __html: markdownToHtml(job.requirements) }} />
               </div>
             )}
             
@@ -591,11 +672,7 @@ export default function JobDetail({ jobId, jobDetails, is_saved }: { jobId: stri
                     <Calendar className="h-5 w-5 mr-2 text-gray-400 mt-0.5" />
                     <div>
                       <div className="font-medium text-dark-gray">Application Deadline</div>
-                      {new Date(job.expires_at).toLocaleDateString("en-US", {
-                        year: "numeric",
-                        month: "long",
-                        day: "numeric",
-                      })}
+                      {formatDate(job.expires_at)}
                     </div>
                   </div>
                 )}
@@ -605,11 +682,7 @@ export default function JobDetail({ jobId, jobDetails, is_saved }: { jobId: stri
                     <div>
                       <div className="font-medium text-dark-gray">Posted</div>
                       <div className="text-gray-600">
-                        {new Date(job.posted_at).toLocaleDateString("en-US", {
-                          year: "numeric",
-                          month: "long",
-                          day: "numeric",
-                        })}
+                        {formatDate(job.posted_at)}
                       </div>
                     </div>
                   </div>
@@ -651,11 +724,7 @@ export default function JobDetail({ jobId, jobDetails, is_saved }: { jobId: stri
         <div className="flex justify-between items-center">
           <div>
             <p className="text-gray-500 text-sm">
-              Job ID: {jobId} • Posted {job.posted_at ? new Date(job.posted_at).toLocaleDateString("en-US", {
-                year: "numeric",
-                month: "long",
-                day: "numeric",
-              }) : "NA"}
+              Job ID: {jobId} • Posted {job.posted_at ? formatDate(job.posted_at) : "NA"}
             </p>
           </div>
 

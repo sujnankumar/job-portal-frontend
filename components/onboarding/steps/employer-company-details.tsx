@@ -49,7 +49,7 @@ export default function EmployerCompanyDetails({ data, onNext }: EmployerCompany
   const [showBenefitsPreview, setShowBenefitsPreview] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null) // Add ref for file input
 
-  // Simple markdown to HTML converter
+  // Simple markdown to HTML converter for preview
   const markdownToHtml = (markdown: string) => {
     return markdown
       .replace(/^### (.*$)/gim, '<h3 class="text-lg font-semibold text-dark-gray mb-2 mt-4">$1</h3>')
@@ -64,6 +64,27 @@ export default function EmployerCompanyDetails({ data, onNext }: EmployerCompany
       .replace(/^(?!<[h|l])/gim, '<p class="mb-3">')
       .replace(/(<li.*<\/li>)/gim, '<ul class="list-disc ml-6 mb-3">$1</ul>')
       .replace(/<\/ul>\s*<ul[^>]*>/gim, '')
+  }
+
+  // Convert HTML back to markdown to ensure we always store markdown
+  const htmlToMarkdown = (html: string) => {
+    return html
+      .replace(/<h1[^>]*>(.*?)<\/h1>/gim, '# $1')
+      .replace(/<h2[^>]*>(.*?)<\/h2>/gim, '## $1') 
+      .replace(/<h3[^>]*>(.*?)<\/h3>/gim, '### $1')
+      .replace(/<strong[^>]*>(.*?)<\/strong>/gim, '**$1**')
+      .replace(/<em[^>]*>(.*?)<\/em>/gim, '*$1*')
+      .replace(/<li[^>]*>(.*?)<\/li>/gim, '- $1')
+      .replace(/<ul[^>]*>|<\/ul>/gim, '')
+      .replace(/<p[^>]*>(.*?)<\/p>/gim, '$1\n\n')
+      .replace(/<br\s*\/?>/gim, '\n')
+      .replace(/&nbsp;/gim, ' ')
+      .replace(/&amp;/gim, '&')
+      .replace(/&lt;/gim, '<')
+      .replace(/&gt;/gim, '>')
+      .replace(/&quot;/gim, '"')
+      .replace(/&#39;/gim, "'")
+      .trim()
   }
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -155,7 +176,14 @@ export default function EmployerCompanyDetails({ data, onNext }: EmployerCompany
   }
 
   const handleSubmit = () => {
-    onNext(formData)
+    // Ensure all text fields are stored as markdown by converting any HTML back to markdown
+    const cleanedData = {
+      ...formData,
+      description: htmlToMarkdown(formData.description),
+      culture: formData.culture ? htmlToMarkdown(formData.culture) : formData.culture,
+      benefits: formData.benefits ? htmlToMarkdown(formData.benefits) : formData.benefits,
+    }
+    onNext(cleanedData)
   }
 
   const handleButtonClick = () => {

@@ -3,7 +3,7 @@ import axios from "@/lib/axios";
 import { useAuthStore } from "@/store/authStore";
 import { useToast } from "@/hooks/use-toast";
 import Image from "next/image";
-import { Camera, MapPin, Briefcase, Mail, Phone, Pencil, Loader2 } from "lucide-react";
+import { Camera, MapPin, Briefcase, Mail, Phone, Pencil, Loader2, FileText, Upload, Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
@@ -82,29 +82,35 @@ export default function ProfileHeader({
   const [profileUploading, setProfileUploading] = useState(false);
   const profileInputRef = useRef<HTMLInputElement>(null);
   const [profileDialogOpen, setProfileDialogOpen] = useState(false);
-  const [coverLoading, setCoverLoading] = useState(true)
-  const [profileLoading, setProfileLoading] = useState(true)
+  const [coverLoading, setCoverLoading] = useState(true);
+  const [profileLoading, setProfileLoading] = useState(true);
+  
+  // Resume state
+  const [resumeDialogOpen, setResumeDialogOpen] = useState(false);
+  const [resumeFile, setResumeFile] = useState<File | null>(null);
+  const [resumeUploading, setResumeUploading] = useState(false);
+  const resumeInputRef = useRef<HTMLInputElement>(null);
 
   // Fetch cover photo on mount or after upload
   useEffect(() => {
     async function fetchCover() {
-      setCoverLoading(true)
+      setCoverLoading(true);
       try {
         const res = await axios.get("/profile/cover_photo", {
           responseType: "blob",
           headers: { Authorization: user?.token ? `Bearer ${user.token}` : undefined },
-        })
-        const url = URL.createObjectURL(res.data)
-        setCoverUrl(url)
+        });
+        const url = URL.createObjectURL(res.data);
+        setCoverUrl(url);
       } catch {
-        setCoverUrl("")
+        setCoverUrl("");
       } finally {
-        setCoverLoading(false)
+        setCoverLoading(false);
       }
     }
-    fetchCover()
-    return () => { if (coverUrl && coverUrl.startsWith("blob:")) URL.revokeObjectURL(coverUrl) }
-  }, [user])
+    fetchCover();
+    return () => { if (coverUrl && coverUrl.startsWith("blob:")) URL.revokeObjectURL(coverUrl); };
+  }, [user]);
 
   // Handle file input change
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -161,23 +167,23 @@ export default function ProfileHeader({
   // Fetch profile photo on mount or after upload
   useEffect(() => {
     async function fetchProfile() {
-      setProfileLoading(true)
+      setProfileLoading(true);
       try {
         const res = await axios.get("/profile/profile_photo", {
           responseType: "blob",
           headers: { Authorization: user?.token ? `Bearer ${user.token}` : undefined },
-        })
-        const url = URL.createObjectURL(res.data)
-        setProfileUrl(url)
+        });
+        const url = URL.createObjectURL(res.data);
+        setProfileUrl(url);
       } catch {
-        setProfileUrl("")
+        setProfileUrl("");
       } finally {
-        setProfileLoading(false)
+        setProfileLoading(false);
       }
     }
-    fetchProfile()
-    return () => { if (profileUrl && profileUrl.startsWith("blob:")) URL.revokeObjectURL(profileUrl) }
-  }, [user])
+    fetchProfile();
+    return () => { if (profileUrl && profileUrl.startsWith("blob:")) URL.revokeObjectURL(profileUrl); };
+  }, [user]);
 
   // Handle profile file input change
   const handleProfileFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -234,6 +240,97 @@ export default function ProfileHeader({
     }
   };
 
+  // Resume functions
+  const handlePreviewResume = async () => {
+    try {
+      const response = await axios.get("/resume/preview_resume", {
+        responseType: "blob",
+        headers: {
+          Authorization: user?.token ? `Bearer ${user.token}` : undefined,
+        },
+      });
+      
+      const blob = new Blob([response.data], { type: response.data.type });
+      const url = URL.createObjectURL(blob);
+      window.open(url, "_blank");
+      
+      // Clean up the object URL after a delay
+      setTimeout(() => URL.revokeObjectURL(url), 100);
+    } catch (e: any) {
+      if (e?.response?.status === 404) {
+        toast({
+          title: "No resume found",
+          description: "Please upload a resume first",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Failed to preview resume",
+          description: e?.response?.data?.detail || "Unknown error",
+          variant: "destructive",
+        });
+      }
+    }
+  };
+
+  const handleResumeFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const allowedTypes = [
+        "application/pdf",
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        "application/msword"
+      ];
+      
+      if (!allowedTypes.includes(file.type)) {
+        toast({
+          title: "Invalid file type",
+          description: "Only PDF and Word documents are allowed",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      setResumeFile(file);
+      setResumeDialogOpen(true);
+    }
+  };
+
+  const handleResumeCancel = () => {
+    setResumeFile(null);
+    setResumeDialogOpen(false);
+    if (resumeInputRef.current) resumeInputRef.current.value = "";
+  };
+
+  const handleResumeConfirm = async () => {
+    if (!resumeFile) return;
+    setResumeUploading(true);
+    
+    try {
+      const formData = new FormData();
+      formData.append("file", resumeFile);
+      
+      await axios.post("/resume/upload_resume", formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+          Authorization: user?.token ? `Bearer ${user.token}` : undefined,
+        },
+      });
+      
+      setResumeFile(null);
+      setResumeDialogOpen(false);
+      toast({ title: "Resume uploaded successfully!" });
+    } catch (e: any) {
+      toast({
+        title: "Failed to upload resume",
+        description: e?.response?.data?.detail || "Unknown error",
+        variant: "destructive",
+      });
+    } finally {
+      setResumeUploading(false);
+    }
+  };
+
   return (
     <div className="bg-white rounded-xl shadow-sm overflow-hidden">
       {/* 
@@ -255,7 +352,6 @@ export default function ProfileHeader({
             src={coverPreview || coverUrl || "/mystical-forest-spirit.png"}
             alt="Cover"
             className="absolute inset-0 w-full h-full object-cover object-center z-0"
-            style={{ pointerEvents: "none" }}
             onLoad={() => setCoverLoading(false)}
           />
         )}
@@ -312,37 +408,38 @@ export default function ProfileHeader({
         <div className="flex flex-col md:block">
           {/* Profile Picture */}
           <div className="absolute -top-12 left-6 z-20 bg-white shadow-md w-32 h-32 flex items-center justify-center rounded-full border-3 border-white">
-          {profileLoading ? (
-            <Loader2 className="animate-spin h-10 w-10 text-gray-400" />
-          ) : (
-            <div className="relative w-32 h-32">
-              <img
-                src={profilePreview || profileUrl || "/mystical-forest-spirit.png"}
-                width={128}
-                height={128}
-                alt="Profile"
-                className="rounded-full h-32 w-32 object-cover absolute top-0 left-0 border-4 border-white"
-                style={{ pointerEvents: "none" }}
-                onLoad={() => setProfileLoading(false)}
-              />
-              <Button
-                variant="ghost"
-                size="sm"
-                className="absolute bottom-0 right-0 rounded-full h-8 w-8 p-0 bg-white hover:bg-light-gray"
-                onClick={() => profileInputRef.current?.click()}
-              >
-                <Camera className="h-4 w-4" />
-              </Button>
-              <input
-                ref={profileInputRef}
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={handleProfileFileChange}
-              />
-            </div>
-          )}
+            {profileLoading ? (
+              <Loader2 className="animate-spin h-10 w-10 text-gray-400" />
+            ) : (
+              <div className="relative w-32 h-32">
+                <img
+                  src={profilePreview || profileUrl || "/mystical-forest-spirit.png"}
+                  width={128}
+                  height={128}
+                  alt="Profile"
+                  className="rounded-full h-32 w-32 object-cover absolute top-0 left-0 border-4 border-white"
+                  onLoad={() => setProfileLoading(false)}
+                />
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="absolute bottom-0 right-0 rounded-full h-8 w-8 p-0 bg-white hover:bg-light-gray"
+                  onClick={() => profileInputRef.current?.click()}
+                >
+                  <Camera className="h-4 w-4" />
+                </Button>
+                <input
+                  ref={profileInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleProfileFileChange}
+                  aria-label="Upload profile photo"
+                />
+              </div>
+            )}
           </div>
+          
           {/* Profile Picture Modal */}
           <Dialog open={profileDialogOpen} onOpenChange={setProfileDialogOpen}>
             <DialogContent>
@@ -376,8 +473,9 @@ export default function ProfileHeader({
               </DialogFooter>
             </DialogContent>
           </Dialog>
+          
           {/* Profile Details */}
-            <div className="mt-5 md:mt-5 md:ml-44 flex flex-col md:flex-row md:items-end justify-between gap-4">
+          <div className="mt-5 md:mt-5 md:ml-44 flex flex-col md:flex-row md:items-end justify-between gap-4">
             {/* On mobile, mt-20 pushes text closer to the profile image. On desktop, md:mt-5 and md:ml-44 keep original alignment. */}
             <div>
               <div className="flex items-center gap-2">
@@ -407,16 +505,83 @@ export default function ProfileHeader({
                 </div>
               </div>
             </div>
-            <Button
-              className="md:self-end bg-accent hover:bg-accent/90"
-              onClick={() => setIsEditing(true)}
-              disabled={isEditing}
-            >
-              <Pencil className="h-4 w-4 mr-1" /> Edit Profile
-            </Button>
+            
+            <div className="flex flex-col md:flex-row gap-2 md:self-end">
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handlePreviewResume}
+                  className="flex items-center"
+                >
+                  <Eye className="h-4 w-4 mr-1" /> Preview Resume
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => resumeInputRef.current?.click()}
+                  className="flex items-center"
+                >
+                  <Upload className="h-4 w-4 mr-1" /> Update Resume
+                </Button>
+                <input
+                  ref={resumeInputRef}
+                  type="file"
+                  accept=".pdf,.doc,.docx"
+                  className="hidden"
+                  onChange={handleResumeFileChange}
+                  aria-label="Upload resume file"
+                />
+              </div>
+              <Button
+                className="bg-accent hover:bg-accent/90"
+                onClick={() => setIsEditing(true)}
+                disabled={isEditing}
+              >
+                <Pencil className="h-4 w-4 mr-1" /> Edit Profile
+              </Button>
             </div>
+          </div>
         </div>
       </div>
+
+      {/* Resume Upload Modal */}
+      <Dialog open={resumeDialogOpen} onOpenChange={setResumeDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Upload Resume</DialogTitle>
+          </DialogHeader>
+          {resumeFile && (
+            <div className="flex flex-col items-center gap-4">
+              <div className="flex items-center gap-3 p-3 border rounded-lg bg-gray-50 w-full">
+                <FileText className="h-8 w-8 text-primary" />
+                <div>
+                  <p className="font-medium">{resumeFile.name}</p>
+                  <p className="text-sm text-gray-500">
+                    {(resumeFile.size / 1024 / 1024).toFixed(2)} MB
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={handleResumeCancel}
+              disabled={resumeUploading}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="default"
+              onClick={handleResumeConfirm}
+              disabled={resumeUploading}
+            >
+              {resumeUploading ? "Uploading..." : "Upload Resume"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

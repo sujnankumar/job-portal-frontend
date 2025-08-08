@@ -45,7 +45,7 @@ export default function JobPostingForm() {
   const [showDescriptionPreview, setShowDescriptionPreview] = useState(false)
   const [showRequirementsPreview, setShowRequirementsPreview] = useState(false)
 
-  // Simple markdown to HTML converter
+  // Simple markdown to HTML converter for preview only
   const markdownToHtml = (markdown: string) => {
     return markdown
       .replace(/^### (.*$)/gim, '<h3 class="text-lg font-semibold text-dark-gray mb-2 mt-4">$1</h3>')
@@ -60,6 +60,30 @@ export default function JobPostingForm() {
       .replace(/^(?!<[h|l])/gim, '<p class="mb-3">')
       .replace(/(<li.*<\/li>)/gim, '<ul class="list-disc ml-6 mb-3">$1</ul>')
       .replace(/<\/ul>\s*<ul[^>]*>/gim, '')
+  }
+
+  // Convert HTML back to markdown to ensure we always store markdown
+  const htmlToMarkdown = (html: string): string => {
+    if (!html) return ""
+    
+    // If it doesn't contain HTML tags, assume it's already markdown
+    if (!html.includes('<') && !html.includes('>')) {
+      return html
+    }
+    
+    return html
+      .replace(/<h1[^>]*>(.*?)<\/h1>/gi, '# $1')
+      .replace(/<h2[^>]*>(.*?)<\/h2>/gi, '## $1')
+      .replace(/<h3[^>]*>(.*?)<\/h3>/gi, '### $1')
+      .replace(/<strong[^>]*>(.*?)<\/strong>/gi, '**$1**')
+      .replace(/<em[^>]*>(.*?)<\/em>/gi, '*$1*')
+      .replace(/<li[^>]*>(.*?)<\/li>/gi, '- $1')
+      .replace(/<ul[^>]*>|<\/ul>/gi, '')
+      .replace(/<p[^>]*>(.*?)<\/p>/gi, '$1\n\n')
+      .replace(/<br\s*\/?>/gi, '\n')
+      .replace(/\n\n\n+/g, '\n\n')
+      .replace(/^\s+|\s+$/g, '') // Trim whitespace
+      .trim()
   }
 
   const handleNext = () => {
@@ -219,8 +243,8 @@ export default function JobPostingForm() {
         min_salary: formData.showSalary ? formData.minSalary : undefined,
         max_salary: formData.showSalary ? formData.maxSalary : undefined,
         show_salary: formData.showSalary,
-        description: markdownToHtml(formData.description), // Convert markdown to HTML
-        requirements: markdownToHtml(formData.requirements), // Convert markdown to HTML
+        description: htmlToMarkdown(formData.description), // Store as markdown, convert any HTML back to markdown
+        requirements: htmlToMarkdown(formData.requirements), // Store as markdown, convert any HTML back to markdown
         benefits: formData.benefits,
         application_deadline: formData.applicationDeadline,
         skills: formData.skills.filter((s) => s.trim() !== ""),
@@ -475,7 +499,7 @@ export default function JobPostingForm() {
             <div>
               <Label className="font-medium">Auto-Expiry</Label>
               <p className="text-sm text-gray-500 mt-1">
-                Job posting will be automatically removed after 30 days to keep listings fresh and relevant.
+                Job posting will be automatically removed after 30 days of deadline to keep listings fresh and relevant.
               </p>
             </div>
           </div>

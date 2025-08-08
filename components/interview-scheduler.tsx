@@ -12,7 +12,7 @@ import { CalendarIcon, Clock, Video, Users, MessageSquare } from "lucide-react"
 import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { format } from "date-fns"
-import { cn } from "@/lib/utils"
+import { cn, toIST } from "@/lib/utils"
 import api from "@/lib/axios"
 import { useAuthStore } from "@/store/authStore"
 
@@ -133,7 +133,7 @@ export default function InterviewScheduler({ candidateName, candidateId, jobId }
                   selected={date}
                   onSelect={setDate}
                   initialFocus
-                  disabled={(date) => date < new Date()}
+                  disabled={(date) => date < toIST(new Date())}
                 />
               </PopoverContent>
             </Popover>

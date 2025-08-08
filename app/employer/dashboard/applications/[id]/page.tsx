@@ -24,6 +24,7 @@ import {
   Award,
 } from "lucide-react"
 import InterviewScheduler from "@/components/interview-scheduler"
+import { formatDate, formatDateShort } from "@/lib/utils"
 import React from "react"
 
 export default function ApplicationDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -131,7 +132,7 @@ export default function ApplicationDetailPage({ params }: { params: Promise<{ id
                 <div className="flex items-center gap-2 mt-1">
                   <Badge className="bg-amber-100 text-amber-800 font-normal">Under Review</Badge>
                   <span className="text-sm text-gray-500">
-                    Applied on {new Date(application.appliedDate).toLocaleDateString()}
+                    Applied on {formatDate(application.appliedDate)}
                   </span>
                 </div>
               </div>
@@ -240,14 +241,10 @@ export default function ApplicationDetailPage({ params }: { params: Promise<{ id
                             </div>
                             <div className="flex items-center text-sm text-gray-500">
                               <Clock className="h-3.5 w-3.5 mr-1" />
-                              {new Date(exp.startDate).toLocaleDateString(undefined, {
-                                year: "numeric",
-                                month: "short",
-                              })}{" "}
-                              -
+                              {formatDateShort(exp.startDate)} -
                               {exp.current
                                 ? " Present"
-                                : ` ${new Date(exp.endDate).toLocaleDateString(undefined, { year: "numeric", month: "short" })}`}
+                                : ` ${formatDateShort(exp.endDate)}`}
                             </div>
                           </div>
                           <p className="text-sm text-gray-700">{exp.description}</p>
@@ -273,14 +270,10 @@ export default function ApplicationDetailPage({ params }: { params: Promise<{ id
                             </div>
                             <div className="flex items-center text-sm text-gray-500">
                               <Clock className="h-3.5 w-3.5 mr-1" />
-                              {new Date(edu.startDate).toLocaleDateString(undefined, {
-                                year: "numeric",
-                                month: "short",
-                              })}{" "}
-                              -
+                              {formatDateShort(edu.startDate)} -
                               {edu.current
                                 ? " Present"
-                                : ` ${new Date(edu.endDate).toLocaleDateString(undefined, { year: "numeric", month: "short" })}`}
+                                : ` ${formatDateShort(edu.endDate)}`}
                             </div>
                           </div>
                         </div>

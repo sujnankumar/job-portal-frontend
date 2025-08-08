@@ -39,6 +39,8 @@ import {
   Download,
   Trash2,
   ExternalLink,
+  Loader2,
+  Edit,
 } from "lucide-react"
 import ApplicationTimeline from "@/components/application-timeline"
 import api from "@/lib/axios"
@@ -47,7 +49,7 @@ import ResumeActions from "@/components/resume-actions"
 import ContactRecruiterChatModal from "@/components/contact-recruiter-chat-modal"
 
 export default function ApplicationDetailsPage({ params }: { params: Promise<{ id: string }> }) {
-  const { user, isAuthenticated } = useAuthStore()
+  const { user, isAuthenticated, hydrated } = useAuthStore()
   const router = useRouter()
   const [isWithdrawDialogOpen, setIsWithdrawDialogOpen] = useState(false)
   const [application, setApplication] = useState<any>(null)
@@ -58,6 +60,10 @@ export default function ApplicationDetailsPage({ params }: { params: Promise<{ i
   const [showInterviewDetails, setShowInterviewDetails] = useState(false)
   const [interviewDetails, setInterviewDetails] = useState<any>(null)
   const [loadingInterview, setLoadingInterview] = useState(false)
+  const [logoUrl, setLogoUrl] = useState<string | null>(null)
+  const [logoLoading, setLogoLoading] = useState(false)
+  const [companyDetails, setCompanyDetails] = useState<any>(null)
+  const [companyLoading, setCompanyLoading] = useState(false)
 
   const fetchApplication = async (appId: string, token: string) => {
        setLoading(true);
@@ -70,6 +76,7 @@ export default function ApplicationDetailsPage({ params }: { params: Promise<{ i
          if (response.data && response.data.application) {
            setApplication(response.data.application);
            console.log("Fetched Application:", response.data.application); // Log fetched data
+          //  console.log("Fetched Application:", response.data.application); // Log fetched data
          } else {
            // Handle cases where the response is OK but the data structure is unexpected
            throw new Error("Invalid application data received from API.");
@@ -91,28 +98,102 @@ export default function ApplicationDetailsPage({ params }: { params: Promise<{ i
       const resolvedParams = await params;
       const appId = resolvedParams.id;
       setId(appId);
+      
+      // Wait for auth store to be hydrated before checking authentication
+      if (!hydrated) {
+        return;
+      }
+      
       if (!isAuthenticated) {
-        console.log("User not authenticated, redirecting to login page");
+        // console.log("User not authenticated, redirecting to login page");
         router.push("/auth/login");
         return; // Stop further execution in this effect
       }
   
       if (user?.role === "employer") {
-        console.log("Employer role detected, redirecting to employer dashboard");
+        // console.log("Employer role detected, redirecting to employer dashboard");
         router.push("/employer/dashboard");
         return; // Stop further execution in this effect
       }
       
-      console.log("User role:", user?.role);
+      // console.log("User role:", user?.role);
      
       if (user?.role === "applicant" && appId && user.token) {
-        console.log("Fetching application details for applicant:", appId);
+        // console.log("Fetching application details for applicant:", appId);
         fetchApplication(appId, user.token);
       }
     };
 
     fetchParamsAndApplication();
-  }, [isAuthenticated, user, router, params]);
+  }, [isAuthenticated, user, router, params, hydrated]);
+
+  // Fetch company details
+  useEffect(() => {
+    const fetchCompanyDetails = async () => {
+      if (!application?.job?.company_id) {
+        setCompanyDetails(null)
+        return
+      }
+
+      setCompanyLoading(true)
+      try {
+        const res = await api.get(`/company/${application.job.company_id}`)
+        setCompanyDetails(res.data)
+      } catch (error) {
+        console.error("Failed to fetch company details:", error)
+        setCompanyDetails(null)
+      } finally {
+        setCompanyLoading(false)
+      }
+    }
+
+    fetchCompanyDetails()
+  }, [application?.job?.company_id])
+
+  // Fetch company logo
+  useEffect(() => {
+    const fetchCompanyLogo = async () => {
+      if (!application?.job?.logo) {
+        // console.log("company details: ",application)
+        setLogoUrl(null)
+        return
+      }
+
+      setLogoLoading(true)
+      try {
+        // console.log("Fetching company logo for:", application.job.logo)
+        const res = await api.get(`/company/logo/${application.job.logo}`, {
+          responseType: "blob",
+        })
+        const url = URL.createObjectURL(res.data)
+        // console.log("Fetched company logo:", url)
+        setLogoUrl(url)
+      } catch (error) {
+        console.error("Failed to fetch company logo:", error)
+        setLogoUrl(null)
+      } finally {
+        setLogoLoading(false)
+      }
+    }
+
+    fetchCompanyLogo()
+
+    // Cleanup function to revoke object URL
+    return () => {
+      if (logoUrl) {
+        URL.revokeObjectURL(logoUrl)
+      }
+    }
+  }, [application?.job?.logo])
+
+  // Cleanup logo URL when component unmounts
+  useEffect(() => {
+    return () => {
+      if (logoUrl) {
+        URL.revokeObjectURL(logoUrl)
+      }
+    }
+  }, [logoUrl])
 
   
   // Format date to readable string
@@ -172,14 +253,46 @@ export default function ApplicationDetailsPage({ params }: { params: Promise<{ i
     }
   }
 
+  // Check if application can be edited
+  const canEditApplication = () => {
+    if (!application) return { canEdit: false, reason: "Application not found" };
+    
+    // Check application status - only pending and review can be edited
+    const editableStatuses = ["pending", "review"];
+    if (!editableStatuses.includes(application.status)) {
+      const statusMessages = {
+        "interview": "Application is scheduled for interview",
+        "accepted": "Application has been accepted",
+        "rejected": "Application has been rejected",
+      };
+      return { 
+        canEdit: false, 
+        reason: statusMessages[application.status as keyof typeof statusMessages] || "Application cannot be edited in current status" 
+      };
+    }
+    
+    // Check if deadline has passed
+    if (application?.job?.expires_at) {
+      const deadline = new Date(application.job.expires_at);
+      const now = new Date();
+      if (now > deadline) {
+        return { canEdit: false, reason: "Application deadline has passed" };
+      }
+    }
+    
+    return { canEdit: true, reason: "" };
+  };
+
+  const { canEdit, reason } = canEditApplication();
+
   const handleWithdrawApplication = async(appId: string, token: string) => {
-    console.log("Withdrawing application:", appId, token)
+    // console.log("Withdrawing application:", appId, token)
     setIsWithdrawDialogOpen(false)
     const response = await api.post(`/application/delete_application/${appId}`,{}, {
            headers: { Authorization: `Bearer ${token}` },
          });
     if (response.status === 200) {
-      console.log("Application withdrawn successfully")
+      // console.log("Application withdrawn successfully")
       router.push("/applications")
     }
     else {
@@ -210,14 +323,23 @@ export default function ApplicationDetailsPage({ params }: { params: Promise<{ i
   // Extract job and employer info for chat modal
   const jobId = application?.job_id || application?.job?._id || ""
   const employerId = application?.job?.employer_id || application?.job?.employer || ""
-  const companyName = application?.job?.company_name || application?.job?.company || ""
-  const companyLogo = application?.job?.logo || "/placeholder.svg"
+  const companyName = companyDetails?.company_name || application?.job?.company_name || application?.job?.company || ""
+  const companyLogo = logoUrl || application?.job?.logo || "/company_placeholder.jpeg"
   const jobTitle = application?.job?.title || ""
 
   return (
     <OnboardingMiddleware>
       <ProtectedRoute allowedRoles={["applicant"]}>
-        <div className="container mx-auto max-w-5xl py-8 px-4">
+        {/* Show loading while auth store is hydrating */}
+        {!hydrated ? (
+          <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-accent mx-auto mb-4"></div>
+              <p className="text-gray-600">Loading...</p>
+            </div>
+          </div>
+        ) : (
+          <div className="container mx-auto max-w-5xl py-8 px-4">
           {/* Back button and title */}
           <div className="flex items-center mb-6">
             <Button variant="ghost" onClick={() => router.push("/applications")} className="mr-2 p-2">
@@ -232,18 +354,35 @@ export default function ApplicationDetailsPage({ params }: { params: Promise<{ i
               <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                 <div className="flex items-center">
                   <div className="mr-4 flex-shrink-0">
-                    <Image
-                      src={application?.job?.logo || "/placeholder.svg"}
-                      alt={application?.job?.company}
-                      width={60}
-                      height={60}
-                      className="rounded-md"
-                    />
+                    <div className="w-16 h-16 bg-light-gray flex-shrink-0 rounded-md overflow-hidden border border-gray-200">
+                      {logoLoading ? (
+                        <div className="w-full h-full flex items-center justify-center">
+                          <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+                        </div>
+                      ) : (
+                        <Image
+                          src={logoUrl || application?.job?.logo || "/company_placeholder.jpeg"}
+                          alt={companyDetails?.company_name || application?.job?.company_name || "Company logo"}
+                          width={60}
+                          height={60}
+                          className="w-full h-full object-cover"
+                        />
+                      )}
+                    </div>
                   </div>
                   <div>
                     <CardTitle className="text-xl font-bold text-dark-gray">{application?.job?.title}</CardTitle>
                     <CardDescription className="text-gray-600 mt-1">
-                      {application?.job?.company_name} • {application?.job?.location}
+                      {companyLoading ? (
+                        <span className="inline-flex items-center gap-1">
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          Loading company...
+                        </span>
+                      ) : (
+                        <>
+                          {companyDetails?.company_name || application?.job?.company_name} • {application?.job?.location}
+                        </>
+                      )}
                     </CardDescription>
                   </div>
                 </div>
@@ -284,6 +423,28 @@ export default function ApplicationDetailsPage({ params }: { params: Promise<{ i
                 View Job Details
               </Button>
 
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => canEdit && router.push(`/applications/edit/${application?._id}`)}
+                        disabled={!canEdit}
+                        className={canEdit ? "text-blue-600 border-blue-200 hover:bg-blue-50" : "text-gray-400 border-gray-200 cursor-not-allowed"}
+                      >
+                        <Edit className="h-4 w-4 mr-2" />
+                        Edit Application
+                      </Button>
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>{canEdit ? "Edit your application details" : reason}</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+
               <Dialog open={isWithdrawDialogOpen} onOpenChange={setIsWithdrawDialogOpen}>
                 <DialogTrigger asChild>
                   <Button variant="outline" size="sm" className="text-red-600 border-red-200 hover:bg-red-50">
@@ -296,7 +457,7 @@ export default function ApplicationDetailsPage({ params }: { params: Promise<{ i
                     <DialogTitle>Withdraw Application</DialogTitle>
                     <DialogDescription>
                       Are you sure you want to withdraw your application for {application?.job?.title} at{" "}
-                      {application?.job?.company}? This action cannot be undone.
+                      {companyDetails?.company_name || application?.job?.company_name}? This action cannot be undone.
                     </DialogDescription>
                   </DialogHeader>
                   <DialogFooter className="mt-4">
@@ -736,6 +897,7 @@ export default function ApplicationDetailsPage({ params }: { params: Promise<{ i
             onClose={() => setShowChat(false)}
           />
         </div>
+        )}
       </ProtectedRoute>
     </OnboardingMiddleware>
   )

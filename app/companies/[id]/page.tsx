@@ -10,6 +10,24 @@ import CompanyJobs from "@/components/company-jobs"
 import { useState, useEffect } from "react" // Import hooks
 import api from "@/lib/axios"
 
+// Simple markdown to HTML converter
+const markdownToHtml = (markdown: string) => {
+  if (!markdown) return ""
+  return markdown
+    .replace(/^### (.*$)/gim, '<h3 class="text-lg font-semibold text-dark-gray mb-2 mt-4">$1</h3>')
+    .replace(/^## (.*$)/gim, '<h2 class="text-xl font-semibold text-dark-gray mb-3 mt-4">$1</h2>')
+    .replace(/^# (.*$)/gim, '<h1 class="text-2xl font-bold text-dark-gray mb-4 mt-4">$1</h1>')
+    .replace(/^\* (.*$)/gim, '<li class="ml-4">$1</li>')
+    .replace(/^- (.*$)/gim, '<li class="ml-4">$1</li>')
+    .replace(/\*\*(.*)\*\*/gim, '<strong class="font-semibold">$1</strong>')
+    .replace(/\*(.*)\*/gim, '<em class="italic">$1</em>')
+    .replace(/\n\n/gim, '</p><p class="mb-3">')
+    .replace(/^\n/gim, '')
+    .replace(/^(?!<[h|l])/gim, '<p class="mb-3">')
+    .replace(/(<li.*<\/li>)/gim, '<ul class="list-disc ml-6 mb-3">$1</ul>')
+    .replace(/<\/ul>\s*<ul[^>]*>/gim, '')
+}
+
 // Define an interface for the company data from the API
 interface CompanyData {
   company_id: string
@@ -24,7 +42,7 @@ interface CompanyData {
   website?: string // Assuming website might come from API or needs a placeholder
   openPositions?: number // Assuming this might be calculated or fetched separately
   rating?: number // Assuming rating might come from API or needs a placeholder
-  benefits?: string[] // Assuming benefits might come from API or needs a placeholder
+  benefits?: string // Updated to string since we're storing markdown
   culture?: string // Assuming culture might come from API or needs a placeholder
   company_email: string
   company_phone: string
@@ -65,9 +83,7 @@ export default function CompanyDetailPage({ params }: { params: { id: string } }
           website: data.website || "#", // Placeholder or fetch logic
           openPositions: jobsCount, // Use actual count from jobs API
           rating: data.rating || 0, // Placeholder or fetch logic
-          benefits: data.benefits || [
-            "Benefit info not available", // Placeholder
-          ],
+          benefits: data.benefits || "Benefits info not available.", // Use string placeholder since benefits is now markdown
           culture: data.culture || "Culture info not available.", // Placeholder
           address: data.address || data.location, // Use location if address specific field is missing
         }
@@ -153,7 +169,7 @@ export default function CompanyDetailPage({ params }: { params: { id: string } }
     website: company.website || "#", // Use placeholder if missing
     openPositions: company.openPositions || 0, // Use placeholder if missing
     rating: company.rating || 0, // Use placeholder if missing
-    benefits: company.benefits || [], // Use empty array if missing
+    benefits: company.benefits || "Benefits info not available.", // Use string placeholder since benefits is now markdown
     culture: company.culture || "N/A", // Use placeholder if missing
     contact: {
       email: company.company_email,
@@ -245,10 +261,10 @@ export default function CompanyDetailPage({ params }: { params: { id: string } }
 
               <TabsContent value="about" className="space-y-4">
                 <div className="prose max-w-none text-gray-700">
-                  {/* Handle potential multiple paragraphs in description */}
-                  {displayCompany.description.split("\n").map((paragraph, index) => (
-                    paragraph.trim() && <p key={index}>{paragraph}</p>
-                  ))}
+                  {/* Render markdown as HTML */}
+                  <div 
+                    dangerouslySetInnerHTML={{ __html: markdownToHtml(displayCompany.description) }}
+                  />
                 </div>
 
                 {displayCompany.website && displayCompany.website !== "#" && ( // Conditionally render website button
@@ -266,20 +282,19 @@ export default function CompanyDetailPage({ params }: { params: { id: string } }
               <TabsContent value="culture" className="space-y-6">
                 <div>
                   <h3 className="text-lg font-medium text-dark-gray mb-3">Company Culture</h3>
-                  <p className="text-gray-700">{displayCompany.culture}</p>
+                  <div 
+                    className="text-gray-700 prose prose-sm max-w-none"
+                    dangerouslySetInnerHTML={{ __html: markdownToHtml(displayCompany.culture) }}
+                  />
                 </div>
 
-                {displayCompany.benefits && displayCompany.benefits.length > 0 && ( // Conditionally render benefits
+                {displayCompany.benefits && typeof displayCompany.benefits === 'string' && displayCompany.benefits.trim() !== "" && displayCompany.benefits !== "Benefits info not available." && ( // Conditionally render benefits if they exist and aren't placeholder
                   <div>
                     <h3 className="text-lg font-medium text-dark-gray mb-3">Benefits & Perks</h3>
-                    <ul className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                      {displayCompany.benefits.map((benefit, index) => (
-                        <li key={index} className="flex items-center text-gray-700">
-                          <span className="h-1.5 w-1.5 rounded-full bg-accent mr-2"></span>
-                          {benefit}
-                        </li>
-                      ))}
-                    </ul>
+                    <div 
+                      className="text-gray-700 prose prose-sm max-w-none"
+                      dangerouslySetInnerHTML={{ __html: markdownToHtml(displayCompany.benefits) }}
+                    />
                   </div>
                 )}
               </TabsContent>

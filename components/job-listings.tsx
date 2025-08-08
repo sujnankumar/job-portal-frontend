@@ -1,17 +1,65 @@
 "use client"
 
-import type React from "react"
-import type { JobFiltersState } from "./job-filters"
-
-import { useState, useEffect } from "react"
-import Image from "next/image"
+import React, { useEffect, useState } from "react"
 import Link from "next/link"
-import { MapPin, DollarSign, Clock, Bookmark, BookmarkCheck } from "lucide-react"
+import { MapPin, DollarSign, Clock, Briefcase, Building, ExternalLink, ChevronDown, ChevronUp, Eye, Bookmark, BookmarkCheck } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { cn } from "@/lib/utils"
-import api from "@/lib/axios"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Slider } from "@/components/ui/slider"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { format } from "date-fns"
+import { cn, formatDate } from "@/lib/utils"
 import { useAuthStore } from "@/store/authStore"
+import api from "@/lib/axios"
+
+// Simple markdown to HTML converter for display
+const markdownToHtml = (markdown: string) => {
+  if (!markdown) return ""
+  
+  return markdown
+    .replace(/^### (.*$)/gim, '<h3 class="text-lg font-semibold text-dark-gray mb-2 mt-4">$1</h3>')
+    .replace(/^## (.*$)/gim, '<h2 class="text-xl font-semibold text-dark-gray mb-3 mt-4">$1</h2>')
+    .replace(/^# (.*$)/gim, '<h1 class="text-2xl font-bold text-dark-gray mb-4 mt-4">$1</h1>')
+    .replace(/^\* (.*$)/gim, '<li class="ml-4">$1</li>')
+    .replace(/^- (.*$)/gim, '<li class="ml-4">$1</li>')
+    .replace(/\*\*(.*)\*\*/gim, '<strong class="font-semibold">$1</strong>')
+    .replace(/\*(.*)\*/gim, '<em class="italic">$1</em>')
+    .replace(/\n\n/gim, '</p><p class="mb-3">')
+    .replace(/^\n/gim, '')
+    .replace(/^(?!<[h|l])/gim, '<p class="mb-3">')
+    .replace(/(<li.*<\/li>)/gim, '<ul class="list-disc ml-6 mb-3">$1</ul>')
+    .replace(/<\/ul>\s*<ul[^>]*>/gim, '')
+}
+
+// Function to truncate HTML content
+const truncateHtml = (html: string, maxLength: number = 150) => {
+  if (!html) return ""
+  
+  // Remove HTML tags for length calculation
+  const textContent = html.replace(/<[^>]*>/g, '')
+  
+  if (textContent.length <= maxLength) {
+    return html
+  }
+  
+  // Truncate the text and add ellipsis
+  const truncatedText = textContent.substring(0, maxLength).trim()
+  return truncatedText + "..."
+}
+
+// Function to truncate markdown content
+const truncateMarkdown = (markdown: string, maxLength: number = 150) => {
+  if (!markdown) return ""
+  
+  // Convert markdown to HTML first, then truncate
+  const html = markdownToHtml(markdown)
+  return truncateHtml(html, maxLength)
+}
+
+import type { JobFiltersState } from "./job-filters"
+import Image from "next/image"
 
 interface JobListingsProps {
   filters?: JobFiltersState // Make filters optional
@@ -256,11 +304,7 @@ export default function JobListings({ filters, savedJobsOnly = false }: JobListi
                       )}
                     </div>
 
-                    <div className="mt-3 text-xs text-gray-500">Posted {new Date(job.posted_at).toLocaleDateString("en-US", {
-                      year: "numeric",
-                      month: "long",
-                      day: "numeric",
-                     })}</div>
+                    <div className="mt-3 text-xs text-gray-500">Posted {formatDate(job.posted_at)}</div>
                   </div>
                 </div>
               </div>
@@ -277,18 +321,18 @@ export default function JobListings({ filters, savedJobsOnly = false }: JobListi
                     {job.description && (
                       <div>
                         <h4 className="font-medium text-dark-gray mb-2">Job Description</h4>
-                        <div className="text-gray-700 text-sm">
-                          {truncateHtml(job.description, 200)}
-                        </div>
+                        <div className="text-gray-700 text-sm" dangerouslySetInnerHTML={{
+                          __html: truncateMarkdown(job.description, 200)
+                        }} />
                       </div>
                     )}
                     
                     {job.requirements && (
                       <div>
                         <h4 className="font-medium text-dark-gray mb-2">Requirements</h4>
-                        <div className="text-gray-700 text-sm">
-                          {truncateHtml(job.requirements, 150)}
-                        </div>
+                        <div className="text-gray-700 text-sm" dangerouslySetInnerHTML={{
+                          __html: truncateMarkdown(job.requirements, 150)
+                        }} />
                       </div>
                     )}
                   </div>
