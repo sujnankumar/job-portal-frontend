@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react"
 import Link from "next/link"
-import { MapPin, DollarSign, Clock, Briefcase, Building, ExternalLink, ChevronDown, ChevronUp, Eye, Bookmark, BookmarkCheck } from "lucide-react"
+import { MapPin, IndianRupee, Clock, Briefcase, Building, ExternalLink, ChevronDown, ChevronUp, Eye, Bookmark, BookmarkCheck } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -282,8 +282,10 @@ export default function JobListings({ filters, savedJobsOnly = false }: JobListi
                         {job.location}
                       </div>
                       <div className="flex items-center">
-                        <DollarSign className="h-3.5 w-3.5 mr-1" />
-                        {job.min_salary} - {job.max_salary}
+                        <IndianRupee className="h-3.5 w-3.5 mr-1" />
+                        {job.min_salary === job.max_salary ? 
+                          `${parseInt(job.min_salary).toLocaleString('en-IN')}/year` : 
+                          `${parseInt(job.min_salary).toLocaleString('en-IN')} - ${parseInt(job.max_salary).toLocaleString('en-IN')}/year`}
                       </div>
                       <div className="flex items-center">
                         <Clock className="h-3.5 w-3.5 mr-1" />

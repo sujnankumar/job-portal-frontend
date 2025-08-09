@@ -41,6 +41,8 @@ import {
   ExternalLink,
   Loader2,
   Edit,
+  CheckCircle,
+  XCircle,
 } from "lucide-react"
 import ApplicationTimeline from "@/components/application-timeline"
 import api from "@/lib/axios"
@@ -227,24 +229,29 @@ export default function ApplicationDetailsPage({ params }: { params: Promise<{ i
       case "pending":
         return (
           <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200">
+            <Clock className="h-3 w-3 mr-1" />
             Pending Review
           </Badge>
         )
       case "interview":
         return (
           <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+            <Calendar className="h-3 w-3 mr-1" />
             Interview Scheduled
           </Badge>
         )
       case "accepted":
+      case "selected":
         return (
           <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
-            Accepted
+            <CheckCircle className="h-3 w-3 mr-1" />
+            {status === "selected" ? "Selected" : "Accepted"}
           </Badge>
         )
       case "rejected":
         return (
           <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200">
+            <XCircle className="h-3 w-3 mr-1" />
             Not Selected
           </Badge>
         )
@@ -263,6 +270,7 @@ export default function ApplicationDetailsPage({ params }: { params: Promise<{ i
       const statusMessages = {
         "interview": "Application is scheduled for interview",
         "accepted": "Application has been accepted",
+        "selected": "Application has been selected",
         "rejected": "Application has been rejected",
       };
       return { 
@@ -284,6 +292,38 @@ export default function ApplicationDetailsPage({ params }: { params: Promise<{ i
   };
 
   const { canEdit, reason } = canEditApplication();
+
+  // Check if application can be withdrawn
+  const canWithdrawApplication = () => {
+    if (!application) return { canWithdraw: false, reason: "Application not found" };
+    
+    // Check application status - only pending, review, and interview can be withdrawn
+    const withdrawableStatuses = ["pending", "review", "interview"];
+    if (!withdrawableStatuses.includes(application.status)) {
+      const statusMessages = {
+        "accepted": "Cannot withdraw an accepted application",
+        "selected": "Cannot withdraw a selected application", 
+        "rejected": "Application has already been rejected",
+      };
+      return { 
+        canWithdraw: false, 
+        reason: statusMessages[application.status as keyof typeof statusMessages] || "Application cannot be withdrawn in current status" 
+      };
+    }
+    
+    // Check if deadline has passed (optional restriction)
+    if (application?.job?.expires_at) {
+      const deadline = new Date(application.job.expires_at);
+      const now = new Date();
+      if (now > deadline) {
+        return { canWithdraw: false, reason: "Application deadline has passed" };
+      }
+    }
+    
+    return { canWithdraw: true, reason: "" };
+  };
+
+  const { canWithdraw, reason: withdrawReason } = canWithdrawApplication();
 
   const handleWithdrawApplication = async(appId: string, token: string) => {
     // console.log("Withdrawing application:", appId, token)
@@ -432,7 +472,7 @@ export default function ApplicationDetailsPage({ params }: { params: Promise<{ i
                         size="sm"
                         onClick={() => canEdit && router.push(`/applications/edit/${application?._id}`)}
                         disabled={!canEdit}
-                        className={canEdit ? "text-blue-600 border-blue-200 hover:bg-blue-50" : "text-gray-400 border-gray-200 cursor-not-allowed"}
+                        className={canEdit ? "text-blue-600 border-blue-200 hover:bg-blue-50" : "text-gray-400 border-gray-200 cursor-not-allowed opacity-60"}
                       >
                         <Edit className="h-4 w-4 mr-2" />
                         Edit Application
@@ -445,43 +485,59 @@ export default function ApplicationDetailsPage({ params }: { params: Promise<{ i
                 </Tooltip>
               </TooltipProvider>
 
-              <Dialog open={isWithdrawDialogOpen} onOpenChange={setIsWithdrawDialogOpen}>
-                <DialogTrigger asChild>
-                  <Button variant="outline" size="sm" className="text-red-600 border-red-200 hover:bg-red-50">
-                    <Trash2 className="h-4 w-4 mr-2" />
-                    Withdraw Application
-                  </Button>
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>Withdraw Application</DialogTitle>
-                    <DialogDescription>
-                      Are you sure you want to withdraw your application for {application?.job?.title} at{" "}
-                      {companyDetails?.company_name || application?.job?.company_name}? This action cannot be undone.
-                    </DialogDescription>
-                  </DialogHeader>
-                  <DialogFooter className="mt-4">
-                    <Button variant="outline" onClick={() => setIsWithdrawDialogOpen(false)}>
-                      Cancel
-                    </Button>
-                    {(application?._id && user?.token) &&
-                      <Button
-                        variant="destructive"
-                        onClick={() => {
-                          if (application._id && user.token) {
-                            handleWithdrawApplication(application._id, user.token)
-                          } else {
-                            console.error("Withdraw failed: Application ID or token missing.");
-                            alert("Could not withdraw application due to missing information.");
-                          }
-                        }}
-                      >
-                        Withdraw Application
-                      </Button>
-                    }               
-                  </DialogFooter>
-                </DialogContent>
-              </Dialog>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div>
+                      <Dialog open={isWithdrawDialogOpen && canWithdraw} onOpenChange={(open) => canWithdraw && setIsWithdrawDialogOpen(open)}>
+                        <DialogTrigger asChild>
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            disabled={!canWithdraw}
+                            className={canWithdraw ? "text-red-600 border-red-200 hover:bg-red-50" : "text-gray-400 border-gray-200 cursor-not-allowed opacity-60"}
+                          >
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            Withdraw Application
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent>
+                          <DialogHeader>
+                            <DialogTitle>Withdraw Application</DialogTitle>
+                            <DialogDescription>
+                              Are you sure you want to withdraw your application for {application?.job?.title} at{" "}
+                              {companyDetails?.company_name || application?.job?.company_name}? This action cannot be undone.
+                            </DialogDescription>
+                          </DialogHeader>
+                          <DialogFooter className="mt-4">
+                            <Button variant="outline" onClick={() => setIsWithdrawDialogOpen(false)}>
+                              Cancel
+                            </Button>
+                            {(application?._id && user?.token) &&
+                              <Button
+                                variant="destructive"
+                                onClick={() => {
+                                  if (application._id && user.token) {
+                                    handleWithdrawApplication(application._id, user.token)
+                                  } else {
+                                    console.error("Withdraw failed: Application ID or token missing.");
+                                    alert("Could not withdraw application due to missing information.");
+                                  }
+                                }}
+                              >
+                                Withdraw Application
+                              </Button>
+                            }               
+                          </DialogFooter>
+                        </DialogContent>
+                      </Dialog>
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>{canWithdraw ? "Withdraw your application" : withdrawReason}</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             </CardFooter>
           </Card>
 

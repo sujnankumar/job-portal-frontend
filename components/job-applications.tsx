@@ -32,6 +32,8 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Textarea } from "@/components/ui/textarea"
+import { useToast } from "@/components/ui/use-toast"
 import InterviewScheduler from "@/components/interview-scheduler"
 import ResumeActions from "@/components/resume-actions"
 import EmployerJobChat from "@/components/employer-job-chat-open"
@@ -52,6 +54,7 @@ interface JobApplication {
 
 export default function JobApplications({ jobId }: JobApplicationsProps) {
   const { user } = useAuthStore()
+  const { toast } = useToast()
   const [job, setJob] = useState<any>(null)
   const [jobApplications, setJobApplications] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
@@ -59,6 +62,13 @@ export default function JobApplications({ jobId }: JobApplicationsProps) {
   const [searchTerm, setSearchTerm] = useState("")
   const [statusFilter, setStatusFilter] = useState("all")
   const [selectedApplication, setSelectedApplication] = useState<string | null>(null)
+
+  // Confirmation modal states
+  const [showAcceptConfirm, setShowAcceptConfirm] = useState<string | null>(null)
+  const [showRejectConfirm, setShowRejectConfirm] = useState<string | null>(null)
+  const [feedbackMessage, setFeedbackMessage] = useState("")
+  const [rejectionReason, setRejectionReason] = useState("")
+  const [isProcessing, setIsProcessing] = useState(false)
 
   // Multi-chat state: array of open chats with applicantId, jobId, etc.
   const [openChats, setOpenChats] = useState<{
@@ -90,6 +100,103 @@ export default function JobApplications({ jobId }: JobApplicationsProps) {
 
   const closeChat = (applicantId: string) => {
     setOpenChats((prev) => prev.filter((c) => c.applicantId !== applicantId))
+  }
+
+  // Accept application function
+  const handleAcceptApplication = async (applicationId: string) => {
+    setIsProcessing(true)
+    try {
+      const response = await api.post(
+        `/application-management/accept/${applicationId}`,
+        { message: feedbackMessage },
+        {
+          headers: { Authorization: `Bearer ${user?.token}` },
+        }
+      )
+
+      if (response.data.success) {
+        // Update the application in the local state
+        setJobApplications((prev) =>
+          prev.map((app) =>
+            app.id === applicationId
+              ? { ...app, status: "accepted", employer_feedback: feedbackMessage }
+              : app
+          )
+        )
+
+        toast({
+          title: "Application Accepted",
+          description: `Successfully accepted ${response.data.applicant_name}'s application.`,
+          variant: "default",
+        })
+
+        // Reset states
+        setShowAcceptConfirm(null)
+        setFeedbackMessage("")
+      }
+    } catch (error: any) {
+      console.error("Error accepting application:", error)
+      toast({
+        title: "Error",
+        description: error.response?.data?.detail || "Failed to accept application",
+        variant: "destructive",
+      })
+    } finally {
+      setIsProcessing(false)
+    }
+  }
+
+  // Reject application function
+  const handleRejectApplication = async (applicationId: string) => {
+    setIsProcessing(true)
+    try {
+      const response = await api.post(
+        `/application-management/reject/${applicationId}`,
+        { 
+          message: feedbackMessage,
+          reason: rejectionReason 
+        },
+        {
+          headers: { Authorization: `Bearer ${user?.token}` },
+        }
+      )
+
+      if (response.data.success) {
+        // Update the application in the local state
+        setJobApplications((prev) =>
+          prev.map((app) =>
+            app.id === applicationId
+              ? { 
+                  ...app, 
+                  status: "rejected", 
+                  employer_feedback: feedbackMessage,
+                  rejection_reason: rejectionReason 
+                }
+              : app
+          )
+        )
+
+        toast({
+          title: "Application Rejected",
+          description: `Successfully rejected ${response.data.applicant_name}'s application.`,
+          variant: "default",
+        })
+
+        // Reset states
+        setShowRejectConfirm(null)
+        setFeedbackMessage("")
+        setRejectionReason("")
+      }
+    } catch (error: any) {
+      console.error("Error rejecting application:", error)
+      toast({
+        title: "Error",
+        description: error.response?.data?.detail || "Failed to reject application",
+        variant: "destructive",
+      })
+    } finally {
+      setIsProcessing(false)
+    }
   }
 
   // Add state for dialog open, resume base64, loading, and error
@@ -141,7 +248,10 @@ export default function JobApplications({ jobId }: JobApplicationsProps) {
       case "interview":
         return <Badge className="bg-blue-100 text-blue-800 font-normal">Interview Scheduled</Badge>
       case "accepted":
-        return <Badge className="bg-green-100 text-green-800 font-normal">Accepted</Badge>
+      case "selected":
+        return <Badge className="bg-green-100 text-green-800 font-normal">
+          {status === "selected" ? "Selected" : "Accepted"}
+        </Badge>
       case "rejected":
         return <Badge className="bg-red-100 text-red-800 font-normal">Rejected</Badge>
       default:
@@ -223,6 +333,7 @@ export default function JobApplications({ jobId }: JobApplicationsProps) {
               <SelectItem value="review">Under Review</SelectItem>
               <SelectItem value="interview">Interview</SelectItem>
               <SelectItem value="accepted">Accepted</SelectItem>
+              <SelectItem value="selected">Selected</SelectItem>
               <SelectItem value="rejected">Rejected</SelectItem>
             </SelectContent>
           </Select>
@@ -429,17 +540,54 @@ export default function JobApplications({ jobId }: JobApplicationsProps) {
                   </DialogContent>
                 </Dialog>
 
-                <Button size="sm" className="bg-green-500 hover:bg-green-600 text-white">
-                  <CheckCircle className="h-3.5 w-3.5 mr-1" /> Accept
-                </Button>
+                {app.status === "accepted" || app.status === "rejected" ? (
+                  // Show status buttons when already processed
+                  <div className="flex gap-2">
+                    <Button 
+                      size="sm" 
+                      variant="outline" 
+                      className={`
+                        ${app.status === "accepted" 
+                          ? "border-green-500 text-green-700 bg-green-50" 
+                          : "border-red-500 text-red-700 bg-red-50"
+                        }
+                      `}
+                      disabled
+                    >
+                      {app.status === "accepted" ? (
+                        <>
+                          <CheckCircle className="h-3.5 w-3.5 mr-1" /> Accepted
+                        </>
+                      ) : (
+                        <>
+                          <XCircle className="h-3.5 w-3.5 mr-1" /> Rejected
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                ) : (
+                  // Show action buttons for pending applications
+                  <>
+                    <Button size="sm" className="bg-green-500 hover:bg-green-600 text-white"
+                      onClick={() => setShowAcceptConfirm(app.id)}
+                      disabled={isProcessing}
+                    >
+                      <CheckCircle className="h-3.5 w-3.5 mr-1" /> Accept
+                    </Button>
 
-                <Button size="sm" className="bg-red-500 hover:bg-red-600 text-white">
-                  <XCircle className="h-3.5 w-3.5 mr-1" /> Reject
-                </Button>
+                    <Button size="sm" className="bg-red-500 hover:bg-red-600 text-white"
+                      onClick={() => setShowRejectConfirm(app.id)}
+                      disabled={isProcessing}
+                    >
+                      <XCircle className="h-3.5 w-3.5 mr-1" /> Reject
+                    </Button>
+                  </>
+                )}
+                
+                {/* Chat button - always available */}
                 <Button
                   variant="outline"
                   size="sm"
-                  className="ml-auto"
                   onClick={() => openChat(app)}
                   disabled={openChats.some((c) => c.applicantId === app.candidate.id)}
                 >
@@ -451,6 +599,106 @@ export default function JobApplications({ jobId }: JobApplicationsProps) {
         )}
         
       </div>
+
+      {/* Accept Confirmation Modal */}
+      <Dialog open={!!showAcceptConfirm} onOpenChange={(open) => !open && setShowAcceptConfirm(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Accept Application</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to accept this application? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <label className="text-sm font-medium text-gray-700 mb-2 block">
+                Message to candidate (optional)
+              </label>
+              <Textarea
+                placeholder="Welcome to the team! We're excited to have you..."
+                value={feedbackMessage}
+                onChange={(e) => setFeedbackMessage(e.target.value)}
+                rows={3}
+              />
+            </div>
+            <div className="flex justify-end gap-3">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowAcceptConfirm(null)
+                  setFeedbackMessage("")
+                }}
+                disabled={isProcessing}
+              >
+                Cancel
+              </Button>
+              <Button
+                className="bg-green-500 hover:bg-green-600 text-white"
+                onClick={() => showAcceptConfirm && handleAcceptApplication(showAcceptConfirm)}
+                disabled={isProcessing}
+              >
+                {isProcessing ? "Processing..." : "Yes, Accept"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Reject Confirmation Modal */}
+      <Dialog open={!!showRejectConfirm} onOpenChange={(open) => !open && setShowRejectConfirm(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Reject Application</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to reject this application? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <label className="text-sm font-medium text-gray-700 mb-2 block">
+                Reason for rejection (optional)
+              </label>
+              <Textarea
+                placeholder="Position has been filled, insufficient experience, etc."
+                value={rejectionReason}
+                onChange={(e) => setRejectionReason(e.target.value)}
+                rows={2}
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium text-gray-700 mb-2 block">
+                Message to candidate (optional)
+              </label>
+              <Textarea
+                placeholder="Thank you for your interest. We'll keep your profile on file..."
+                value={feedbackMessage}
+                onChange={(e) => setFeedbackMessage(e.target.value)}
+                rows={3}
+              />
+            </div>
+            <div className="flex justify-end gap-3">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowRejectConfirm(null)
+                  setFeedbackMessage("")
+                  setRejectionReason("")
+                }}
+                disabled={isProcessing}
+              >
+                Cancel
+              </Button>
+              <Button
+                className="bg-red-500 hover:bg-red-600 text-white"
+                onClick={() => showRejectConfirm && handleRejectApplication(showRejectConfirm)}
+                disabled={isProcessing}
+              >
+                {isProcessing ? "Processing..." : "Yes, Reject"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Render all open chat modals, stacked horizontally */}
       {openChats.map((chat, idx) => (

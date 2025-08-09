@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Calendar as CalendarIcon, Clock, Search, ChevronRight, Calendar, Loader2 } from "lucide-react"
+import { Calendar as CalendarIcon, Clock, Search, ChevronRight, Calendar, Loader2, CheckCircle, XCircle } from "lucide-react"
 import { Calendar as CalendarComponent } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { format } from "date-fns"
@@ -131,24 +131,29 @@ export default function ApplicationList() {
       case "pending":
         return (
           <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200">
+            <Clock className="h-3 w-3 mr-1" />
             Pending Review
           </Badge>
         )
       case "interview":
         return (
           <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+            <Calendar className="h-3 w-3 mr-1" />
             Interview Scheduled
           </Badge>
         )
       case "accepted":
+      case "selected":
         return (
           <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
-            Accepted
+            <CheckCircle className="h-3 w-3 mr-1" />
+            {status === "selected" ? "Selected" : "Accepted"}
           </Badge>
         )
       case "rejected":
         return (
           <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200">
+            <XCircle className="h-3 w-3 mr-1" />
             Not Selected
           </Badge>
         )
@@ -193,6 +198,7 @@ export default function ApplicationList() {
                 <SelectItem value="pending">Pending Review</SelectItem>
                 <SelectItem value="interview">Interview Scheduled</SelectItem>
                 <SelectItem value="accepted">Accepted</SelectItem>
+                <SelectItem value="selected">Selected</SelectItem>
                 <SelectItem value="rejected">Not Selected</SelectItem>
               </SelectContent>
             </Select>

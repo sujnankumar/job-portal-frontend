@@ -22,6 +22,7 @@ export default function ApplicationTimeline({ timeline }: ApplicationTimelinePro
       case "interview":
         return <AlertCircle className="h-5 w-5 text-purple-500" />
       case "accepted":
+      case "selected":
         return <CheckCircle2 className="h-5 w-5 text-green-500" />
       case "rejected":
         return <XCircle className="h-5 w-5 text-red-500" />

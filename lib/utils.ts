@@ -123,11 +123,13 @@ export function generateRandomId(): string {
 
 export function formatSalaryRange(min?: number | null, max?: number | null): string {
   const formatValue = (value: number): string => {
-    // Simple K formatting for large numbers
-    if (value >= 1000) {
+    // Format with INR locale and add proper comma separators (without ₹ symbol since we use IndianRupee icon)
+    if (value >= 100000) {
+      return `${(value / 100000).toFixed(1)} L`;
+    } else if (value >= 1000) {
       return `${Math.round(value / 1000)}k`;
     }
-    return `${value}`;
+    return `${value.toLocaleString('en-IN')}`;
   };
 
   if (min && max) {
@@ -140,7 +142,7 @@ export function formatSalaryRange(min?: number | null, max?: number | null): str
   } else if (max) {
     return `Up to ${formatValue(max)}/year`;
   } else {
-    return "Salary not specified"; // Or return an empty string or null
+    return "Salary not specified";
   }
 }
 

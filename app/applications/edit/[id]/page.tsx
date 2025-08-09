@@ -75,6 +75,21 @@ export default function EditApplicationPage() {
         
         const data = res.data.application
         setApplication(data)
+        
+        // Check if application can be edited
+        const editableStatuses = ["pending", "review"];
+        if (!editableStatuses.includes(data.status)) {
+          const statusMessages = {
+            "interview": "Application is scheduled for interview and cannot be edited",
+            "accepted": "Application has been accepted and cannot be edited",
+            "selected": "Application has been selected and cannot be edited",
+            "rejected": "Application has been rejected and cannot be edited",
+          };
+          const statusMessage = statusMessages[data.status as keyof typeof statusMessages] || "Application cannot be edited in current status";
+          setError(statusMessage);
+          return;
+        }
+        
         setForm({
           cover_letter: data.cover_letter || "",
           linked_in: data.linked_in || "",

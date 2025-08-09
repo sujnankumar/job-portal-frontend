@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import Image from "next/image"
 import Link from "next/link"
-import { MapPin, DollarSign, Clock, Briefcase, Building, Calendar, Share2, Bookmark, BookmarkCheck, X, Facebook, Twitter, Send, Copy, MessageCircle, Loader2 } from "lucide-react"
+import { MapPin, IndianRupee, Clock, Briefcase, Building, Calendar, Share2, Bookmark, BookmarkCheck, X, Facebook, Twitter, Send, Copy, MessageCircle, Loader2 } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -313,8 +313,12 @@ export default function JobDetail({ jobId, jobDetails, is_saved }: { jobId: stri
                 </div>
               )}
               <div className="flex items-center">
-                <DollarSign className="h-4 w-4 mr-1" />
-                {job.min_salary && job.max_salary ? `${job.min_salary}-${job.max_salary}` : "NA"}
+                <IndianRupee className="h-4 w-4 mr-1" />
+                {job.min_salary && job.max_salary ? 
+                  (job.min_salary === job.max_salary ? 
+                    `${parseInt(job.min_salary).toLocaleString('en-IN')}/year` : 
+                    `${parseInt(job.min_salary).toLocaleString('en-IN')} - ${parseInt(job.max_salary).toLocaleString('en-IN')}/year`) 
+                  : "NA"}
               </div>
               {job.employment_type && (
                 <div className="flex items-center">

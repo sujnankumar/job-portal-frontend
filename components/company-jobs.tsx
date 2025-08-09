@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import Link from "next/link"
-import { MapPin, DollarSign, Clock, Bookmark, BookmarkCheck } from "lucide-react"
+import { MapPin, IndianRupee, Clock, Bookmark, BookmarkCheck } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { cn, formatDate } from "@/lib/utils"
@@ -115,9 +115,11 @@ export default function CompanyJobs({ companyId, companyName }: { companyId: str
                   {job.location} ({job.location_type})
                 </div>
                 <div className="flex items-center">
-                  <DollarSign className="h-3.5 w-3.5 mr-1" />
-                  {job.show_salary
-                    ? `₹${parseInt(job.min_salary).toLocaleString()} - ₹${parseInt(job.max_salary).toLocaleString()}`
+                  <IndianRupee className="h-3.5 w-3.5 mr-1" />
+                  {job.show_salary && job.min_salary && job.max_salary
+                    ? (job.min_salary === job.max_salary ? 
+                        `${parseInt(job.min_salary).toLocaleString('en-IN')}/year` : 
+                        `${parseInt(job.min_salary).toLocaleString('en-IN')} - ${parseInt(job.max_salary).toLocaleString('en-IN')}/year`)
                     : "Salary not disclosed"}
                 </div>
                 <div className="flex items-center">
