@@ -17,7 +17,10 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { cn } from "@/lib/utils"
 import NotificationBadge from "@/components/notification-badge"
+import { DEFAULT_USER_AVATAR } from "@/lib/placeholders"
 import { useAuthStore } from "@/store/authStore"
+import api from "@/lib/axios"
+import { useChatStore } from "@/store/chatStore"
 
 export default function Navbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
@@ -27,6 +30,8 @@ export default function Navbar() {
   const pathname = usePathname()
   const router = useRouter()
   const { user, isAuthenticated, logout } = useAuthStore()
+  const unreadChatThreads = useChatStore(s => s.unreadThreadCount)
+  const refreshChatThreads = useChatStore(s => s.refreshFromServer)
 
   // Get user's subscription plan (mock/demo logic)
   const getUserPlan = () => {
@@ -153,6 +158,7 @@ export default function Navbar() {
   const navLinks = [
     { name: "Home", path: "/" },
     { name: "Jobs", path: "/jobs" },
+  { name: "Companies", path: "/companies" },
     ...(isAuthenticated && user?.role === "applicant"
       ? [
           { name: "Applications", path: "/applications" },
@@ -167,6 +173,15 @@ export default function Navbar() {
         ]
       : []),
   ]
+
+  // Initial fetch & window focus refresh
+  useEffect(()=>{
+    if(!isAuthenticated || !user?.token) return
+    refreshChatThreads(user.token)
+    const onFocus = () => { if(user?.token) refreshChatThreads(user.token) }
+    window.addEventListener('focus', onFocus)
+    return ()=> window.removeEventListener('focus', onFocus)
+  }, [isAuthenticated, user?.token, refreshChatThreads])
 
   return (
     <header
@@ -191,27 +206,37 @@ export default function Navbar() {
 
           {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center space-x-6">
-            {navLinks.map((link) => (
-              <Link
-                key={link.path}
-                href={link.path}
-                className={cn(
-                  "text-gray-700 font-semibold font-sans px-3 py-2 rounded-md transition-all duration-200 relative group overflow-hidden",
-                  isActive(link.path) && "text-accent"
-                )}
-              >
-                <span className="relative z-10">{link.name}</span>
-                {/* Animated underline and box on hover/active */}
-                <span
+            {navLinks.map((link) => {
+              const isChat = link.name === 'Chat'
+              const showBadge = isChat && unreadChatThreads > 0
+              return (
+                <Link
+                  key={link.path}
+                  href={link.path}
                   className={cn(
-                    "absolute left-0 bottom-0 h-full w-full rounded-md -z-1 transition-all duration-300 pointer-events-none",
-                    isActive(link.path)
-                      ? "bg-accent/10 border-b-2 border-accent w-full"
-                      : "group-hover:bg-accent/10 group-hover:border-b-2 group-hover:border-accent group-hover:w-full w-0"
+                    "text-gray-700 font-semibold font-sans px-3 py-2 rounded-md transition-all duration-200 relative group overflow-hidden",
+                    isActive(link.path) && "text-accent"
                   )}
-                />
-              </Link>
-            ))}
+                >
+                  <span className="relative z-10 flex items-center gap-2">
+                    {link.name}
+                    {showBadge && (
+                      <span className="inline-flex items-center justify-center rounded-full bg-accent text-white text-[10px] font-bold min-w-[18px] h-[18px] px-1">
+                        {unreadChatThreads > 99 ? '99+' : unreadChatThreads}
+                      </span>
+                    )}
+                  </span>
+                  <span
+                    className={cn(
+                      "absolute left-0 bottom-0 h-full w-full rounded-md -z-1 transition-all duration-300 pointer-events-none",
+                      isActive(link.path)
+                        ? "bg-accent/10 border-b-2 border-accent w-full"
+                        : "group-hover:bg-accent/10 group-hover:border-b-2 group-hover:border-accent group-hover:w-full w-0"
+                    )}
+                  />
+                </Link>
+              )
+            })}
           </nav>
 
           {/* Desktop Actions */}
@@ -227,11 +252,8 @@ export default function Navbar() {
                     </Button>
                   </Link>
                 )}
-                <Link href="/notifications">
-                  <Button variant="ghost" size="icon" className="relative transition-all duration-300 hover:bg-gray-100 rounded-full">
-                    <NotificationBadge />
-                  </Button>
-                </Link>
+                {/* Notification dropdown (removed wrapping Button to avoid nested button) */}
+                <NotificationBadge />
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" size="icon" className="rounded-full transition-all duration-300 hover:bg-gray-100 hover:scale-105 p-0 border-2 border-accent/60 shadow-md focus:ring-2 focus:ring-accent/40">
@@ -240,7 +262,7 @@ export default function Navbar() {
                           <Loader2 className="h-5 w-5 animate-spin text-accent" />
                         ) : (
                           <Image
-                            src={profileUrl || (user?.role === "employer" ? "/abstract-circuit-board.png" : user?.avatar || "/mystical-forest-spirit.png")}
+                            src={profileUrl || user?.avatar || DEFAULT_USER_AVATAR}
                             width={40}
                             height={40}
                             className="object-cover w-full h-full rounded-full"
@@ -331,19 +353,28 @@ export default function Navbar() {
         <div className="md:hidden bg-white border-b border-gray-200 shadow-lg">
           <div className="container mx-auto px-4 py-4 space-y-4">
             <nav className="flex flex-col space-y-4">
-              {navLinks.map((link) => (
-                <Link
-                  key={link.path}
-                  href={link.path}
-                  className={cn(
-                    "text-gray-600 hover:text-accent transition-colors py-2 px-3 rounded-lg",
-                    isActive(link.path) && "text-accent font-medium bg-gray-50"
-                  )}
-                  onClick={() => setIsMenuOpen(false)}
-                >
-                  {link.name}
-                </Link>
-              ))}
+              {navLinks.map((link) => {
+                const isChat = link.name === 'Chat'
+                const showBadge = isChat && unreadChatThreads > 0
+                return (
+                  <Link
+                    key={link.path}
+                    href={link.path}
+                    className={cn(
+                      "flex items-center gap-2 text-gray-600 hover:text-accent transition-colors py-2 px-3 rounded-lg",
+                      isActive(link.path) && "text-accent font-medium bg-gray-50"
+                    )}
+                    onClick={() => setIsMenuOpen(false)}
+                  >
+                    <span>{link.name}</span>
+                    {showBadge && (
+                      <span className="inline-flex items-center justify-center rounded-full bg-accent text-white text-[10px] font-bold min-w-[18px] h-[18px] px-1">
+                        {unreadChatThreads > 99 ? '99+' : unreadChatThreads}
+                      </span>
+                    )}
+                  </Link>
+                )
+              })}
               {/* Mobile Subscription Link - Only for employers */}
               {isAuthenticated && user?.role === "employer" && (
                 <Link
@@ -364,7 +395,7 @@ export default function Navbar() {
                       <Loader2 className="h-5 w-5 animate-spin text-accent" />
                     ) : (
                       <Image
-                        src={profileUrl || (user?.role === "employer" ? "/abstract-circuit-board.png" : user?.avatar || "/mystical-forest-spirit.png")}
+                        src={profileUrl || user?.avatar || DEFAULT_USER_AVATAR}
                         width={40}
                         height={40}
                         className="object-cover w-full h-full rounded-full"

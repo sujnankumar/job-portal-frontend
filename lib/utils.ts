@@ -85,6 +85,33 @@ export function formatChatTime(date: string | Date): string {
   })
 }
 
+// If same day: show HH:MM AM/PM, else show DD Mon, HH:MM AM/PM (IST)
+export function formatChatTimestampSmart(date: string | Date): string {
+  const dRaw = new Date(date)
+  // Normalize to IST for consistent day comparisons
+  const d = toIST(dRaw)
+  const now = toIST(new Date())
+
+  const sameDay = d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth() && d.getDate() === now.getDate()
+  if (sameDay) {
+    return d.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Kolkata" })
+  }
+
+  // Compute difference in whole days (midnight boundaries in IST)
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+  const startOfGiven = new Date(d.getFullYear(), d.getMonth(), d.getDate())
+  const diffMs = startOfToday.getTime() - startOfGiven.getTime()
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24))
+
+  const timePart = d.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Kolkata" })
+  if (diffDays === 1) {
+    return `Yesterday, ${timePart}`
+  }
+
+  const datePart = d.toLocaleDateString("en-IN", { day: "2-digit", month: "short", timeZone: "Asia/Kolkata" })
+  return `${datePart}, ${timePart}`
+}
+
 /**
  * Format date for short display (MMM DD, YYYY)
  */

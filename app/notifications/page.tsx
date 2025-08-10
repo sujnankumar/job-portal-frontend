@@ -8,6 +8,7 @@ import Link from "next/link"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Bell, CheckCircle2, Mail, AlertTriangle, Briefcase, CalendarClock } from "lucide-react"
+import { toIST } from "@/lib/utils"
 
 export default function NotificationsPage() {
   const { user } = useAuthStore()
@@ -54,32 +55,50 @@ export default function NotificationsPage() {
         </div>
       ) : (
         <ul className="space-y-4">
-          {notifications.filter(n => n && n.id).map((notification) => (
-            <li
-              key={notification.id}
-              className={`flex items-start gap-3 p-4 rounded-xl border shadow-sm transition bg-white hover:bg-light-gray/70 ${notification.read ? 'opacity-70' : 'border-accent/60'}`}
-            >
-              <span className="mt-1">
-                {notification.type === "application" && <Briefcase className="h-6 w-6 text-accent" />}
-                {notification.type === "message" && <Mail className="h-6 w-6 text-blue-500" />}
-                {notification.type === "alert" && <AlertTriangle className="h-6 w-6 text-yellow-500" />}
-                {notification.type === "job" && <CheckCircle2 className="h-6 w-6 text-green-500" />}
-                {notification.type === "interview" && <CalendarClock className="h-6 w-6 text-purple-500" />}
-              </span>
-              <Link
-                href={notification.link}
-                className="flex-1 group"
-                onClick={() => markAsRead(notification.id)}
+          {notifications.filter(n => n && n.id).map((notification) => {
+            const hasLink = typeof notification.link === 'string' && notification.link.trim() !== ''
+            const Wrapper: any = hasLink ? Link : 'div'
+            const wrapperProps = hasLink ? { href: notification.link } : {}
+            const formatNotifTime = (t: string | null) => {
+              if(!t) return ''
+              const raw = t.endsWith('Z') ? new Date(t) : new Date(t)
+              const d = toIST(raw)
+              const now = toIST(new Date())
+              const sameDay = d.getDate() === now.getDate() && d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear()
+              const opts: Intl.DateTimeFormatOptions = { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Kolkata' }
+              if(sameDay) return d.toLocaleTimeString('en-IN', opts)
+              const yesterday = new Date(now.getFullYear(), now.getMonth(), now.getDate()-1)
+              const isYesterday = d.getDate() === yesterday.getDate() && d.getMonth() === yesterday.getMonth() && d.getFullYear() === yesterday.getFullYear()
+              if(isYesterday) return 'Yesterday ' + d.toLocaleTimeString('en-IN', opts)
+              return d.toLocaleDateString('en-IN', { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit', timeZone:'Asia/Kolkata' })
+            }
+            return (
+              <li
+                key={notification.id}
+                className={`flex items-start gap-3 p-4 rounded-xl border shadow-sm transition bg-white hover:bg-light-gray/70 ${notification.read ? 'opacity-70' : 'border-accent/60'}`}
               >
-                <div className="flex items-center gap-2">
-                  <span className={`font-semibold text-base text-dark-gray group-hover:text-accent transition-colors`}>{notification.title}</span>
-                  {!notification.read && <Badge className="bg-accent text-white ml-2">New</Badge>}
-                </div>
-                <div className="text-sm text-gray-600 mt-1">{notification.description}</div>
-                <div className="text-xs text-gray-400 mt-1">{notification.time}</div>
-              </Link>
-            </li>
-          ))}
+                <span className="mt-1">
+                  {notification.type === "application" && <Briefcase className="h-6 w-6 text-accent" />}
+                  {notification.type === "message" && <Mail className="h-6 w-6 text-blue-500" />}
+                  {notification.type === "alert" && <AlertTriangle className="h-6 w-6 text-yellow-500" />}
+                  {notification.type === "job" && <CheckCircle2 className="h-6 w-6 text-green-500" />}
+                  {notification.type === "interview" && <CalendarClock className="h-6 w-6 text-purple-500" />}
+                </span>
+                <Wrapper
+                  {...wrapperProps}
+                  className={`flex-1 group ${!hasLink ? 'cursor-default' : ''}`}
+                  onClick={() => { if(hasLink) markAsRead(notification.id) }}
+                >
+                  <div className="flex items-center gap-2">
+                    <span className={`font-semibold text-base text-dark-gray ${hasLink ? 'group-hover:text-accent transition-colors' : ''}`}>{notification.title}</span>
+                    {!notification.read && <Badge className="bg-accent text-white ml-2">New</Badge>}
+                  </div>
+                  <div className="text-sm text-gray-600 mt-1">{notification.description}</div>
+                  <div className="text-xs text-gray-400 mt-1">{formatNotifTime(notification.time)}</div>
+                </Wrapper>
+              </li>
+            )
+          })}
         </ul>
       )}
     </div>

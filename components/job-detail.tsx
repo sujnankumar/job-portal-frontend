@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import Image from "next/image"
 import Link from "next/link"
-import { MapPin, IndianRupee, Clock, Briefcase, Building, Calendar, Share2, Bookmark, BookmarkCheck, X, Facebook, Twitter, Send, Copy, MessageCircle, Loader2 } from "lucide-react"
+import { MapPin, IndianRupee, Clock, Briefcase, Building, Calendar, Share2, Bookmark, BookmarkCheck, X, Facebook, Twitter, Send, Copy, MessageCircle, Loader2, AlertTriangle } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -51,6 +51,7 @@ export default function JobDetail({ jobId, jobDetails, is_saved }: { jobId: stri
   const [applicationData, setApplicationData] = useState<any>(null)
   const [showShareModal, setShowShareModal] = useState(false)
   const [copySuccess, setCopySuccess] = useState("")
+  const [showEmployerApplyModal, setShowEmployerApplyModal] = useState(false)
   const [logoUrl, setLogoUrl] = useState<string | null>(null)
   const [logoLoading, setLogoLoading] = useState(false)
   const [companyDetails, setCompanyDetails] = useState<any>(null)
@@ -305,7 +306,7 @@ export default function JobDetail({ jobId, jobDetails, is_saved }: { jobId: stri
             {!companyLoading && companyDetails?.industry && (
               <p className="text-sm text-gray-500 mb-2">{companyDetails.industry}</p>
             )}
-            <div className="mt-3 flex flex-wrap gap-y-2 gap-x-4 text-sm text-gray-600">
+            <div className="mt-3 flex flex-wrap gap-y-2 gap-x-4 text-sm text-gray-600 items-center">
               {job.location && (
                 <div className="flex items-center">
                   <MapPin className="h-4 w-4 mr-1" />
@@ -332,12 +333,23 @@ export default function JobDetail({ jobId, jobDetails, is_saved }: { jobId: stri
                   {formatDate(job.posted_at)}
                 </div>
               )}
+              {(job.status === 'expired' || (job.expires_at && new Date(job.expires_at) < new Date())) && (
+                <Badge className="bg-red-500 text-white">Expired</Badge>
+              )}
             </div>
           </div>
         </div>
 
         <div className="flex flex-wrap gap-3 mt-6">
-          {isApplied ? (
+          {user?.role === 'employer' ? (
+            <Button className="bg-gray-400 hover:bg-gray-500" type="button" onClick={() => setShowEmployerApplyModal(true)}>
+              Apply Now
+            </Button>
+          ) : (job.status === 'expired' || (job.expires_at && new Date(job.expires_at) < new Date())) ? (
+            <Button className="bg-gray-400 cursor-not-allowed" disabled>
+              Application Closed
+            </Button>
+          ) : isApplied ? (
             <>
               <Button className="bg-gray-400 cursor-not-allowed" disabled>
                 Applied
@@ -376,19 +388,21 @@ export default function JobDetail({ jobId, jobDetails, is_saved }: { jobId: stri
             </Link>
           )}
 
-          <Button variant="outline" onClick={toggleSave}>
-            {isSaved ? (
-              <>
-                <BookmarkCheck className="h-4 w-4 mr-2 text-accent" />
-                Saved
-              </>
-            ) : (
-              <>
-                <Bookmark className="h-4 w-4 mr-2" />
-                Save Job
-              </>
-            )}
-          </Button>
+          {user?.role === 'applicant' && (
+            <Button variant="outline" onClick={toggleSave}>
+              {isSaved ? (
+                <>
+                  <BookmarkCheck className="h-4 w-4 mr-2 text-accent" />
+                  Saved
+                </>
+              ) : (
+                <>
+                  <Bookmark className="h-4 w-4 mr-2" />
+                  Save Job
+                </>
+              )}
+            </Button>
+          )}
 
           <Button variant="outline" onClick={() => setShowShareModal(true)}>
             <Share2 className="h-4 w-4 mr-2" />
@@ -397,6 +411,29 @@ export default function JobDetail({ jobId, jobDetails, is_saved }: { jobId: stri
         </div>
         {saveError && <div className="text-red-500 text-sm mt-2">{saveError}</div>}
         {saveSuccess && <div className="text-green-600 text-sm mt-2">{saveSuccess}</div>}
+        {showEmployerApplyModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+            <div className="bg-white rounded-xl shadow-lg p-6 w-[340px] relative">
+              <button
+                className="absolute top-3 right-3 text-gray-400 hover:text-gray-700"
+                onClick={() => setShowEmployerApplyModal(false)}
+                aria-label="Close"
+              >
+                <X className="w-5 h-5" />
+              </button>
+              <div className="flex items-center gap-2 mb-3 text-amber-600">
+                <AlertTriangle className="w-5 h-5" />
+                <h2 className="text-lg font-semibold">Action Not Allowed</h2>
+              </div>
+              <p className="text-sm text-gray-600 mb-4">
+                Only job seekers can apply to jobs. Employer accounts are restricted from applying.
+              </p>
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" onClick={() => setShowEmployerApplyModal(false)}>Close</Button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Job Content - Mobile (Tabs) */}

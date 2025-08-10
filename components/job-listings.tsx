@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react"
 import Link from "next/link"
-import { MapPin, IndianRupee, Clock, Briefcase, Building, ExternalLink, ChevronDown, ChevronUp, Eye, Bookmark, BookmarkCheck } from "lucide-react"
+import { MapPin, IndianRupee, Clock, Briefcase, Building, ExternalLink, ChevronDown, ChevronUp, Eye, Bookmark, BookmarkCheck, ChevronLeft, ChevronRight } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -62,11 +62,12 @@ import type { JobFiltersState } from "./job-filters"
 import Image from "next/image"
 
 interface JobListingsProps {
-  filters?: JobFiltersState // Make filters optional
-  savedJobsOnly?: boolean // Add savedJobsOnly prop
+  filters?: JobFiltersState
+  savedJobsOnly?: boolean
+  showExpired?: boolean
 }
 
-export default function JobListings({ filters, savedJobsOnly = false }: JobListingsProps) {
+export default function JobListings({ filters, savedJobsOnly = false, showExpired = false }: JobListingsProps) {
   const [expandedJob, setExpandedJob] = useState<string | null>(null)
   const [savedJobs, setSavedJobs] = useState<string[]>([])
   const [allJobs, setAllJobs] = useState<any[]>([]) // Store all fetched jobs
@@ -74,6 +75,10 @@ export default function JobListings({ filters, savedJobsOnly = false }: JobListi
   const [error, setError] = useState("")
   const [saveError, setSaveError] = useState("")
   const [saveSuccess, setSaveSuccess] = useState("")
+  const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState<number>(10)
+  const [pageSizeMode, setPageSizeMode] = useState<string>("10")
+  const [customPageSize, setCustomPageSize] = useState<string>("")
   const user = useAuthStore((state) => state.user)
 
   // Function to truncate HTML content
@@ -180,6 +185,10 @@ export default function JobListings({ filters, savedJobsOnly = false }: JobListi
 
   // Filtering logic applied to jobsToDisplay
   const filteredJobs = jobsToDisplay.filter((job) => {
+    // Exclude expired unless showExpired explicitly true
+    if (!showExpired && (job.status === 'expired' || (job.expires_at && new Date(job.expires_at) < new Date()))) {
+      return false
+    }
     // Apply filters only if they exist
     if (filters) {
       // Job Type
@@ -211,6 +220,40 @@ export default function JobListings({ filters, savedJobsOnly = false }: JobListi
     return true
   })
 
+  // Reset to first page when filters or showExpired change
+  useEffect(() => {
+    setPage(1)
+  }, [JSON.stringify(filters), showExpired])
+
+  const totalJobs = filteredJobs.length
+  const totalPages = Math.max(1, Math.ceil(totalJobs / pageSize))
+  if (page > totalPages) {
+    setPage(totalPages)
+  }
+  const startIdx = (page - 1) * pageSize
+  const currentPageJobs = filteredJobs.slice(startIdx, startIdx + pageSize)
+
+  const changePageSize = (val: string) => {
+    setPageSizeMode(val)
+    if (val === 'custom') {
+      // wait for user input
+      return
+    }
+    const num = parseInt(val, 10)
+    if (!isNaN(num)) {
+      setPageSize(num)
+      setPage(1)
+    }
+  }
+
+  const applyCustomPageSize = () => {
+    let num = parseInt(customPageSize, 10)
+    if (isNaN(num) || num < 1) return
+    if (num > 100) num = 100
+    setPageSize(num)
+    setPage(1)
+  }
+
   if (loading) {
     return <div className="text-center py-8 text-gray-500">Loading jobs...</div>
   }
@@ -233,7 +276,8 @@ export default function JobListings({ filters, savedJobsOnly = false }: JobListi
           </p>
         </div>
       ) : (
-        filteredJobs.map((job, index) => (
+  <>
+  {currentPageJobs.map((job) => (
           <div key={ job.job_id} className="relative">
             {/* Job Card */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
@@ -256,24 +300,29 @@ export default function JobListings({ filters, savedJobsOnly = false }: JobListi
                   <div className="flex-1 min-w-0">
                     <div className="flex justify-between items-start">
                       <div>
-                        <div className="flex items-center">
+                        <div className="flex items-center flex-wrap gap-2">
                           <h3 className="font-medium text-dark-gray">{job.title}</h3>
-                          {job.isNew && <Badge className="ml-2 bg-accent text-white">New</Badge>}
+                          {job.isNew && <Badge className="bg-accent text-white">New</Badge>}
+                          {(job.status === 'expired' || (job.expires_at && new Date(job.expires_at) < new Date())) && (
+                            <Badge className="bg-red-500 text-white">Expired</Badge>
+                          )}
                         </div>
                         <p className="text-sm text-gray-500">{job.company}</p>
                       </div>
 
-                      <button
-                        onClick={(e) => toggleSaveJob(job.job_id, e)}
-                        className="text-gray-400 hover:text-accent"
-                        aria-label={savedJobs.includes(job.job_id) ? "Unsave job" : "Save job"}
-                      >
-                        {savedJobs.includes(job.job_id) ? (
-                          <BookmarkCheck className="h-5 w-5 text-accent" />
-                        ) : (
-                          <Bookmark className="h-5 w-5" />
-                        )}
-                      </button>
+                      {user?.role === 'applicant' && (
+                        <button
+                          onClick={(e) => toggleSaveJob(job.job_id, e)}
+                          className="text-gray-400 hover:text-accent"
+                          aria-label={savedJobs.includes(job.job_id) ? "Unsave job" : "Save job"}
+                        >
+                          {savedJobs.includes(job.job_id) ? (
+                            <BookmarkCheck className="h-5 w-5 text-accent" />
+                          ) : (
+                            <Bookmark className="h-5 w-5" />
+                          )}
+                        </button>
+                      )}
                     </div>
 
                     <div className="mt-3 flex flex-wrap gap-y-2 gap-x-3 text-xs text-gray-600">
@@ -349,18 +398,22 @@ export default function JobListings({ filters, savedJobsOnly = false }: JobListi
                     </div>
 
                     <div className="flex gap-2 w-full sm:w-auto">
-                      <Button
-                        variant="outline"
-                        className="flex-1 sm:flex-initial"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          toggleSaveJob(job.job_id, e)
-                        }}
-                      >
-                        {savedJobs.includes(job.job_id) ? "Saved" : "Save"}
-                      </Button>
+                      {user?.role === 'applicant' && (
+                        <Button
+                          variant="outline"
+                          className="flex-1 sm:flex-initial"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            toggleSaveJob(job.job_id, e)
+                          }}
+                        >
+                          {savedJobs.includes(job.job_id) ? "Saved" : "Save"}
+                        </Button>
+                      )}
                       <Link href={`/jobs/${job.job_id}`} className="flex-1 sm:flex-initial">
-                        <Button className="w-full bg-accent hover:bg-accent/90">View Full Details</Button>
+                        <Button className="w-full bg-accent hover:bg-accent/90">
+                          View Full Details
+                        </Button>
                       </Link>
                     </div>
                   </div>
@@ -368,7 +421,76 @@ export default function JobListings({ filters, savedJobsOnly = false }: JobListi
               </div>
             </div>
           </div>
-        ))
+        ))}
+        {/* Bottom Controls: page size + pagination + summary */}
+        <div className="mt-6 space-y-3">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-sm text-gray-600">Per page:</span>
+              <Select value={pageSizeMode} onValueChange={changePageSize}>
+                <SelectTrigger className="w-[90px] h-8 text-sm" aria-label="Jobs per page">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="10">10</SelectItem>
+                  <SelectItem value="20">20</SelectItem>
+                  <SelectItem value="50">50</SelectItem>
+                  <SelectItem value="100">100</SelectItem>
+                  <SelectItem value="custom">Custom</SelectItem>
+                </SelectContent>
+              </Select>
+              {pageSizeMode === 'custom' && (
+                <div className="flex items-center gap-1">
+                  <Input
+                    type="number"
+                    min={1}
+                    max={100}
+                    value={customPageSize}
+                    onChange={(e) => setCustomPageSize(e.target.value)}
+                    onBlur={applyCustomPageSize}
+                    onKeyDown={(e) => { if (e.key === 'Enter') { applyCustomPageSize(); } }}
+                    className="w-20 h-8 text-sm"
+                    placeholder="1-100"
+                    aria-label="Custom jobs per page"
+                  />
+                  <Button type="button" variant="outline" size="sm" className="h-8 px-2" onClick={applyCustomPageSize}>Set</Button>
+                </div>
+              )}
+            </div>
+            <div className="text-sm text-gray-600">
+              Showing {Math.min(startIdx + 1, totalJobs)}–{Math.min(startIdx + pageSize, totalJobs)} of {totalJobs} jobs
+            </div>
+            <div className="flex flex-wrap items-center gap-1" aria-label="Pagination">
+              <button
+                onClick={() => page > 1 && setPage(page - 1)}
+                disabled={page === 1}
+                className="w-8 h-8 flex items-center justify-center rounded-md border text-gray-600 hover:bg-light-gray disabled:opacity-40"
+                aria-label="Previous page"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map(p => (
+                <button
+                  key={p}
+                  onClick={() => setPage(p)}
+                  className={`min-w-8 h-8 px-2 flex items-center justify-center rounded-md border text-sm ${p === page ? 'bg-accent text-white border-accent' : 'text-gray-700 hover:bg-light-gray'}`}
+                  aria-current={p === page ? 'page' : undefined}
+                >
+                  {p}
+                </button>
+              ))}
+              <button
+                onClick={() => page < totalPages && setPage(page + 1)}
+                disabled={page === totalPages}
+                className="w-8 h-8 flex items-center justify-center rounded-md border text-gray-600 hover:bg-light-gray disabled:opacity-40"
+                aria-label="Next page"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        </div>
+        </>
       )}
     </div>
   )

@@ -204,6 +204,8 @@ export default function JobApplications({ jobId }: JobApplicationsProps) {
   const [resumeBase64Map, setResumeBase64Map] = useState<Record<string, string>>({})
   const [resumeLoadingMap, setResumeLoadingMap] = useState<Record<string, boolean>>({})
   const [resumeErrorMap, setResumeErrorMap] = useState<Record<string, string>>({})
+  // Track interview dialog open state per application
+  const [interviewDialogOpen, setInterviewDialogOpen] = useState<Record<string, boolean>>({})
 
   useEffect(() => {
     const fetchApplications = async () => {
@@ -380,13 +382,13 @@ export default function JobApplications({ jobId }: JobApplicationsProps) {
                 </div>
               </div>
 
-              {app.status === "interview" && app.interviewDate && (
+        {app.status === "interview" && (app.interview_date || app.interviewDate) && (
                 <div className="mt-3 p-3 bg-blue-50 rounded-md text-sm flex items-center">
                   <Calendar className="h-4 w-4 text-blue-500 mr-2" />
                   <div>
                     <span className="font-medium text-blue-700">Interview Scheduled: </span>
                     <span className="text-blue-600">
-                      {formatDate(app.interviewDate)} at {app.interviewTime}
+          {formatDate(app.interview_date || app.interviewDate)} at {(app.interview_time || app.interviewTime)}
                     </span>
                   </div>
                 </div>
@@ -523,22 +525,40 @@ export default function JobApplications({ jobId }: JobApplicationsProps) {
                   </DialogContent>
                 </Dialog>
 
-                <Dialog>
-                  <DialogTrigger asChild>
-                    <Button size="sm" className="bg-blue-500 hover:bg-blue-600 text-white">
-                      <Calendar className="h-3.5 w-3.5 mr-1" /> Schedule Interview
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-                    <DialogHeader>
-                      <DialogTitle>Schedule Interview</DialogTitle>
-                      <DialogDescription>
-                        Schedule an interview with {app.candidate.name} for the {job.title} position
-                      </DialogDescription>
-                    </DialogHeader>
-                    <InterviewScheduler candidateName={app.candidate.name} candidateId={app.candidate.id} jobId={job.id} />
-                  </DialogContent>
-                </Dialog>
+                {/* Schedule / Reschedule Interview (hidden if accepted/rejected/selected) */}
+                {!(app.status === "accepted" || app.status === "rejected" || app.status === "selected") && (
+                  <Dialog 
+                    open={!!interviewDialogOpen[app.id]} 
+                    onOpenChange={(open) => setInterviewDialogOpen(prev => ({ ...prev, [app.id]: open }))}
+                  >
+                    <DialogTrigger asChild>
+                      <Button size="sm" className="bg-blue-500 hover:bg-blue-600 text-white" onClick={() => setInterviewDialogOpen(prev => ({ ...prev, [app.id]: true }))}>
+                        <Calendar className="h-3.5 w-3.5 mr-1" /> {app.status === "interview" ? "Reschedule Interview" : "Schedule Interview"}
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+                      <DialogHeader>
+                        <DialogTitle>{app.status === "interview" ? "Reschedule Interview" : "Schedule Interview"}</DialogTitle>
+                        <DialogDescription>
+                          {app.status === "interview" ? "Update the interview details" : "Schedule an interview"} with {app.candidate.name} for the {job.title} position
+                        </DialogDescription>
+                      </DialogHeader>
+                      <InterviewScheduler 
+                        candidateName={app.candidate.name} 
+                        candidateId={app.candidate.id} 
+                        jobId={job.id}
+                        isReschedule={app.status === "interview"}
+                        existingDate={(app.interview_date || app.interviewDate) || null}
+                        existingTime={(app.interview_time || app.interviewTime) || null}
+                        onSuccess={(data) => {
+                          setJobApplications(prev => prev.map(a => a.id === app.id ? { ...a, status: "interview", interview_date: data.date, interview_time: data.startTime, interviewDate: data.date, interviewTime: data.startTime } : a))
+                          setInterviewDialogOpen(prev => ({ ...prev, [app.id]: false }))
+                        }}
+                        onCancel={() => setInterviewDialogOpen(prev => ({ ...prev, [app.id]: false }))}
+                      />
+                    </DialogContent>
+                  </Dialog>
+                )}
 
                 {app.status === "accepted" || app.status === "rejected" ? (
                   // Show status buttons when already processed

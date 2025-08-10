@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -20,22 +20,64 @@ interface InterviewSchedulerProps {
   candidateName: string
   candidateId: string
   jobId: string
+  onSuccess?: (data: { date: string; startTime: string; duration: string; interviewType: string }) => void
+  isReschedule?: boolean
+  existingDate?: string | null
+  existingTime?: string | null
+  onCancel?: () => void
 }
 
-export default function InterviewScheduler({ candidateName, candidateId, jobId }: InterviewSchedulerProps) {
+export default function InterviewScheduler({ candidateName, candidateId, jobId, onSuccess, isReschedule, existingDate, existingTime, onCancel }: InterviewSchedulerProps) {
   const { user } = useAuthStore()
-  const [date, setDate] = useState<Date>()
+  const [date, setDate] = useState<Date | undefined>(existingDate ? new Date(existingDate) : undefined)
   const [formData, setFormData] = useState({
     interviewType: "video",
-    startTime: "",
+    startTime: existingTime || "",
     duration: "30",
     interviewers: "",
     notes: "",
-    zoomLink: "https://zoom.us/j/123456789",
+    zoomLink: "",
   })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
   const [success, setSuccess] = useState("")
+  const [loadingPrefill, setLoadingPrefill] = useState(false)
+  // Prefill existing interview details if rescheduling and no explicit existingDate provided
+  useEffect(() => {
+    const prefill = async () => {
+      if (!isReschedule) return
+      if (!user?.token) return
+      // If both date & time already provided via props, skip fetch
+      // if (existingDate && existingTime) return
+      try {
+        setLoadingPrefill(true)
+        const res = await api.get(`/interview/details/${jobId}?candidate_id=${candidateId}`, {
+          headers: { Authorization: `Bearer ${user.token}` }
+        })
+        const data = res.data
+        if (data?.scheduled_time) {
+          const dt = new Date(data.scheduled_time)
+          setDate(dt)
+          const hh = dt.getHours().toString().padStart(2, '0')
+            const mm = dt.getMinutes().toString().padStart(2, '0')
+          setFormData(prev => ({
+            ...prev,
+            startTime: `${hh}:${mm}`,
+            interviewType: data.details?.interviewType || data.details?.interview_type || prev.interviewType,
+            duration: data.details?.duration || prev.duration,
+            interviewers: data.details?.interviewers || prev.interviewers,
+            notes: data.details?.notes || prev.notes,
+            zoomLink: data.zoom_link || data.details?.zoomLink || prev.zoomLink,
+          }))
+        }
+      } catch (e) {
+        // silent fail
+      } finally {
+        setLoadingPrefill(false)
+      }
+    }
+    prefill()
+  }, [isReschedule, user?.token, jobId, candidateId])
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target
@@ -58,7 +100,7 @@ export default function InterviewScheduler({ candidateName, candidateId, jobId }
     setSuccess("")
     setLoading(true)
     try {
-      if (!date) {
+  if (!date) {
         setError("Please select a date.")
         setLoading(false)
         return
@@ -76,12 +118,51 @@ export default function InterviewScheduler({ candidateName, candidateId, jobId }
       if (formData.interviewType === "video") {
         payload.zoomLink = formData.zoomLink
       }
-      await api.post("/interview/schedule", payload, {
-        headers: { Authorization: `Bearer ${user?.token}` },
-      })
+      if (isReschedule) {
+        // Need interview id: attempt fetch if not already
+        let interviewId: string | undefined
+        try {
+          const existing = await api.get(`/interview/details/${jobId}?candidate_id=${candidateId}`, { headers: { Authorization: `Bearer ${user?.token}` } })
+          interviewId = existing.data?.id
+        } catch {}
+        if (!interviewId) {
+          setError("Existing interview not found to reschedule.")
+          setLoading(false)
+          return
+        }
+        const scheduled_time = `${payload.date}T${payload.startTime}:00` // simple ISO local
+        const editPayload: any = { scheduled_time, details: {
+          interviewType: payload.interviewType,
+          interviewers: payload.interviewers,
+          notes: payload.notes,
+          duration: payload.duration
+        }}
+        await api.put(`/interview/edit/${interviewId}`, editPayload, { headers: { Authorization: `Bearer ${user?.token}` } })
+      } else {
+        await api.post("/interview/schedule", payload, {
+          headers: { Authorization: `Bearer ${user?.token}` },
+        })
+      }
       setSuccess("Interview scheduled successfully!")
-    } catch (err: any) {
-      setError(err?.response?.data?.detail || "Failed to schedule interview.")
+      // Notify parent to close dialog & update UI then auto-close via parent
+      onSuccess?.({
+        date: payload.date,
+        startTime: payload.startTime,
+        duration: payload.duration,
+        interviewType: payload.interviewType,
+      })
+    }
+    catch (err: any) {
+  if (err?.response?.status === 409) {
+        const detail = err.response.data.detail
+        if (detail?.interview_id) {
+          setError("Interview already exists. Please use reschedule option.")
+        } else {
+          setError("Interview already exists for this candidate & job.")
+        }
+      } else {
+        setError(err?.response?.data?.detail || "Failed to schedule interview.")
+      }
     } finally {
       setLoading(false)
     }
@@ -217,11 +298,11 @@ export default function InterviewScheduler({ candidateName, candidateId, jobId }
         </div>
 
         <div className="pt-4 border-t flex justify-end gap-3">
-          <Button type="button" variant="outline" disabled={loading}>
+          <Button type="button" variant="outline" disabled={loading} onClick={() => onCancel?.()}>
             Cancel
           </Button>
-          <Button type="submit" className="bg-accent hover:bg-accent/90" disabled={loading}>
-            {loading ? "Scheduling..." : "Schedule Interview"}
+          <Button type="submit" className="bg-accent hover:bg-accent/90" disabled={loading || loadingPrefill}>
+            {loading || loadingPrefill ? (isReschedule ? "Rescheduling..." : "Scheduling...") : (isReschedule ? "Reschedule Interview" : "Schedule Interview")}
           </Button>
         </div>
       </form>
