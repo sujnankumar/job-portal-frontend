@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation"
 import { useAuthStore } from "@/store/authStore"
 import ProtectedRoute from "@/components/auth/protected-route"
 import Image from "next/image"
+import { DEFAULT_USER_AVATAR } from "@/lib/placeholders"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -50,7 +51,7 @@ export default function ApplicationDetailPage({ params }: { params: Promise<{ id
       email: "john.smith@example.com",
       phone: "(555) 123-4567",
       location: "San Francisco, CA",
-      avatar: "/mystical-forest-spirit.png",
+  avatar: DEFAULT_USER_AVATAR,
       website: "johnsmith.dev",
       github: "github.com/johnsmith",
     },
@@ -119,7 +120,7 @@ export default function ApplicationDetailPage({ params }: { params: Promise<{ id
             <div className="flex items-center gap-4">
               <div className="w-16 h-16 rounded-full overflow-hidden">
                 <Image
-                  src={application.candidate.avatar || "/placeholder.svg"}
+                  src={application.candidate.avatar || DEFAULT_USER_AVATAR}
                   width={64}
                   height={64}
                   alt={application.candidate.name}

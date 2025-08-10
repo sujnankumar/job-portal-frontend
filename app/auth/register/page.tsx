@@ -12,6 +12,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { useAuthStore } from "@/store/authStore"
 import type { UserRole } from "@/store/authStore"
 import api from "@/lib/axios"
+import { DEFAULT_USER_AVATAR } from "@/lib/placeholders"
 
 export default function RegisterPage() {
   const router = useRouter()
@@ -151,9 +152,7 @@ export default function RegisterPage() {
           : userData.company_name || userData.name || formData.email,
         email: userData.email,
         role: userData.user_type === "employer" ? ("employer" as UserRole) : ("applicant" as UserRole),
-        avatar: userData.avatar || (userData.user_type === "employer"
-          ? "/abstract-circuit-board.png"
-          : "/mystical-forest-spirit.png"),
+        avatar: userData.avatar || DEFAULT_USER_AVATAR,
         onboarding: onboarding || {
           isComplete: false,
           lastStep: 0,
@@ -162,13 +161,13 @@ export default function RegisterPage() {
         token: access_token,
       }
       login(user)
-      if (!user.onboarding?.isComplete) {
-        router.push("/onboarding")
-      } else if (user.role === "employer") {
-        router.push("/employer/dashboard")
-      } else {
-        router.push("/dashboard")
-      }
+      // Defer navigation to next tick so Zustand state is committed before route change
+      const target = !user.onboarding?.isComplete
+        ? "/onboarding"
+        : user.role === "employer" ? "/employer/dashboard" : "/dashboard"
+      setTimeout(() => {
+        try { router.replace(target) } catch {}
+      }, 0)
     } catch (err: any) {
       setError(err.response?.data?.detail || "Registration failed. Please try again.")
     } finally {
@@ -177,15 +176,14 @@ export default function RegisterPage() {
   }
 
   useEffect(() => {
-    if (!hydrated) return
-    if (isAuthenticated) {
-      if (!user?.onboarding?.isComplete) {
-        router.push("/onboarding")
-      } else if (user?.role === "employer") {
-        router.push("/employer/dashboard")
-      } else {
-        router.push("/dashboard")
-      }
+    if (!hydrated || !isAuthenticated || !user) return
+    // Secondary safety navigation in case initial deferred redirect missed
+    const expected = !user.onboarding?.isComplete
+      ? "/onboarding"
+      : user.role === "employer" ? "/employer/dashboard" : "/dashboard"
+    // Avoid redundant navigation if already there
+    if (window.location.pathname !== expected) {
+      router.replace(expected)
     }
   }, [hydrated, isAuthenticated, user, router])
 

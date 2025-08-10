@@ -14,6 +14,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { useAuthStore } from "@/store/authStore"
 import type { UserRole } from "@/store/authStore"
 import api from "@/lib/axios"
+import { DEFAULT_USER_AVATAR } from "@/lib/placeholders"
 
 export default function LoginPage() {
   const router = useRouter()
@@ -113,9 +114,7 @@ export default function LoginPage() {
           : userData.company_name || userData.name || formData.email,
         email: userData.email,
         role: userData.user_type === "employer" ? "employer" as UserRole : "applicant" as UserRole,
-        avatar: userData.avatar || (userData.user_type === "employer"
-          ? "/abstract-circuit-board.png"
-          : "/mystical-forest-spirit.png"),
+        avatar: userData.avatar || DEFAULT_USER_AVATAR,
         onboarding: onboarding || {
           isComplete: false,
           lastStep: 0,
