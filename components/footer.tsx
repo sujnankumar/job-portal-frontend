@@ -43,11 +43,6 @@ export default function Footer() {
                 </Link>
               </li>
               <li>
-                <Link href="/applications" className="text-gray-600 hover:text-accent">
-                  My Applications
-                </Link>
-              </li>
-              <li>
                 <Link href="/profile" className="text-gray-600 hover:text-accent">
                   My Profile
                 </Link>

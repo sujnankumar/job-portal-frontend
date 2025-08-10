@@ -28,6 +28,8 @@ export default function JobPostingForm() {
     employmentType: "Full-time",
     minSalary: "",
     maxSalary: "",
+  singleSalary: "",
+  salaryMode: "range", // 'range' | 'single'
     showSalary: true,
     description: "",
     requirements: "",
@@ -192,14 +194,20 @@ export default function JobPostingForm() {
     
     // Salary validation
     if (formData.showSalary) {
-      if (!formData.minSalary || isNaN(Number(formData.minSalary))) {
-        newErrors.minSalary = "Valid minimum salary is required"
-      }
-      if (!formData.maxSalary || isNaN(Number(formData.maxSalary))) {
-        newErrors.maxSalary = "Valid maximum salary is required"
-      }
-      if (formData.minSalary && formData.maxSalary && Number(formData.minSalary) >= Number(formData.maxSalary)) {
-        newErrors.maxSalary = "Maximum salary must be greater than minimum salary"
+      if (formData.salaryMode === 'range') {
+        if (!formData.minSalary || isNaN(Number(formData.minSalary))) {
+          newErrors.minSalary = "Valid minimum salary is required"
+        }
+        if (!formData.maxSalary || isNaN(Number(formData.maxSalary))) {
+          newErrors.maxSalary = "Valid maximum salary is required"
+        }
+        if (formData.minSalary && formData.maxSalary && Number(formData.minSalary) >= Number(formData.maxSalary)) {
+          newErrors.maxSalary = "Maximum salary must be greater than minimum salary"
+        }
+      } else { // single
+        if (!formData.singleSalary || isNaN(Number(formData.singleSalary))) {
+          newErrors.singleSalary = "Valid salary amount required"
+        }
       }
     }
     
@@ -234,14 +242,15 @@ export default function JobPostingForm() {
         setIsLoading(false)
         return
       }
+      const isSingle = formData.showSalary && formData.salaryMode === 'single'
       const payload = {
         title: formData.title,
         department: formData.department,
         location: formData.location,
         location_type: formData.locationType,
         employment_type: formData.employmentType,
-        min_salary: formData.showSalary ? formData.minSalary : undefined,
-        max_salary: formData.showSalary ? formData.maxSalary : undefined,
+        min_salary: formData.showSalary ? (isSingle ? formData.singleSalary : formData.minSalary) : undefined,
+        max_salary: formData.showSalary ? (isSingle ? formData.singleSalary : formData.maxSalary) : undefined,
         show_salary: formData.showSalary,
         description: htmlToMarkdown(formData.description), // Store as markdown, convert any HTML back to markdown
         requirements: htmlToMarkdown(formData.requirements), // Store as markdown, convert any HTML back to markdown
@@ -448,50 +457,49 @@ export default function JobPostingForm() {
           {/* Salary Information */}
           <div className="space-y-4 pt-4 border-t">
             <div className="flex items-center justify-between">
-              <Label htmlFor="showSalary" className="font-medium">
-                Salary Information
-              </Label>
+              <Label htmlFor="showSalary" className="font-medium">Salary Information</Label>
               <div className="flex items-center space-x-2">
-                <Switch
-                  id="showSalary"
-                  checked={formData.showSalary}
-                  onCheckedChange={(checked) => handleSwitchChange("showSalary", checked)}
-                />
-                <Label htmlFor="showSalary" className="font-normal">
-                  Display salary range on job posting
-                </Label>
+                <Switch id="showSalary" checked={formData.showSalary} onCheckedChange={(checked) => handleSwitchChange("showSalary", checked)} />
+                <Label htmlFor="showSalary" className="font-normal">Display salary on posting</Label>
               </div>
             </div>
-
-            <div className={cn("grid grid-cols-1 md:grid-cols-2 gap-6", !formData.showSalary && "opacity-50")}>
-              <div className="space-y-2">
-                <Label htmlFor="minSalary">Minimum Salary (USD)</Label>
-                <Input
-                  id="minSalary"
-                  name="minSalary"
-                  type="number"
-                  value={formData.minSalary}
-                  onChange={handleChange}
-                  placeholder="e.g. 80000"
-                  disabled={!formData.showSalary}
-                />
-                {errors.minSalary && <p className="text-red-500 text-xs mt-1">{errors.minSalary}</p>}
+            {formData.showSalary && (
+              <div className="space-y-4">
+                <div className="space-y-2 max-w-xs">
+                  <Label>Display Mode</Label>
+                  <Select value={formData.salaryMode} onValueChange={(v)=> setFormData(f=> ({...f, salaryMode: v, // reset values when switching
+                    ...(v==='single'? {minSalary:'', maxSalary:''}: {singleSalary:''})
+                  }))}>
+                    <SelectTrigger><SelectValue placeholder="Select mode" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="range">Range</SelectItem>
+                      <SelectItem value="single">Single Value</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                {formData.salaryMode === 'range' ? (
+                  <div className={cn("grid grid-cols-1 md:grid-cols-2 gap-6")}>
+                    <div className="space-y-2">
+                      <Label htmlFor="minSalary">Minimum Salary</Label>
+                      <Input id="minSalary" name="minSalary" type="number" value={formData.minSalary} onChange={handleChange} placeholder="e.g. 80000" />
+                      {errors.minSalary && <p className="text-red-500 text-xs mt-1">{errors.minSalary}</p>}
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="maxSalary">Maximum Salary</Label>
+                      <Input id="maxSalary" name="maxSalary" type="number" value={formData.maxSalary} onChange={handleChange} placeholder="e.g. 120000" />
+                      {errors.maxSalary && <p className="text-red-500 text-xs mt-1">{errors.maxSalary}</p>}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-2 max-w-xs">
+                    <Label htmlFor="singleSalary">Salary</Label>
+                    <Input id="singleSalary" name="singleSalary" type="number" value={formData.singleSalary} onChange={handleChange} placeholder="e.g. 100000" />
+                    {errors.singleSalary && <p className="text-red-500 text-xs mt-1">{errors.singleSalary}</p>}
+                    <p className="text-xs text-gray-500">Shown as a single fixed amount (min & max equal).</p>
+                  </div>
+                )}
               </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="maxSalary">Maximum Salary (USD)</Label>
-                <Input
-                  id="maxSalary"
-                  name="maxSalary"
-                  type="number"
-                  value={formData.maxSalary}
-                  onChange={handleChange}
-                  placeholder="e.g. 120000"
-                  disabled={!formData.showSalary}
-                />
-                {errors.maxSalary && <p className="text-red-500 text-xs mt-1">{errors.maxSalary}</p>}
-              </div>
-            </div>
+            )}
           </div>
 
           {/* Auto-Expiry */}

@@ -158,10 +158,9 @@ export default function Navbar() {
   const navLinks = [
     { name: "Home", path: "/" },
     { name: "Jobs", path: "/jobs" },
-  { name: "Companies", path: "/companies" },
+    { name: "Companies", path: "/companies" },
     ...(isAuthenticated && user?.role === "applicant"
       ? [
-          { name: "Applications", path: "/applications" },
           { name: "Dashboard", path: "/dashboard" },
           { name: "Chat", path: "/chat" },
         ]
@@ -279,9 +278,6 @@ export default function Navbar() {
                       <>
                         <DropdownMenuItem>
                           <Link href="/profile" className="flex w-full">Profile</Link>
-                        </DropdownMenuItem>
-                        <DropdownMenuItem>
-                          <Link href="/applications" className="flex w-full">Applications</Link>
                         </DropdownMenuItem>
                         <DropdownMenuItem>
                           <Link href="/saved-jobs" className="flex w-full">Saved Jobs</Link>
@@ -413,9 +409,6 @@ export default function Navbar() {
                     <>
                       <Link href="/profile" onClick={() => setIsMenuOpen(false)}>
                         <Button variant="ghost" size="sm" className="w-full justify-start rounded-lg transition-colors duration-200 hover:bg-gray-100">Profile</Button>
-                      </Link>
-                      <Link href="/applications" onClick={() => setIsMenuOpen(false)}>
-                        <Button variant="ghost" size="sm" className="w-full justify-start rounded-lg transition-colors duration-200 hover:bg-gray-100">Applications</Button>
                       </Link>
                       <Link href="/saved-jobs" onClick={() => setIsMenuOpen(false)}>
                         <Button variant="ghost" size="sm" className="w-full justify-start rounded-lg transition-colors duration-200 hover:bg-gray-100">Saved Jobs</Button>
