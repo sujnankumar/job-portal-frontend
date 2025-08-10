@@ -17,6 +17,8 @@ export default function JobListingsPage() {
   const initialSearch   = searchParams.get("search")   ?? ""
   const initialLocation = searchParams.get("location") ?? ""
   const initialJobTypes = searchParams.getAll("jobType")
+  const initialIndustry = searchParams.get("industry")
+  const initialBoolean = searchParams.get("boolean") || ""
   
   // 2) Local state for inputs & filters
   const [search, setSearch]     = useState(initialSearch)
@@ -24,10 +26,12 @@ export default function JobListingsPage() {
   const [filters, setFilters]   = useState<JobFiltersState>({
     jobTypes: initialJobTypes,
     experienceLevels: [],
-    salaryRange: [50, 150],
+  // salaryRange expressed in LPA (Lakhs Per Annum) 0-20
+  salaryRange: [0, 20],
     location: initialLocation,
-    industries: [],
+  industries: initialIndustry ? [initialIndustry] : [],
     skills: [],
+    booleanQuery: initialBoolean,
   })
   const initialShowExpired = searchParams.get("showExpired") === "1"
   const [showExpired, setShowExpired] = useState(initialShowExpired)
@@ -47,7 +51,10 @@ export default function JobListingsPage() {
     const params = new URLSearchParams()
     if (search) params.set("search", search)
     if (location) params.set("location", location)
-    if (showExpired) params.set("showExpired", "1")
+  if (showExpired) params.set("showExpired", "1")
+  // Persist first selected industry (could extend to multiple later)
+  if (filters.industries.length > 0) params.set('industry', filters.industries[0])
+  if (filters.booleanQuery && filters.booleanQuery.trim()) params.set('boolean', filters.booleanQuery.trim())
   // pagination now internal to JobListings; omit page & pageSize from URL
     Object.entries(overrides).forEach(([k, v]) => {
       if (v === undefined || v === null || v === "") return
@@ -65,6 +72,27 @@ export default function JobListingsPage() {
     pushParams()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showExpired])
+
+  // Sync industry selection to URL when it changes (first selected only for now)
+  useEffect(() => {
+    pushParams()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filters.industries])
+
+  // Keep industries in sync with URL (handles client-side nav between categories)
+  useEffect(() => {
+    const ind = searchParams.get('industry')
+    setFilters(prev => {
+      if (ind && (prev.industries.length === 0 || prev.industries[0] !== ind)) {
+        return { ...prev, industries: [ind] }
+      }
+      if (!ind && prev.industries.length > 0) {
+        return { ...prev, industries: [] }
+      }
+      return prev
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams])
 
   return (
     <div className="container mx-auto max-w-6xl py-10 px-4">

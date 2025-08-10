@@ -197,22 +197,106 @@ export default function JobListings({ filters, savedJobsOnly = false, showExpire
       if (filters.experienceLevels && filters.experienceLevels.length > 0 && !filters.experienceLevels.includes(job.experience_level)) return false
       // Location Type
       if (filters.locationTypes && filters.locationTypes.length > 0 && !filters.locationTypes.includes(job.location_type)) return false
-      // Salary
-      // if (job.min_salary < filters.salaryRange[0] || job.max_salary > filters.salaryRange[1]) return false
+      // Salary (convert to LPA). Backend strings are annual INR. Lakh = 100,000.
+      // If user selects the upper bound (20), treat it as open-ended so jobs above 20 LPA are still shown.
+      if (filters.salaryRange) {
+        const minLpa = job.min_salary ? parseInt(job.min_salary, 10) / 100000 : 0
+        const maxLpa = job.max_salary ? parseInt(job.max_salary, 10) / 100000 : minLpa
+        const [selMin, selMax] = filters.salaryRange
+        const openEnded = selMax === 20
+        if (openEnded) {
+          // Only enforce lower bound; include anything whose max salary is >= selMin
+            if (maxLpa < selMin) return false
+        } else {
+          if (maxLpa < selMin || minLpa > selMax) return false
+        }
+      }
       // Location
       if (filters.location && !job.location?.toLowerCase().includes(filters.location.toLowerCase())) return false
-      // Industry
-      if (filters.industries && filters.industries.length > 0 && !filters.industries.includes(job.industry)) return false
+      // Industry (robust matching). Selected industries are exact names like "Technology".
+      if (filters.industries && filters.industries.length > 0) {
+        const selected = filters.industries.map(i => i.toLowerCase())
+        // Collect possible job industry fields
+        const rawIndustries: any[] = []
+        if (job.job_category) rawIndustries.push(job.job_category)
+
+        // Normalize to flat string array
+        const jobIndustryValues = rawIndustries
+          .flat()
+          .filter(Boolean)
+          .map((v: any) => String(v).split(/[,|]/)) // split if comma or pipe separated
+          .flat()
+          .map(s => s.trim().toLowerCase())
+          .filter(Boolean)
+
+        if (jobIndustryValues.length === 0) return false
+        const intersects = jobIndustryValues.some(iv => selected.includes(iv))
+        if (!intersects) return false
+      }
       // Skills
       if (filters.skills && filters.skills.length > 0 && !filters.skills.every(skill => job.skills?.includes(skill))) return false
-      // Search (title, keywords, company)
-      if (filters.search && filters.search.trim() !== "") {
+      // Simple Search (title, company, tags) when booleanQuery not provided
+      if (filters.search && filters.search.trim() !== "" && !filters.booleanQuery) {
         const searchLower = filters.search.toLowerCase()
-        if (
-          !(job.title?.toLowerCase().includes(searchLower) ||
-            job.company?.toLowerCase().includes(searchLower) ||
-            (job.tags && job.tags.some((tag: string) => tag.toLowerCase().includes(searchLower))))
-        ) {
+        const haystack = [job.title, job.company, ...(job.tags || [])].filter(Boolean).map((s: string) => s.toLowerCase())
+        if (!haystack.some(h => h.includes(searchLower))) return false
+      }
+
+      // Boolean search evaluation (experimental)
+      if (filters.booleanQuery && filters.booleanQuery.trim()) {
+        const expr = filters.booleanQuery.trim()
+        // Tokenize: parentheses, AND, OR, NOT, words / quoted phrases
+        const tokens = expr.match(/\(|\)|AND|OR|NOT|"[^"]+"|[^\s()]+/gi) || []
+        // Build evaluation by mapping terms to booleans over extended corpus
+        const textCorpus = (
+          [
+            job.title,
+            job.company,
+            job.department,
+            job.description,
+            job.requirements,
+            job.benefits,
+            job.employment_type,
+            job.job_category,
+            job.location,
+            job.location_type,
+            job.experience_level,
+            job.status,
+            job.visibility,
+            Array.isArray(job.skills) ? job.skills.join(' ') : job.skills,
+          ]
+            .concat(job.tags || [])
+            .filter(Boolean)
+            .join(' ')
+            .toLowerCase()
+        )
+        // Pre-normalized variant where hyphens removed & multiple spaces collapsed
+        const normalizedCorpus = textCorpus.replace(/-/g, ' ').replace(/\s+/g, ' ')
+        const evalTokens = tokens.map(t => {
+          const up = t.toUpperCase()
+          if (up === 'AND' || up === 'OR' || up === 'NOT' || t === '(' || t === ')') return up
+          const cleaned = t.replace(/^"|"$/g, '').toLowerCase()
+          const cleanedNorm = cleaned.replace(/-/g, ' ').replace(/\s+/g, ' ')
+          const present = textCorpus.includes(cleaned)
+            || normalizedCorpus.includes(cleanedNorm)
+            || (cleanedNorm !== cleaned && textCorpus.includes(cleanedNorm))
+          return present ? 'true' : 'false'
+        })
+        // Convert NOT to unary !, AND to &&, OR to ||
+        let jsExpr = evalTokens.join(' ')
+          .replace(/\bNOT\b/g, '!')
+          .replace(/\bAND\b/g, '&&')
+          .replace(/\bOR\b/g, '||')
+        // Safety: allow only true/false/!/&/|/parens/space
+        if (/[^truefals!&|()\s]/i.test(jsExpr.replace(/true|false/g,''))) {
+          // If expression has unknown chars, fallback to simple search fail-safe
+          return false
+        }
+        try {
+          // eslint-disable-next-line no-eval
+          const result = eval(jsExpr)
+          if (!result) return false
+        } catch {
           return false
         }
       }

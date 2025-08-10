@@ -13,6 +13,7 @@ import {
 } from "lucide-react"
 import { useEffect, useState } from "react"
 import api from "@/lib/axios"
+import Link from "next/link"
 
 const iconMap: Record<string, React.ElementType> = {
   Technology: Code,
@@ -48,16 +49,17 @@ export default function JobCategories() {
       {categories.map((category) => {
         const Icon = iconMap[category.name] || CircleHelp
         return (
-          <div
+          <Link
             key={category.name}
-            className="bg-white p-4 rounded-xl shadow-sm text-center hover:shadow-md transition-shadow cursor-pointer border border-gray-100"
+            href={`/jobs?industry=${encodeURIComponent(category.name)}`}
+            className="bg-white p-4 rounded-xl shadow-sm text-center hover:shadow-md transition-shadow cursor-pointer border border-gray-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
           >
             <div className="inline-flex p-3 rounded-full bg-light-cream mb-3">
               <Icon className="h-6 w-6 text-primary" />
             </div>
             <h3 className="font-medium text-dark-gray">{category.name}</h3>
             <p className="text-sm text-gray-500">{category.count} jobs</p>
-          </div>
+          </Link>
         )
       })}
     </div>

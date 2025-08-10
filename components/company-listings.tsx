@@ -28,6 +28,8 @@ interface Company {
   industry?: string
   logo?: string
   created_at?: string
+  average_rating?: number
+  total_raters?: number
 }
 
 interface CompanyListingsProps {
@@ -47,8 +49,31 @@ export default function CompanyListings({ searchFilters }: CompanyListingsProps)
       setError("")
       try {
         const res = await api.get("/company/all")
-        setAllCompanies(res.data)
-        setFilteredCompanies(res.data)
+        let baseCompanies: Company[] = res.data
+        // Fetch ratings for each company (N+1). For many companies consider backend aggregation.
+        try {
+          const ratingResults = await Promise.allSettled(
+            baseCompanies.map(c => api.get(`/review/company/${c.company_id}`))
+          )
+          const withRatings = baseCompanies.map((c, idx) => {
+            const r = ratingResults[idx]
+            if (r.status === 'fulfilled') {
+              const data = r.value.data || {}
+              const total = Number(data.total_raters) || 0
+              const avg = typeof data.average_rating === 'number' ? data.average_rating : Number(data.average_rating)
+              if (total <= 0 || !avg || avg <= 0) {
+                return { ...c, total_raters: 0 }
+              }
+              return { ...c, average_rating: avg, total_raters: total }
+            }
+            return c
+          })
+          baseCompanies = withRatings
+        } catch (ratingErr) {
+          console.warn('Failed to fetch some company ratings', ratingErr)
+        }
+        setAllCompanies(baseCompanies)
+        setFilteredCompanies(baseCompanies)
       } catch (err: any) {
         setError("Failed to load companies. Please try again later.")
         console.error("Error fetching companies:", err)
@@ -64,41 +89,27 @@ export default function CompanyListings({ searchFilters }: CompanyListingsProps)
   useEffect(() => {
     let filtered = allCompanies
 
-    // Filter by search query (company name)
+    // Search by company name
     if (searchFilters.searchQuery.trim()) {
-      filtered = filtered.filter(company =>
-        company.company_name.toLowerCase().includes(searchFilters.searchQuery.toLowerCase())
-      )
+      const q = searchFilters.searchQuery.toLowerCase()
+      filtered = filtered.filter(c => c.company_name.toLowerCase().includes(q))
     }
 
-    // Filter by industry
+    // Industry filter
     if (searchFilters.industry && searchFilters.industry !== "All Industries") {
-      filtered = filtered.filter(company =>
-        company.industry?.toLowerCase() === searchFilters.industry.toLowerCase()
-      )
+      const ind = searchFilters.industry.toLowerCase()
+      filtered = filtered.filter(c => c.industry?.toLowerCase() === ind)
     }
 
-    // Filter by location
-    if (searchFilters.location && searchFilters.location.trim()) {
-      filtered = filtered.filter(company =>
-        company.location?.toLowerCase().includes(searchFilters.location.toLowerCase())
-      )
+    // Location filter (substring match)
+    if (searchFilters.location.trim()) {
+      const loc = searchFilters.location.toLowerCase()
+      filtered = filtered.filter(c => c.location?.toLowerCase().includes(loc))
     }
 
     setFilteredCompanies(filtered)
   }, [allCompanies, searchFilters])
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center py-16">
-        <div className="flex items-center gap-2 text-gray-500">
-          <Loader2 className="h-6 w-6 animate-spin" />
-          <span>Loading companies...</span>
-        </div>
-      </div>
-    )
-  }
-
+  
   if (error) {
     return (
       <div className="flex flex-col items-center justify-center py-16 bg-white rounded-xl shadow-sm border border-gray-100">
@@ -256,21 +267,16 @@ function CompanyCard({ company, view }: CompanyCardProps) {
                     <span className="capitalize">{company.industry}</span>
                   </div>
                 )}
+                {typeof company.average_rating === 'number' && company.average_rating > 0 && company.total_raters && company.total_raters > 0 && (
+                  <div className="flex items-center" title={`Rating ${Number(company.average_rating).toFixed(2)} from ${company.total_raters} ratings`}>
+                    <Star className="h-3.5 w-3.5 mr-1 text-yellow-500 fill-yellow-500" />
+                    <span>{Number(company.average_rating).toFixed(1)}</span>
+                  </div>
+                )}
               </div>
             </div>
           </div>
-
-          <p className={cn(
-            "text-sm text-gray-600 mb-3 line-clamp-2",
-            view === "grid" && "text-center"
-          )}>
-            {company.description 
-              ? company.description.length > 120 
-                ? `${company.description.substring(0, 120).trim()}...`
-                : company.description
-              : `Explore career opportunities at ${company.company_name}`
-            }
-          </p>
+          {/* Description removed per requirements */}
 
           <div className={cn(
             "flex flex-wrap gap-2 mb-4",
