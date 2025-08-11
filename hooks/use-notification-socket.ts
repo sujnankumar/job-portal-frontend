@@ -15,7 +15,8 @@ export function useNotificationSocket({
 
   useEffect(() => {
     if (!token) return
-    const WS_BACKEND = process.env.NEXT_PUBLIC_WS_BACKEND || "ws://localhost:8000/api/notifications"
+    // const WS_BACKEND = process.env.NEXT_PUBLIC_WS_BACKEND || "ws://localhost:8000/api/notifications"
+    const WS_BACKEND = process.env.NEXT_PUBLIC_WS_BACKEND || "wss://alluring-bravery-production.up.railway.app/api/notifications"
     const ws = new WebSocket(`${WS_BACKEND}/ws?token=${token}`)
     wsRef.current = ws
     ws.onopen = () => {

@@ -17,7 +17,8 @@ export function useChatSocket({
 
   useEffect(() => {
     if (!recipientId || !token) return
-    const WS_BACKEND = process.env.NEXT_PUBLIC_WS_BACKEND || "ws://localhost:8000/api/chat"
+    // const WS_BACKEND = process.env.NEXT_PUBLIC_WS_BACKEND || "ws://localhost:8000/api/chat"
+    const WS_BACKEND = process.env.NEXT_PUBLIC_WS_BACKEND || "wss://alluring-bravery-production.up.railway.app/api/chat"
     // const WS_BACKEND = process.env.NEXT_PUBLIC_WS_BACKEND || "wss://job-portal-backend-x5oc.onrender.com/api/chat"
     const ws = new WebSocket(
       `${WS_BACKEND}/ws/chat/${recipientId}?token=${token}`
