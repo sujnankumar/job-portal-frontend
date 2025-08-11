@@ -4,6 +4,7 @@ import { useEffect, useState } from "react"
 import Image from "next/image"
 import Link from "next/link"
 import { MapPin, IndianRupee, Clock, Briefcase, Building, Calendar, Share2, Bookmark, BookmarkCheck, X, Facebook, Twitter, Send, Copy, MessageCircle, Loader2, AlertTriangle } from "lucide-react"
+import { toast } from "sonner"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -45,12 +46,11 @@ interface JobDetails {
 
 export default function JobDetail({ jobId, jobDetails, is_saved }: { jobId: string; jobDetails: JobDetails; is_saved: boolean }) {
   const [isSaved, setIsSaved] = useState(is_saved)
-  const [saveError, setSaveError] = useState("")
-  const [saveSuccess, setSaveSuccess] = useState("")
+  // Inline save/copy feedback replaced with toasts
   const [isApplied, setIsApplied] = useState(false)
   const [applicationData, setApplicationData] = useState<any>(null)
   const [showShareModal, setShowShareModal] = useState(false)
-  const [copySuccess, setCopySuccess] = useState("")
+  // copySuccess removed in favor of toast
   const [showEmployerApplyModal, setShowEmployerApplyModal] = useState(false)
   const [logoUrl, setLogoUrl] = useState<string | null>(null)
   const [logoLoading, setLogoLoading] = useState(false)
@@ -156,10 +156,8 @@ export default function JobDetail({ jobId, jobDetails, is_saved }: { jobId: stri
 
   const toggleSave = async (e: React.MouseEvent) => {
     e.stopPropagation && e.stopPropagation()
-    setSaveError("")
-    setSaveSuccess("")
     if (!user || user.role !== "applicant" || !user.token) {
-      setSaveError("You must be logged in as a job seeker to save jobs.")
+      toast.error("You must be logged in as a job seeker to save jobs.")
       return
     }
     if (isSaved) {
@@ -170,10 +168,10 @@ export default function JobDetail({ jobId, jobDetails, is_saved }: { jobId: stri
             Authorization: `Bearer ${user.token}`,
           },
         })
-        setIsSaved(false)
-        setSaveSuccess("Job removed from saved jobs.")
+  setIsSaved(false)
+  toast.success("Job removed from saved jobs")
       } catch (err: any) {
-        setSaveError(err.response?.data?.detail || "Failed to remove saved job.")
+  toast.error(err.response?.data?.detail || "Failed to remove saved job")
       }
       return
     }
@@ -184,18 +182,17 @@ export default function JobDetail({ jobId, jobDetails, is_saved }: { jobId: stri
           Authorization: `Bearer ${user.token}`,
         },
       })
-      setIsSaved(true)
-      setSaveSuccess("Job saved successfully.")
+  setIsSaved(true)
+  toast.success("Job saved")
     } catch (err: any) {
-      setSaveError(err.response?.data?.detail || "Failed to save job.")
+  toast.error(err.response?.data?.detail || "Failed to save job")
     }
   }
 
   const handleCopy = () => {
     if (navigator.clipboard && shareUrl) {
       navigator.clipboard.writeText(shareUrl)
-      setCopySuccess("Link copied!")
-      setTimeout(() => setCopySuccess(""), 1500)
+      toast.success("Link copied to clipboard")
     }
   }
 
@@ -268,7 +265,7 @@ export default function JobDetail({ jobId, jobDetails, is_saved }: { jobId: stri
                 <Copy className="w-4 h-4" /> Copy
               </button>
             </div>
-            {copySuccess && <div className="text-green-600 text-xs mt-2">{copySuccess}</div>}
+            {/* copy success toast now */}
           </div>
         </div>
       )}
@@ -409,8 +406,7 @@ export default function JobDetail({ jobId, jobDetails, is_saved }: { jobId: stri
             Share
           </Button>
         </div>
-        {saveError && <div className="text-red-500 text-sm mt-2">{saveError}</div>}
-        {saveSuccess && <div className="text-green-600 text-sm mt-2">{saveSuccess}</div>}
+  {/* Toasts now handle save success/error messages */}
         {showEmployerApplyModal && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
             <div className="bg-white rounded-xl shadow-lg p-6 w-[340px] relative">

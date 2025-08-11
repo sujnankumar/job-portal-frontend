@@ -11,7 +11,7 @@ import { Label } from "@/components/ui/label"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
 import axios from "@/lib/axios"
 import { useAuthStore } from "@/store/authStore"
-import { useToast } from "@/hooks/use-toast"
+import { toast } from "sonner"
 
 interface Education {
   id: string
@@ -68,7 +68,6 @@ export default function ProfileEditor({
   onCancel,
 }: ProfileEditorProps) {
   const { user } = useAuthStore()
-  const { toast } = useToast()
   const [errors, setErrors] = useState<Record<string, string>>({})
 
   const validateForm = () => {
@@ -137,17 +136,16 @@ export default function ProfileEditor({
       newErrors.skills = "Please add at least one skill"
     }
     
-    setErrors(newErrors)
-    return Object.keys(newErrors).length === 0
+  setErrors(newErrors)
+  return { isValid: Object.keys(newErrors).length === 0, newErrors }
   }
 
   const handleSave = async () => {
-    if (!validateForm()) {
-      toast({ 
-        title: "Validation Error", 
-        description: "Please fix the errors below before saving", 
-        variant: "destructive" 
-      })
+    const { isValid, newErrors } = validateForm()
+    if (!isValid) {
+      const messages = Object.values(newErrors)
+      messages.slice(0, 5).forEach((m, idx) => setTimeout(() => toast.error(m), idx * 60))
+      if (messages.length > 5) setTimeout(() => toast.error(`${messages.length - 5} more validation errors...`), 6 * 60)
       return
     }
     
@@ -168,9 +166,9 @@ export default function ProfileEditor({
       )
       setIsEditing(false)
       setErrors({})
-      toast({ title: "Profile updated successfully!" })
+  toast.success("Profile updated successfully")
     } catch (e: any) {
-      toast({ title: "Failed to update profile", description: e?.response?.data?.detail || "Unknown error", variant: "destructive" })
+  toast.error(e?.response?.data?.detail || "Failed to update profile")
     }
   }
 

@@ -4,7 +4,8 @@ import { Inter } from "next/font/google"
 import "./globals.css"
 import Navbar from "@/components/navbar"
 import Footer from "@/components/footer"
-import { Toaster } from "@/components/ui/toaster"
+// Using sonner toaster for unified bottom-right notifications
+import { Toaster } from "@/components/ui/sonner"
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -27,7 +28,23 @@ export default function RootLayout({
           <main className="flex-1 bg-light-cream">{children}</main>
           <Footer />
         </div>
-        <Toaster />
+  <Toaster
+    position="bottom-right"
+    closeButton
+    expand={false}
+    // Remove richColors to prevent default green/black palette
+    toastOptions={{
+      classNames: {
+        toast: "bg-white border border-purple-200 text-purple-900 shadow-lg shadow-purple-100/40",
+        success: "bg-white border border-purple-300 text-purple-900 [&>svg]:text-purple-600",
+        error: "bg-white border border-purple-400 text-purple-900 [&>svg]:text-purple-700",
+        warning: "bg-white border border-purple-300 text-purple-900 [&>svg]:text-purple-700",
+        info: "bg-white border border-purple-200 text-purple-900 [&>svg]:text-purple-600",
+        actionButton: "bg-purple-600 text-white hover:bg-purple-600/90",
+        cancelButton: "bg-purple-100 text-purple-800 hover:bg-purple-200"
+      }
+    }}
+  />
       </body>
     </html>
   )

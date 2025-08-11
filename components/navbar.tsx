@@ -33,19 +33,33 @@ export default function Navbar() {
   const unreadChatThreads = useChatStore(s => s.unreadThreadCount)
   const refreshChatThreads = useChatStore(s => s.refreshFromServer)
 
-  // Get user's subscription plan (mock/demo logic)
-  const getUserPlan = () => {
-    if (!isAuthenticated) return null
-    if (user?.role === "employer") {
-      // For demo: randomly select a plan
-      const plans = ["free", "basic", "pro", "premium", "enterprise"]
-      // const randomIndex = Math.floor(Math.random() * plans.length)
-      // return plans[randomIndex]
-      return plans[3]
+  // Real subscription plan state
+  const [subscriptionPlan, setSubscriptionPlan] = useState<string | null>(null)
+  const [planLoading, setPlanLoading] = useState(false)
+
+  useEffect(() => {
+    let cancelled = false
+    const fetchPlan = async () => {
+      if (!isAuthenticated || user?.role !== 'employer' || !user?.token) {
+        setSubscriptionPlan(null)
+        return
+      }
+      setPlanLoading(true)
+      try {
+        const res = await api.get('/subscription/me', { headers: { Authorization: `Bearer ${user.token}` } })
+        if (!cancelled) {
+          const pid = res.data?.subscription?.plan_id || 'free'
+            setSubscriptionPlan(pid)
+        }
+      } catch (e) {
+        if (!cancelled) setSubscriptionPlan('free')
+      } finally {
+        if (!cancelled) setPlanLoading(false)
+      }
     }
-    return null
-  }
-  const userPlan = getUserPlan()
+    fetchPlan()
+  return () => { cancelled = true }
+  }, [isAuthenticated, user?.role, user?.token])
 
   // Plan icon
   const getPlanIcon = (plan: string | null) => {
@@ -246,8 +260,8 @@ export default function Navbar() {
                 {user?.role === "employer" && (
                   <Link href="/subscribe">
                     <Button className="bg-gradient-to-r from-primary to-accent hover:opacity-90 transition-all duration-300 transform hover:scale-105 text-white rounded-full px-4 py-2 flex items-center">
-                      {getPlanIcon(userPlan)}
-                      <span>{getPlanDisplayName(userPlan)}</span>
+                      {planLoading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : getPlanIcon(subscriptionPlan || 'free')}
+                      <span>{subscriptionPlan === 'free' ? 'Upgrade' : getPlanDisplayName(subscriptionPlan)}</span>
                     </Button>
                   </Link>
                 )}
@@ -378,8 +392,8 @@ export default function Navbar() {
                   className="flex items-center text-gray-600 hover:text-accent transition-colors py-2 px-3 rounded-lg"
                   onClick={() => setIsMenuOpen(false)}
                 >
-                  {getPlanIcon(userPlan)}
-                  <span className="ml-2">Subscription ({getPlanDisplayName(userPlan)})</span>
+                  {planLoading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : getPlanIcon(subscriptionPlan || 'free')}
+                  <span className="ml-2">Subscription ({subscriptionPlan === 'free' ? 'Upgrade' : getPlanDisplayName(subscriptionPlan)})</span>
                 </Link>
               )}
             </nav>

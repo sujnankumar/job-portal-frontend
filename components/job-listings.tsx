@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from "react"
 import Link from "next/link"
 import { MapPin, IndianRupee, Clock, Briefcase, Building, ExternalLink, ChevronDown, ChevronUp, Eye, Bookmark, BookmarkCheck, ChevronLeft, ChevronRight } from "lucide-react"
+import { toast } from "sonner"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -73,8 +74,7 @@ export default function JobListings({ filters, savedJobsOnly = false, showExpire
   const [allJobs, setAllJobs] = useState<any[]>([]) // Store all fetched jobs
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
-  const [saveError, setSaveError] = useState("")
-  const [saveSuccess, setSaveSuccess] = useState("")
+  // Removed inline saveError/saveSuccess display in favor of toasts
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState<number>(10)
   const [pageSizeMode, setPageSizeMode] = useState<string>("10")
@@ -143,10 +143,8 @@ export default function JobListings({ filters, savedJobsOnly = false, showExpire
 
   const toggleSaveJob = async (jobId: string, e: React.MouseEvent) => {
     e.stopPropagation()
-    setSaveError("")
-    setSaveSuccess("")
     if (!user || user.role !== "applicant" || !user.token) {
-      setSaveError("You must be logged in as a job seeker to save jobs.")
+      toast.error("You must be logged in as a job seeker to save jobs.")
       return
     }
     if (savedJobs.includes(jobId)) {
@@ -157,10 +155,10 @@ export default function JobListings({ filters, savedJobsOnly = false, showExpire
             Authorization: `Bearer ${user.token}`,
           },
         })
-        setSavedJobs((prev) => prev.filter((id) => id !== jobId))
-        setSaveSuccess("Job removed from saved jobs.")
+  setSavedJobs((prev) => prev.filter((id) => id !== jobId))
+  toast.success("Job removed from saved jobs")
       } catch (err: any) {
-        setSaveError(err.response?.data?.detail || "Failed to remove saved job.")
+  toast.error(err.response?.data?.detail || "Failed to remove saved job")
       }
       return
     }
@@ -171,10 +169,10 @@ export default function JobListings({ filters, savedJobsOnly = false, showExpire
           Authorization: `Bearer ${user.token}`,
         },
       })
-      setSavedJobs((prev) => [...prev, jobId])
-      setSaveSuccess("Job saved successfully.")
+  setSavedJobs((prev) => [...prev, jobId])
+  toast.success("Job saved")
     } catch (err: any) {
-      setSaveError(err.response?.data?.detail || "Failed to save job.")
+  toast.error(err.response?.data?.detail || "Failed to save job")
     }
   }
 
@@ -347,8 +345,7 @@ export default function JobListings({ filters, savedJobsOnly = false, showExpire
 
   return (
     <div className="space-y-4">
-      {saveError && <div className="text-center text-red-500 text-sm">{saveError}</div>}
-      {saveSuccess && <div className="text-center text-green-600 text-sm">{saveSuccess}</div>}
+  {/* Toasts handle save/unsave feedback; removed inline messages */}
       {filteredJobs.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-16 bg-white rounded-xl shadow-sm border border-gray-100">
           <img src="/job_placeholder.jpeg" alt="No jobs" className="w-20 h-20 mb-4 opacity-60" />

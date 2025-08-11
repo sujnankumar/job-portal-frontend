@@ -18,9 +18,12 @@ interface NotificationState {
   addNotification: (notification: Notification) => void;
   markAsRead: (id: string) => void;
   markAllAsRead: () => void;
+  toggleRead: (id: string) => void;
+  deleteNotification: (id: string) => void;
+  deleteNotifications: (ids: string[]) => void;
 }
 
-export const useNotificationStore = create<NotificationState>((set) => ({
+export const useNotificationStore = create<NotificationState>((set, get) => ({
   notifications: [],
   unreadCount: 0,
   setNotifications: (notifications) =>
@@ -70,5 +73,48 @@ export const useNotificationStore = create<NotificationState>((set) => ({
         await api.post("/notifications/mark-all-read", null, { params: { token } });
       }
     } catch (e) { /* ignore */ }
+  },
+  toggleRead: async (id: string) => {
+    const prev = get().notifications.find(n => n.id === id)?.read
+    const next = !prev
+    set((state) => {
+      const notifications = state.notifications.map((n) => n.id === id ? { ...n, read: next } : n)
+      return { notifications, unreadCount: notifications.filter(n => !n.read).length }
+    })
+    try {
+      const token = typeof window !== "undefined" ? JSON.parse(localStorage.getItem("auth-storage") || '{}')?.state?.user?.token : null;
+      if (token) {
+        if (next) {
+          await api.post(`/notifications/mark-read/${id}`, null, { params: { token } })
+        } else {
+          await api.post(`/notifications/mark-unread/${id}`, null, { params: { token } })
+        }
+      }
+    } catch(e) { /* ignore */ }
+  },
+  deleteNotification: async (id: string) => {
+    set((state) => {
+      const notifications = state.notifications.filter(n => n.id !== id)
+      return { notifications, unreadCount: notifications.filter(n => !n.read).length }
+    })
+    try {
+      const token = typeof window !== "undefined" ? JSON.parse(localStorage.getItem("auth-storage") || '{}')?.state?.user?.token : null;
+      if (token) {
+        await api.delete(`/notifications/${id}`, { params: { token } })
+      }
+    } catch(e) { /* ignore */ }
+  },
+  deleteNotifications: async (ids: string[]) => {
+    set((state) => {
+      const idsSet = new Set(ids)
+      const notifications = state.notifications.filter(n => !idsSet.has(n.id))
+      return { notifications, unreadCount: notifications.filter(n => !n.read).length }
+    })
+    try {
+      const token = typeof window !== "undefined" ? JSON.parse(localStorage.getItem("auth-storage") || '{}')?.state?.user?.token : null;
+      if (token) {
+        await api.delete(`/notifications/`, { params: { token }, data: { ids } })
+      }
+    } catch(e) { /* ignore */ }
   },
 }));
