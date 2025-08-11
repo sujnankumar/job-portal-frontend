@@ -3,7 +3,8 @@ import { useAuthStore } from "@/store/authStore";
 
 const api = axios.create({
   // baseURL: process.env.NEXT_PUBLIC_API_BASE_URL || "https://job-portal-backend-x5oc.onrender.com/api",
-  baseURL: process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000/api",
+  baseURL: process.env.NEXT_PUBLIC_API_BASE_URL || "https://alluring-bravery-production.up.railway.app/api",
+  // baseURL: process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000/api",
   headers: {
     "Content-Type": "application/json",
   },
