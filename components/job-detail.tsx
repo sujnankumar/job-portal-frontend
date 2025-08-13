@@ -3,14 +3,41 @@
 import { useEffect, useState } from "react"
 import Image from "next/image"
 import Link from "next/link"
-import { MapPin, DollarSign, Clock, Briefcase, Building, Calendar, Share2, Bookmark, BookmarkCheck, X, Facebook, Twitter, Send, Copy, MessageCircle } from "lucide-react"
+import { MapPin, IndianRupee, Clock, Briefcase, Building, Calendar, Share2, Bookmark, BookmarkCheck, X, Facebook, Twitter, Send, Copy, MessageCircle, Loader2, AlertTriangle } from "lucide-react"
+import { toast } from "sonner"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent } from "@/components/ui/card"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 import MapEmbed from "@/components/map-embed"
 import { useAuthStore } from "@/store/authStore"
 import api from "@/lib/axios"
+import { formatDate, formatDateShort, toIST } from "@/lib/utils"
+
+// Simple markdown to HTML converter for display
+const markdownToHtml = (markdown: string) => {
+  if (!markdown) return ""
+  
+  return markdown
+    .replace(/^### (.*$)/gim, '<h3 class="text-lg font-semibold text-dark-gray mb-2 mt-4">$1</h3>')
+    .replace(/^## (.*$)/gim, '<h2 class="text-xl font-semibold text-dark-gray mb-3 mt-4">$1</h2>')
+    .replace(/^# (.*$)/gim, '<h1 class="text-2xl font-bold text-dark-gray mb-4 mt-4">$1</h1>')
+    .replace(/^\* (.*$)/gim, '<li class="ml-4">$1</li>')
+    .replace(/^- (.*$)/gim, '<li class="ml-4">$1</li>')
+    .replace(/\*\*(.*)\*\*/gim, '<strong class="font-semibold">$1</strong>')
+    .replace(/\*(.*)\*/gim, '<em class="italic">$1</em>')
+    .replace(/\n\n/gim, '</p><p class="mb-3">')
+    .replace(/^\n/gim, '')
+    .replace(/^(?!<[h|l])/gim, '<p class="mb-3">')
+    .replace(/(<li.*<\/li>)/gim, '<ul class="list-disc ml-6 mb-3">$1</ul>')
+    .replace(/<\/ul>\s*<ul[^>]*>/gim, '')
+}
 
 interface JobDetails {
   skills: string[];
@@ -19,11 +46,16 @@ interface JobDetails {
 
 export default function JobDetail({ jobId, jobDetails, is_saved }: { jobId: string; jobDetails: JobDetails; is_saved: boolean }) {
   const [isSaved, setIsSaved] = useState(is_saved)
-  const [saveError, setSaveError] = useState("")
-  const [saveSuccess, setSaveSuccess] = useState("")
+  // Inline save/copy feedback replaced with toasts
   const [isApplied, setIsApplied] = useState(false)
+  const [applicationData, setApplicationData] = useState<any>(null)
   const [showShareModal, setShowShareModal] = useState(false)
-  const [copySuccess, setCopySuccess] = useState("")
+  // copySuccess removed in favor of toast
+  const [showEmployerApplyModal, setShowEmployerApplyModal] = useState(false)
+  const [logoUrl, setLogoUrl] = useState<string | null>(null)
+  const [logoLoading, setLogoLoading] = useState(false)
+  const [companyDetails, setCompanyDetails] = useState<any>(null)
+  const [companyLoading, setCompanyLoading] = useState(false)
   const user = useAuthStore((state) => state.user)
   const job = jobDetails
   const shareUrl = typeof window !== "undefined" ? window.location.href : ""
@@ -36,6 +68,20 @@ export default function JobDetail({ jobId, jobDetails, is_saved }: { jobId: stri
           headers: { Authorization: `Bearer ${user.token}` }
         })
         setIsApplied(res.data.is_applied)
+        
+        // If applied, fetch application details
+        if (res.data.is_applied) {
+          try {
+            const appRes = await api.get(`/ga/application/job_id/${jobId}`, {
+              headers: { Authorization: `Bearer ${user.token}` }
+            })
+            // console.log("Fetched Application:", appRes.data)
+            // console.log("Job Details:", job)
+            setApplicationData(appRes.data)
+          } catch (appErr) {
+            console.error("Error fetching application details:", appErr)
+          }
+        }
       } catch (err) {
         // Optionally handle error
       }
@@ -43,12 +89,75 @@ export default function JobDetail({ jobId, jobDetails, is_saved }: { jobId: stri
     checkApplied()
   }, [jobId, user?.token])
 
+  // Fetch company details
+  useEffect(() => {
+    const fetchCompanyDetails = async () => {
+      if (!job.company_id) {
+        setCompanyDetails(null)
+        return
+      }
+
+      setCompanyLoading(true)
+      try {
+        const res = await api.get(`/company/${job.company_id}`)
+        setCompanyDetails(res.data)
+      } catch (error) {
+        console.error("Failed to fetch company details:", error)
+        setCompanyDetails(null)
+      } finally {
+        setCompanyLoading(false)
+      }
+    }
+
+    fetchCompanyDetails()
+  }, [job.company_id])
+
+  // Fetch company logo
+  useEffect(() => {
+    const fetchCompanyLogo = async () => {
+      if (!companyDetails?.logo) {
+        setLogoUrl(null)
+        return
+      }
+
+      setLogoLoading(true)
+      try {
+        const res = await api.get(`/company/logo/${companyDetails.logo}`, {
+          responseType: "blob",
+        })
+        const url = URL.createObjectURL(res.data)
+        setLogoUrl(url)
+      } catch (error) {
+        console.error("Failed to fetch company logo:", error)
+        setLogoUrl(null)
+      } finally {
+        setLogoLoading(false)
+      }
+    }
+
+    fetchCompanyLogo()
+
+    // Cleanup function to revoke object URL
+    return () => {
+      if (logoUrl) {
+        URL.revokeObjectURL(logoUrl)
+      }
+    }
+  }, [companyDetails?.logo])
+
+  // Cleanup logo URL when component unmounts
+  useEffect(() => {
+    return () => {
+      if (logoUrl) {
+        URL.revokeObjectURL(logoUrl)
+      }
+    }
+  }, [logoUrl])
+
   const toggleSave = async (e: React.MouseEvent) => {
     e.stopPropagation && e.stopPropagation()
-    setSaveError("")
-    setSaveSuccess("")
     if (!user || user.role !== "applicant" || !user.token) {
-      setSaveError("You must be logged in as a job seeker to save jobs.")
+      toast.error("You must be logged in as a job seeker to save jobs.")
       return
     }
     if (isSaved) {
@@ -59,10 +168,10 @@ export default function JobDetail({ jobId, jobDetails, is_saved }: { jobId: stri
             Authorization: `Bearer ${user.token}`,
           },
         })
-        setIsSaved(false)
-        setSaveSuccess("Job removed from saved jobs.")
+  setIsSaved(false)
+  toast.success("Job removed from saved jobs")
       } catch (err: any) {
-        setSaveError(err.response?.data?.detail || "Failed to remove saved job.")
+  toast.error(err.response?.data?.detail || "Failed to remove saved job")
       }
       return
     }
@@ -73,19 +182,42 @@ export default function JobDetail({ jobId, jobDetails, is_saved }: { jobId: stri
           Authorization: `Bearer ${user.token}`,
         },
       })
-      setIsSaved(true)
-      setSaveSuccess("Job saved successfully.")
+  setIsSaved(true)
+  toast.success("Job saved")
     } catch (err: any) {
-      setSaveError(err.response?.data?.detail || "Failed to save job.")
+  toast.error(err.response?.data?.detail || "Failed to save job")
     }
   }
 
   const handleCopy = () => {
     if (navigator.clipboard && shareUrl) {
       navigator.clipboard.writeText(shareUrl)
-      setCopySuccess("Link copied!")
-      setTimeout(() => setCopySuccess(""), 1500)
+      toast.success("Link copied to clipboard")
     }
+  }
+
+  const canEditApplication = () => {
+    if (!applicationData) return { canEdit: false, reason: "Application data not available" }
+    // console.log("Checking application data:", applicationData.application)
+    // Check if application is rejected or withdrawn
+    if (applicationData.application.status === "rejected" || applicationData.application.status === "withdrawn" || applicationData.application.status === "interview") {
+      return { 
+        canEdit: false, 
+        reason: `Cannot edit ${applicationData.application.status === "interview"?"interview scheduled":applicationData.application.status} application` 
+      }
+    }
+    
+    // Check if job deadline has passed
+    const deadline = toIST(job.expires_at)
+    const now = toIST(new Date())
+    if (deadline < now) {
+      return { 
+        canEdit: false, 
+        reason: "Application deadline has passed" 
+      }
+    }
+    
+    return { canEdit: true, reason: "" }
   }
 
   return (
@@ -133,7 +265,7 @@ export default function JobDetail({ jobId, jobDetails, is_saved }: { jobId: stri
                 <Copy className="w-4 h-4" /> Copy
               </button>
             </div>
-            {copySuccess && <div className="text-green-600 text-xs mt-2">{copySuccess}</div>}
+            {/* copy success toast now */}
           </div>
         </div>
       )}
@@ -141,19 +273,37 @@ export default function JobDetail({ jobId, jobDetails, is_saved }: { jobId: stri
       <div className="p-6 border-b border-gray-100">
         <div className="flex items-start gap-4">
           <div className="w-16 h-16 bg-light-gray flex-shrink-0 rounded-md overflow-hidden border border-gray-200">
-            <Image
-              src={job.logo || "/placeholder.svg"}
-              alt={job.company_details?.company_name || "Company logo"}
-              width={64}
-              height={64}
-              className="object-contain"
-            />
+            {logoLoading ? (
+              <div className="w-full h-full flex items-center justify-center">
+                <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+              </div>
+            ) : (
+              <Image
+                src={logoUrl || job.logo_url || "/company_placeholder.jpeg"}
+                alt={companyDetails?.company_name || job.company || "Company logo"}
+                width={64}
+                height={64}
+                className="w-full h-full object-cover"
+              />
+            )}
           </div>
 
           <div className="flex-1 min-w-0">
             {job.title && <h1 className="text-2xl font-bold text-dark-gray mb-1">{job.title}</h1>}
-            {job.company_details?.company_name && <span className="text-accent">{job.company_details.company_name}</span>}
-            <div className="mt-3 flex flex-wrap gap-y-2 gap-x-4 text-sm text-gray-600">
+            <p className="text-lg text-accent mb-1">
+              {companyLoading ? (
+                <span className="inline-flex items-center gap-1">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Loading company...
+                </span>
+              ) : (
+                companyDetails?.company_name || job.company || "Company"
+              )}
+            </p>
+            {!companyLoading && companyDetails?.industry && (
+              <p className="text-sm text-gray-500 mb-2">{companyDetails.industry}</p>
+            )}
+            <div className="mt-3 flex flex-wrap gap-y-2 gap-x-4 text-sm text-gray-600 items-center">
               {job.location && (
                 <div className="flex items-center">
                   <MapPin className="h-4 w-4 mr-1" />
@@ -161,8 +311,12 @@ export default function JobDetail({ jobId, jobDetails, is_saved }: { jobId: stri
                 </div>
               )}
               <div className="flex items-center">
-                <DollarSign className="h-4 w-4 mr-1" />
-                {job.min_salary && job.max_salary ? `${job.min_salary}-${job.max_salary}` : "NA"}
+                <IndianRupee className="h-4 w-4 mr-1" />
+                {job.min_salary && job.max_salary ? (
+                  parseInt(job.min_salary) === parseInt(job.max_salary)
+                    ? `${parseInt(job.min_salary).toLocaleString('en-IN')}/year`
+                    : `${parseInt(job.min_salary).toLocaleString('en-IN')} - ${parseInt(job.max_salary).toLocaleString('en-IN')}/year`
+                ) : 'NA'}
               </div>
               {job.employment_type && (
                 <div className="flex items-center">
@@ -173,26 +327,57 @@ export default function JobDetail({ jobId, jobDetails, is_saved }: { jobId: stri
               {job.posted_at && (
                 <div className="flex items-center">
                   <Clock className="h-4 w-4 mr-1" />
-                  {new Date(job.posted_at).toLocaleDateString("en-US", {
-                    year: "numeric",
-                    month: "long",
-                    day: "numeric",
-                  })}
+                  {formatDate(job.posted_at)}
                 </div>
+              )}
+              {(job.status === 'expired' || (job.expires_at && new Date(job.expires_at) < new Date())) && (
+                <Badge className="bg-red-500 text-white">Expired</Badge>
               )}
             </div>
           </div>
         </div>
 
         <div className="flex flex-wrap gap-3 mt-6">
-          {isApplied ? (
+          {user?.role === 'employer' ? (
+            <Button className="bg-gray-400 hover:bg-gray-500" type="button" onClick={() => setShowEmployerApplyModal(true)}>
+              Apply Now
+            </Button>
+          ) : (job.status === 'expired' || (job.expires_at && new Date(job.expires_at) < new Date())) ? (
+            <Button className="bg-gray-400 cursor-not-allowed" disabled>
+              Application Closed
+            </Button>
+          ) : isApplied ? (
             <>
               <Button className="bg-gray-400 cursor-not-allowed" disabled>
                 Applied
               </Button>
-              <Link href={`/applications/edit/${jobId}`}>
-                <Button variant="outline">Edit Application</Button>
-              </Link>
+              <TooltipProvider>
+                {(() => {
+                  const editStatus = canEditApplication()
+                  if (editStatus.canEdit) {
+                    return (
+                      <Button variant="outline" onClick={() => window.location.href = '/dashboard'}>
+                        Manage Application
+                      </Button>
+                    )
+                  } else {
+                    return (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div>
+                            <Button variant="outline" disabled className="cursor-not-allowed">
+                              Edit Application
+                            </Button>
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>{editStatus.reason}</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    )
+                  }
+                })()}
+              </TooltipProvider>
             </>
           ) : (
             <Link href={`/apply/${jobId}`}>
@@ -200,27 +385,51 @@ export default function JobDetail({ jobId, jobDetails, is_saved }: { jobId: stri
             </Link>
           )}
 
-          <Button variant="outline" onClick={toggleSave}>
-            {isSaved ? (
-              <>
-                <BookmarkCheck className="h-4 w-4 mr-2 text-accent" />
-                Saved
-              </>
-            ) : (
-              <>
-                <Bookmark className="h-4 w-4 mr-2" />
-                Save Job
-              </>
-            )}
-          </Button>
+          {user?.role === 'applicant' && (
+            <Button variant="outline" onClick={toggleSave}>
+              {isSaved ? (
+                <>
+                  <BookmarkCheck className="h-4 w-4 mr-2 text-accent" />
+                  Saved
+                </>
+              ) : (
+                <>
+                  <Bookmark className="h-4 w-4 mr-2" />
+                  Save Job
+                </>
+              )}
+            </Button>
+          )}
 
           <Button variant="outline" onClick={() => setShowShareModal(true)}>
             <Share2 className="h-4 w-4 mr-2" />
             Share
           </Button>
         </div>
-        {saveError && <div className="text-red-500 text-sm mt-2">{saveError}</div>}
-        {saveSuccess && <div className="text-green-600 text-sm mt-2">{saveSuccess}</div>}
+  {/* Toasts now handle save success/error messages */}
+        {showEmployerApplyModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+            <div className="bg-white rounded-xl shadow-lg p-6 w-[340px] relative">
+              <button
+                className="absolute top-3 right-3 text-gray-400 hover:text-gray-700"
+                onClick={() => setShowEmployerApplyModal(false)}
+                aria-label="Close"
+              >
+                <X className="w-5 h-5" />
+              </button>
+              <div className="flex items-center gap-2 mb-3 text-amber-600">
+                <AlertTriangle className="w-5 h-5" />
+                <h2 className="text-lg font-semibold">Action Not Allowed</h2>
+              </div>
+              <p className="text-sm text-gray-600 mb-4">
+                Only job seekers can apply to jobs. Employer accounts are restricted from applying.
+              </p>
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" onClick={() => setShowEmployerApplyModal(false)}>Close</Button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Job Content - Mobile (Tabs) */}
@@ -235,8 +444,19 @@ export default function JobDetail({ jobId, jobDetails, is_saved }: { jobId: stri
           <TabsContent value="description" className="space-y-6">
             <div className="space-y-4">
               {job.description && (
-                <div className="prose max-w-none" dangerouslySetInnerHTML={{ __html: job.description }} />
+                <div>
+                  <h3 className="text-lg font-semibold text-dark-gray mb-3">Job Description</h3>
+                  <div className="prose max-w-none" dangerouslySetInnerHTML={{ __html: markdownToHtml(job.description) }} />
+                </div>
               )}
+              
+              {job.requirements && (
+                <div className="mt-8">
+                  <h3 className="text-lg font-semibold text-dark-gray mb-3">Requirements</h3>
+                  <div className="prose max-w-none" dangerouslySetInnerHTML={{ __html: markdownToHtml(job.requirements) }} />
+                </div>
+              )}
+              
               {job.skills && job.skills.length > 0 && (
                 <div className="mt-6">
                   <h3 className="text-lg font-semibold text-dark-gray mb-3">Required Skills</h3>
@@ -275,11 +495,7 @@ export default function JobDetail({ jobId, jobDetails, is_saved }: { jobId: stri
                       <Calendar className="h-5 w-5 mr-2 text-gray-400 mt-0.5" />
                       <div>
                         <div className="font-medium text-dark-gray">Application Deadline</div>
-                        {new Date(job.expires_at).toLocaleDateString("en-US", {
-                          year: "numeric",
-                          month: "long",
-                          day: "numeric",
-                        })}
+                        {formatDate(job.expires_at)}
                       </div>
                     </div>
                   )}
@@ -300,29 +516,40 @@ export default function JobDetail({ jobId, jobDetails, is_saved }: { jobId: stri
           <TabsContent value="company" className="space-y-6">
             <div className="flex items-start gap-4 mb-6">
               <div className="w-16 h-16 bg-light-gray flex-shrink-0 rounded-md overflow-hidden border border-gray-200">
-                <Image
-                  src={job.logo || "/placeholder.svg"}
-                  alt={job.company_details?.company_name || "Company logo"}
-                  width={64}
-                  height={64}
-                  className="object-contain"
-                />
+                {logoLoading ? (
+                  <div className="w-full h-full flex items-center justify-center">
+                    <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+                  </div>
+                ) : (
+                  <Image
+                    src={logoUrl || job.logo_url || "/company_placeholder.jpeg"}
+                    alt={companyDetails?.company_name || job.company || "Company logo"}
+                    width={64}
+                    height={64}
+                    className="w-full h-full object-cover"
+                  />
+                )}
               </div>
 
-              <div>
-                {job.company_details?.company_name && (
-                  <h3 className="text-xl font-semibold text-dark-gray mb-1">{job.company_details.company_name}</h3>
-                )}
-                {job.company_details?.company_id && (
-                  <Link href={`/companies/${job.company_details.company_id}`} className="text-accent hover:underline text-sm">
+              <div className="flex-1">
+                <h3 className="text-lg font-semibold text-dark-gray mb-1">
+                  {companyDetails?.company_name || job.company || "Company"}
+                </h3>
+                {companyDetails?.company_id && (
+                  <Link href={`/companies/${companyDetails.company_id}`} className="text-accent hover:underline text-sm">
                     View Company Profile
                   </Link>
+                )}
+                {companyDetails?.industry && (
+                  <p className="text-sm text-gray-500 mt-1">{companyDetails.industry}</p>
+                )}
+                {companyDetails?.employee_count && (
+                  <p className="text-sm text-gray-500">{companyDetails.employee_count} employees</p>
                 )}
               </div>
             </div>
 
             <div className="space-y-4">
-              {job.company_details?.description && <p className="text-gray-700">{job.company_details?.description}</p>}
               {job.benefits && (
                 <div className="mt-6">
                   <h3 className="text-lg font-semibold text-dark-gray mb-3">Benefits & Perks</h3>
@@ -332,8 +559,8 @@ export default function JobDetail({ jobId, jobDetails, is_saved }: { jobId: stri
             </div>
 
             <div className="mt-6 flex gap-3">
-              {job.company_details?.company_id && (
-                <Link href={`/companies/${job.company_details.company_id}`}>
+              {companyDetails?.company_id && (
+                <Link href={`/companies/${companyDetails.company_id}`}>
                   <Button variant="outline">View All Jobs</Button>
                 </Link>
               )}
@@ -373,8 +600,19 @@ export default function JobDetail({ jobId, jobDetails, is_saved }: { jobId: stri
           {/* Left Column - Job Description */}
           <div className="space-y-6">
             {job.description && (
-              <div className="prose max-w-none" dangerouslySetInnerHTML={{ __html: job.description }} />
+              <div>
+                <h3 className="text-lg font-semibold text-dark-gray mb-3">Job Description</h3>
+                <div className="prose max-w-none" dangerouslySetInnerHTML={{ __html: markdownToHtml(job.description) }} />
+              </div>
             )}
+            
+            {job.requirements && (
+              <div className="mt-8">
+                <h3 className="text-lg font-semibold text-dark-gray mb-3">Requirements</h3>
+                <div className="prose max-w-none" dangerouslySetInnerHTML={{ __html: markdownToHtml(job.requirements) }} />
+              </div>
+            )}
+            
             {job.skills && job.skills.length > 0 && (
               <div className="mt-6">
                 <h3 className="text-lg font-semibold text-dark-gray mb-3">Required Skills</h3>
@@ -396,31 +634,42 @@ export default function JobDetail({ jobId, jobDetails, is_saved }: { jobId: stri
             <CardContent className="p-4">
               <div className="flex items-start gap-4 mb-4">
                 <div className="w-16 h-16 bg-light-gray flex-shrink-0 rounded-md overflow-hidden border border-gray-200">
-                  <Image
-                    src={job.logo || "/placeholder.svg"}
-                    alt={job.company_details?.company_name || "Company logo"}
-                    width={64}
-                    height={64}
-                    className="object-contain"
-                  />
+                  {logoLoading ? (
+                    <div className="w-full h-full flex items-center justify-center">
+                      <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+                    </div>
+                  ) : (
+                    <Image
+                      src={logoUrl || job.logo_url || "/company_placeholder.jpeg"}
+                      alt={companyDetails?.company_name || job.company || "Company logo"}
+                      width={64}
+                      height={64}
+                      className="w-full h-full object-cover"
+                    />
+                  )}
                 </div>
 
-                <div>
-                  {job.company_details?.company_name && (
-                    <h3 className="text-xl font-semibold text-dark-gray mb-1">{job.company_details.company_name}</h3>
-                  )}
-                  {job.company_details?.company_id && (
-                    <Link href={`/companies/${job.company_details.company_id}`} className="text-accent hover:underline text-sm">
+                <div className="flex-1">
+                  <h3 className="text-lg font-semibold text-dark-gray mb-1">
+                    {companyDetails?.company_name || job.company || "Company"}
+                  </h3>
+                  {companyDetails?.company_id && (
+                    <Link href={`/companies/${companyDetails.company_id}`} className="text-accent hover:underline text-sm">
                       View Company Profile
                     </Link>
+                  )}
+                  {companyDetails?.industry && (
+                    <p className="text-sm text-gray-500 mt-1">{companyDetails.industry}</p>
+                  )}
+                  {companyDetails?.employee_count && (
+                    <p className="text-sm text-gray-500">{companyDetails.employee_count} employees</p>
                   )}
                 </div>
               </div>
 
-              {job.company_details?.description && <p className="text-gray-700 mb-4">{job.company_details.description}</p>}
               <div className="flex flex-col gap-2">
-                {job.company_details?.company_id && (
-                  <Link href={`/companies/${job.company_details.company_id}`}>
+                {companyDetails?.company_id && (
+                  <Link href={`/companies/${companyDetails.company_id}`}>
                     <Button variant="outline" className="w-full">
                       View All Jobs
                     </Button>
@@ -460,11 +709,7 @@ export default function JobDetail({ jobId, jobDetails, is_saved }: { jobId: stri
                     <Calendar className="h-5 w-5 mr-2 text-gray-400 mt-0.5" />
                     <div>
                       <div className="font-medium text-dark-gray">Application Deadline</div>
-                      {new Date(job.expires_at).toLocaleDateString("en-US", {
-                        year: "numeric",
-                        month: "long",
-                        day: "numeric",
-                      })}
+                      {formatDate(job.expires_at)}
                     </div>
                   </div>
                 )}
@@ -474,11 +719,7 @@ export default function JobDetail({ jobId, jobDetails, is_saved }: { jobId: stri
                     <div>
                       <div className="font-medium text-dark-gray">Posted</div>
                       <div className="text-gray-600">
-                        {new Date(job.posted_at).toLocaleDateString("en-US", {
-                          year: "numeric",
-                          month: "long",
-                          day: "numeric",
-                        })}
+                        {formatDate(job.posted_at)}
                       </div>
                     </div>
                   </div>
@@ -520,11 +761,7 @@ export default function JobDetail({ jobId, jobDetails, is_saved }: { jobId: stri
         <div className="flex justify-between items-center">
           <div>
             <p className="text-gray-500 text-sm">
-              Job ID: {jobId} • Posted {job.posted_at ? new Date(job.posted_at).toLocaleDateString("en-US", {
-                year: "numeric",
-                month: "long",
-                day: "numeric",
-              }) : "NA"}
+              Job ID: {jobId} • Posted {job.posted_at ? formatDate(job.posted_at) : "NA"}
             </p>
           </div>
 

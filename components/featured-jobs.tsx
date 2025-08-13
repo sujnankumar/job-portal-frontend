@@ -97,7 +97,7 @@ export default function FeaturedJobs() {
                 width={48}
                 height={48}
                 alt={`${job.company_name} logo`}
-                className="object-contain" // Ensure image fits well
+                className="w-full h-full object-contain" // Ensure image fits well
                 // Add error handling for images if needed
                 onError={(e) => { e.currentTarget.src = '/company_placeholder.jpeg'; }}
               />

@@ -2,11 +2,21 @@
 
 import type React from "react"
 
-import { useState } from "react"
 import { Search, MapPin, Briefcase } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+
+export interface SearchFilters {
+  searchQuery: string
+  industry: string
+  location: string
+}
+
+interface CompanySearchProps {
+  searchFilters: SearchFilters
+  onSearchFiltersChange: (filters: SearchFilters) => void
+}
 
 const industries = [
   "All Industries",
@@ -22,7 +32,6 @@ const industries = [
 ]
 
 const locations = [
-  "All Locations",
   "Remote",
   "San Francisco, CA",
   "New York, NY",
@@ -34,15 +43,14 @@ const locations = [
   "Denver, CO",
 ]
 
-export default function CompanySearch() {
-  const [searchQuery, setSearchQuery] = useState("")
-  const [industry, setIndustry] = useState("All Industries")
-  const [location, setLocation] = useState("All Locations")
-
+export default function CompanySearch({ searchFilters, onSearchFiltersChange }: CompanySearchProps) {
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault()
-    // In a real application, this would trigger a search with the current filters
-    console.log({ searchQuery, industry, location })
+    // Search filters are already updated in real-time, so just prevent form submission
+  }
+
+  const updateFilters = (updates: Partial<SearchFilters>) => {
+    onSearchFiltersChange({ ...searchFilters, ...updates })
   }
 
   return (
@@ -57,14 +65,14 @@ export default function CompanySearch() {
               type="text"
               placeholder="Company name"
               className="pl-10"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              value={searchFilters.searchQuery}
+              onChange={(e) => updateFilters({ searchQuery: e.target.value })}
             />
           </div>
 
           <div className="relative">
             <Briefcase className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4 z-10" />
-            <Select value={industry} onValueChange={setIndustry}>
+            <Select value={searchFilters.industry} onValueChange={(value) => updateFilters({ industry: value })}>
               <SelectTrigger className="pl-10">
                 <SelectValue placeholder="Select industry" />
               </SelectTrigger>
@@ -79,19 +87,14 @@ export default function CompanySearch() {
           </div>
 
           <div className="relative">
-            <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4 z-10" />
-            <Select value={location} onValueChange={setLocation}>
-              <SelectTrigger className="pl-10">
-                <SelectValue placeholder="Select location" />
-              </SelectTrigger>
-              <SelectContent>
-                {locations.map((loc) => (
-                  <SelectItem key={loc} value={loc}>
-                    {loc}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+            <Input
+              type="text"
+              placeholder="Location (e.g., Remote, New York, CA)"
+              className="pl-10"
+              value={searchFilters.location}
+              onChange={(e) => updateFilters({ location: e.target.value })}
+            />
           </div>
         </div>
 

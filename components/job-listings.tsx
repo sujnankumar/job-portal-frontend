@@ -1,32 +1,101 @@
 "use client"
 
-import type React from "react"
-import type { JobFiltersState } from "./job-filters"
-
-import { useState, useEffect } from "react"
-import Image from "next/image"
+import React, { useEffect, useState } from "react"
 import Link from "next/link"
-import { MapPin, DollarSign, Clock, Bookmark, BookmarkCheck } from "lucide-react"
+import { MapPin, IndianRupee, Clock, Briefcase, Building, ExternalLink, ChevronDown, ChevronUp, Eye, Bookmark, BookmarkCheck, ChevronLeft, ChevronRight } from "lucide-react"
+import { toast } from "sonner"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { cn } from "@/lib/utils"
-import api from "@/lib/axios"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Slider } from "@/components/ui/slider"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { format } from "date-fns"
+import { cn, formatDate } from "@/lib/utils"
 import { useAuthStore } from "@/store/authStore"
+import api from "@/lib/axios"
 
-interface JobListingsProps {
-  filters?: JobFiltersState // Make filters optional
-  savedJobsOnly?: boolean // Add savedJobsOnly prop
+// Simple markdown to HTML converter for display
+const markdownToHtml = (markdown: string) => {
+  if (!markdown) return ""
+  
+  return markdown
+    .replace(/^### (.*$)/gim, '<h3 class="text-lg font-semibold text-dark-gray mb-2 mt-4">$1</h3>')
+    .replace(/^## (.*$)/gim, '<h2 class="text-xl font-semibold text-dark-gray mb-3 mt-4">$1</h2>')
+    .replace(/^# (.*$)/gim, '<h1 class="text-2xl font-bold text-dark-gray mb-4 mt-4">$1</h1>')
+    .replace(/^\* (.*$)/gim, '<li class="ml-4">$1</li>')
+    .replace(/^- (.*$)/gim, '<li class="ml-4">$1</li>')
+    .replace(/\*\*(.*)\*\*/gim, '<strong class="font-semibold">$1</strong>')
+    .replace(/\*(.*)\*/gim, '<em class="italic">$1</em>')
+    .replace(/\n\n/gim, '</p><p class="mb-3">')
+    .replace(/^\n/gim, '')
+    .replace(/^(?!<[h|l])/gim, '<p class="mb-3">')
+    .replace(/(<li.*<\/li>)/gim, '<ul class="list-disc ml-6 mb-3">$1</ul>')
+    .replace(/<\/ul>\s*<ul[^>]*>/gim, '')
 }
 
-export default function JobListings({ filters, savedJobsOnly = false }: JobListingsProps) {
+// Function to truncate HTML content
+const truncateHtml = (html: string, maxLength: number = 150) => {
+  if (!html) return ""
+  
+  // Remove HTML tags for length calculation
+  const textContent = html.replace(/<[^>]*>/g, '')
+  
+  if (textContent.length <= maxLength) {
+    return html
+  }
+  
+  // Truncate the text and add ellipsis
+  const truncatedText = textContent.substring(0, maxLength).trim()
+  return truncatedText + "..."
+}
+
+// Function to truncate markdown content
+const truncateMarkdown = (markdown: string, maxLength: number = 150) => {
+  if (!markdown) return ""
+  
+  // Convert markdown to HTML first, then truncate
+  const html = markdownToHtml(markdown)
+  return truncateHtml(html, maxLength)
+}
+
+import type { JobFiltersState } from "./job-filters"
+import Image from "next/image"
+
+interface JobListingsProps {
+  filters?: JobFiltersState
+  savedJobsOnly?: boolean
+  showExpired?: boolean
+}
+
+export default function JobListings({ filters, savedJobsOnly = false, showExpired = false }: JobListingsProps) {
   const [expandedJob, setExpandedJob] = useState<string | null>(null)
   const [savedJobs, setSavedJobs] = useState<string[]>([])
   const [allJobs, setAllJobs] = useState<any[]>([]) // Store all fetched jobs
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
-  const [saveError, setSaveError] = useState("")
-  const [saveSuccess, setSaveSuccess] = useState("")
+  // Removed inline saveError/saveSuccess display in favor of toasts
+  const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState<number>(10)
+  const [pageSizeMode, setPageSizeMode] = useState<string>("10")
+  const [customPageSize, setCustomPageSize] = useState<string>("")
   const user = useAuthStore((state) => state.user)
+
+  // Function to truncate HTML content
+  const truncateHtml = (html: string, maxLength: number = 150) => {
+    if (!html) return ""
+    
+    // Remove HTML tags for length calculation
+    const textContent = html.replace(/<[^>]*>/g, '')
+    
+    if (textContent.length <= maxLength) {
+      return html
+    }
+    
+    // Truncate the text and add ellipsis
+    const truncatedText = textContent.substring(0, maxLength).trim()
+    return truncatedText + "..."
+  }
 
   useEffect(() => {
     const fetchJobs = async () => {
@@ -74,10 +143,8 @@ export default function JobListings({ filters, savedJobsOnly = false }: JobListi
 
   const toggleSaveJob = async (jobId: string, e: React.MouseEvent) => {
     e.stopPropagation()
-    setSaveError("")
-    setSaveSuccess("")
     if (!user || user.role !== "applicant" || !user.token) {
-      setSaveError("You must be logged in as a job seeker to save jobs.")
+      toast.error("You must be logged in as a job seeker to save jobs.")
       return
     }
     if (savedJobs.includes(jobId)) {
@@ -88,10 +155,10 @@ export default function JobListings({ filters, savedJobsOnly = false }: JobListi
             Authorization: `Bearer ${user.token}`,
           },
         })
-        setSavedJobs((prev) => prev.filter((id) => id !== jobId))
-        setSaveSuccess("Job removed from saved jobs.")
+  setSavedJobs((prev) => prev.filter((id) => id !== jobId))
+  toast.success("Job removed from saved jobs")
       } catch (err: any) {
-        setSaveError(err.response?.data?.detail || "Failed to remove saved job.")
+  toast.error(err.response?.data?.detail || "Failed to remove saved job")
       }
       return
     }
@@ -102,10 +169,10 @@ export default function JobListings({ filters, savedJobsOnly = false }: JobListi
           Authorization: `Bearer ${user.token}`,
         },
       })
-      setSavedJobs((prev) => [...prev, jobId])
-      setSaveSuccess("Job saved successfully.")
+  setSavedJobs((prev) => [...prev, jobId])
+  toast.success("Job saved")
     } catch (err: any) {
-      setSaveError(err.response?.data?.detail || "Failed to save job.")
+  toast.error(err.response?.data?.detail || "Failed to save job")
     }
   }
 
@@ -116,6 +183,10 @@ export default function JobListings({ filters, savedJobsOnly = false }: JobListi
 
   // Filtering logic applied to jobsToDisplay
   const filteredJobs = jobsToDisplay.filter((job) => {
+    // Exclude expired unless showExpired explicitly true
+    if (!showExpired && (job.status === 'expired' || (job.expires_at && new Date(job.expires_at) < new Date()))) {
+      return false
+    }
     // Apply filters only if they exist
     if (filters) {
       // Job Type
@@ -124,28 +195,146 @@ export default function JobListings({ filters, savedJobsOnly = false }: JobListi
       if (filters.experienceLevels && filters.experienceLevels.length > 0 && !filters.experienceLevels.includes(job.experience_level)) return false
       // Location Type
       if (filters.locationTypes && filters.locationTypes.length > 0 && !filters.locationTypes.includes(job.location_type)) return false
-      // Salary
-      // if (job.min_salary < filters.salaryRange[0] || job.max_salary > filters.salaryRange[1]) return false
+      // Salary (convert to LPA). Backend strings are annual INR. Lakh = 100,000.
+      // If user selects the upper bound (20), treat it as open-ended so jobs above 20 LPA are still shown.
+      if (filters.salaryRange) {
+        const minLpa = job.min_salary ? parseInt(job.min_salary, 10) / 100000 : 0
+        const maxLpa = job.max_salary ? parseInt(job.max_salary, 10) / 100000 : minLpa
+        const [selMin, selMax] = filters.salaryRange
+        const openEnded = selMax === 20
+        if (openEnded) {
+          // Only enforce lower bound; include anything whose max salary is >= selMin
+            if (maxLpa < selMin) return false
+        } else {
+          if (maxLpa < selMin || minLpa > selMax) return false
+        }
+      }
       // Location
       if (filters.location && !job.location?.toLowerCase().includes(filters.location.toLowerCase())) return false
-      // Industry
-      if (filters.industries && filters.industries.length > 0 && !filters.industries.includes(job.industry)) return false
+      // Industry (robust matching). Selected industries are exact names like "Technology".
+      if (filters.industries && filters.industries.length > 0) {
+        const selected = filters.industries.map(i => i.toLowerCase())
+        // Collect possible job industry fields
+        const rawIndustries: any[] = []
+        if (job.job_category) rawIndustries.push(job.job_category)
+
+        // Normalize to flat string array
+        const jobIndustryValues = rawIndustries
+          .flat()
+          .filter(Boolean)
+          .map((v: any) => String(v).split(/[,|]/)) // split if comma or pipe separated
+          .flat()
+          .map(s => s.trim().toLowerCase())
+          .filter(Boolean)
+
+        if (jobIndustryValues.length === 0) return false
+        const intersects = jobIndustryValues.some(iv => selected.includes(iv))
+        if (!intersects) return false
+      }
       // Skills
       if (filters.skills && filters.skills.length > 0 && !filters.skills.every(skill => job.skills?.includes(skill))) return false
-      // Search (title, keywords, company)
-      if (filters.search && filters.search.trim() !== "") {
+      // Simple Search (title, company, tags) when booleanQuery not provided
+      if (filters.search && filters.search.trim() !== "" && !filters.booleanQuery) {
         const searchLower = filters.search.toLowerCase()
-        if (
-          !(job.title?.toLowerCase().includes(searchLower) ||
-            job.company?.toLowerCase().includes(searchLower) ||
-            (job.tags && job.tags.some((tag: string) => tag.toLowerCase().includes(searchLower))))
-        ) {
+        const haystack = [job.title, job.company, ...(job.tags || [])].filter(Boolean).map((s: string) => s.toLowerCase())
+        if (!haystack.some(h => h.includes(searchLower))) return false
+      }
+
+      // Boolean search evaluation (experimental)
+      if (filters.booleanQuery && filters.booleanQuery.trim()) {
+        const expr = filters.booleanQuery.trim()
+        // Tokenize: parentheses, AND, OR, NOT, words / quoted phrases
+        const tokens = expr.match(/\(|\)|AND|OR|NOT|"[^"]+"|[^\s()]+/gi) || []
+        // Build evaluation by mapping terms to booleans over extended corpus
+        const textCorpus = (
+          [
+            job.title,
+            job.company,
+            job.department,
+            job.description,
+            job.requirements,
+            job.benefits,
+            job.employment_type,
+            job.job_category,
+            job.location,
+            job.location_type,
+            job.experience_level,
+            job.status,
+            job.visibility,
+            Array.isArray(job.skills) ? job.skills.join(' ') : job.skills,
+          ]
+            .concat(job.tags || [])
+            .filter(Boolean)
+            .join(' ')
+            .toLowerCase()
+        )
+        // Pre-normalized variant where hyphens removed & multiple spaces collapsed
+        const normalizedCorpus = textCorpus.replace(/-/g, ' ').replace(/\s+/g, ' ')
+        const evalTokens = tokens.map(t => {
+          const up = t.toUpperCase()
+          if (up === 'AND' || up === 'OR' || up === 'NOT' || t === '(' || t === ')') return up
+          const cleaned = t.replace(/^"|"$/g, '').toLowerCase()
+          const cleanedNorm = cleaned.replace(/-/g, ' ').replace(/\s+/g, ' ')
+          const present = textCorpus.includes(cleaned)
+            || normalizedCorpus.includes(cleanedNorm)
+            || (cleanedNorm !== cleaned && textCorpus.includes(cleanedNorm))
+          return present ? 'true' : 'false'
+        })
+        // Convert NOT to unary !, AND to &&, OR to ||
+        let jsExpr = evalTokens.join(' ')
+          .replace(/\bNOT\b/g, '!')
+          .replace(/\bAND\b/g, '&&')
+          .replace(/\bOR\b/g, '||')
+        // Safety: allow only true/false/!/&/|/parens/space
+        if (/[^truefals!&|()\s]/i.test(jsExpr.replace(/true|false/g,''))) {
+          // If expression has unknown chars, fallback to simple search fail-safe
+          return false
+        }
+        try {
+          // eslint-disable-next-line no-eval
+          const result = eval(jsExpr)
+          if (!result) return false
+        } catch {
           return false
         }
       }
     }
     return true
   })
+
+  // Reset to first page when filters or showExpired change
+  useEffect(() => {
+    setPage(1)
+  }, [JSON.stringify(filters), showExpired])
+
+  const totalJobs = filteredJobs.length
+  const totalPages = Math.max(1, Math.ceil(totalJobs / pageSize))
+  if (page > totalPages) {
+    setPage(totalPages)
+  }
+  const startIdx = (page - 1) * pageSize
+  const currentPageJobs = filteredJobs.slice(startIdx, startIdx + pageSize)
+
+  const changePageSize = (val: string) => {
+    setPageSizeMode(val)
+    if (val === 'custom') {
+      // wait for user input
+      return
+    }
+    const num = parseInt(val, 10)
+    if (!isNaN(num)) {
+      setPageSize(num)
+      setPage(1)
+    }
+  }
+
+  const applyCustomPageSize = () => {
+    let num = parseInt(customPageSize, 10)
+    if (isNaN(num) || num < 1) return
+    if (num > 100) num = 100
+    setPageSize(num)
+    setPage(1)
+  }
 
   if (loading) {
     return <div className="text-center py-8 text-gray-500">Loading jobs...</div>
@@ -156,8 +345,7 @@ export default function JobListings({ filters, savedJobsOnly = false }: JobListi
 
   return (
     <div className="space-y-4">
-      {saveError && <div className="text-center text-red-500 text-sm">{saveError}</div>}
-      {saveSuccess && <div className="text-center text-green-600 text-sm">{saveSuccess}</div>}
+  {/* Toasts handle save/unsave feedback; removed inline messages */}
       {filteredJobs.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-16 bg-white rounded-xl shadow-sm border border-gray-100">
           <img src="/job_placeholder.jpeg" alt="No jobs" className="w-20 h-20 mb-4 opacity-60" />
@@ -169,7 +357,8 @@ export default function JobListings({ filters, savedJobsOnly = false }: JobListi
           </p>
         </div>
       ) : (
-        filteredJobs.map((job, index) => (
+  <>
+  {currentPageJobs.map((job) => (
           <div key={ job.job_id} className="relative">
             {/* Job Card */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
@@ -185,31 +374,36 @@ export default function JobListings({ filters, savedJobsOnly = false }: JobListi
                       width={48}
                       height={48}
                       alt={`${job.company} logo`}
-                      className="object-contain"
+                      className="w-full h-full object-contain"
                     />
                   </div>
 
                   <div className="flex-1 min-w-0">
                     <div className="flex justify-between items-start">
                       <div>
-                        <div className="flex items-center">
+                        <div className="flex items-center flex-wrap gap-2">
                           <h3 className="font-medium text-dark-gray">{job.title}</h3>
-                          {job.isNew && <Badge className="ml-2 bg-accent text-white">New</Badge>}
+                          {job.isNew && <Badge className="bg-accent text-white">New</Badge>}
+                          {(job.status === 'expired' || (job.expires_at && new Date(job.expires_at) < new Date())) && (
+                            <Badge className="bg-red-500 text-white">Expired</Badge>
+                          )}
                         </div>
                         <p className="text-sm text-gray-500">{job.company}</p>
                       </div>
 
-                      <button
-                        onClick={(e) => toggleSaveJob(job.job_id, e)}
-                        className="text-gray-400 hover:text-accent"
-                        aria-label={savedJobs.includes(job.job_id) ? "Unsave job" : "Save job"}
-                      >
-                        {savedJobs.includes(job.job_id) ? (
-                          <BookmarkCheck className="h-5 w-5 text-accent" />
-                        ) : (
-                          <Bookmark className="h-5 w-5" />
-                        )}
-                      </button>
+                      {user?.role === 'applicant' && (
+                        <button
+                          onClick={(e) => toggleSaveJob(job.job_id, e)}
+                          className="text-gray-400 hover:text-accent"
+                          aria-label={savedJobs.includes(job.job_id) ? "Unsave job" : "Save job"}
+                        >
+                          {savedJobs.includes(job.job_id) ? (
+                            <BookmarkCheck className="h-5 w-5 text-accent" />
+                          ) : (
+                            <Bookmark className="h-5 w-5" />
+                          )}
+                        </button>
+                      )}
                     </div>
 
                     <div className="mt-3 flex flex-wrap gap-y-2 gap-x-3 text-xs text-gray-600">
@@ -218,8 +412,10 @@ export default function JobListings({ filters, savedJobsOnly = false }: JobListi
                         {job.location}
                       </div>
                       <div className="flex items-center">
-                        <DollarSign className="h-3.5 w-3.5 mr-1" />
-                        {job.min_salary} - {job.max_salary}
+                        <IndianRupee className="h-3.5 w-3.5 mr-1" />
+                        {job.min_salary === job.max_salary ? 
+                          `${parseInt(job.min_salary).toLocaleString('en-IN')}/year` : 
+                          `${parseInt(job.min_salary).toLocaleString('en-IN')} - ${parseInt(job.max_salary).toLocaleString('en-IN')}/year`}
                       </div>
                       <div className="flex items-center">
                         <Clock className="h-3.5 w-3.5 mr-1" />
@@ -240,11 +436,7 @@ export default function JobListings({ filters, savedJobsOnly = false }: JobListi
                       )}
                     </div>
 
-                    <div className="mt-3 text-xs text-gray-500">Posted {new Date(job.posted_at).toLocaleDateString("en-US", {
-                      year: "numeric",
-                      month: "long",
-                      day: "numeric",
-                     })}</div>
+                    <div className="mt-3 text-xs text-gray-500">Posted {formatDate(job.posted_at)}</div>
                   </div>
                 </div>
               </div>
@@ -257,9 +449,27 @@ export default function JobListings({ filters, savedJobsOnly = false }: JobListi
                 )}
               >
                 <div className="border-t border-gray-100 p-5 bg-light-gray">
-                  <div className="text-gray-700 mb-4">{job.description}</div>
+                  <div className="space-y-4">
+                    {job.description && (
+                      <div>
+                        <h4 className="font-medium text-dark-gray mb-2">Job Description</h4>
+                        <div className="text-gray-700 text-sm" dangerouslySetInnerHTML={{
+                          __html: truncateMarkdown(job.description, 200)
+                        }} />
+                      </div>
+                    )}
+                    
+                    {job.requirements && (
+                      <div>
+                        <h4 className="font-medium text-dark-gray mb-2">Requirements</h4>
+                        <div className="text-gray-700 text-sm" dangerouslySetInnerHTML={{
+                          __html: truncateMarkdown(job.requirements, 150)
+                        }} />
+                      </div>
+                    )}
+                  </div>
 
-                  <div className="flex flex-col sm:flex-row gap-3 justify-between items-center">
+                  <div className="flex flex-col sm:flex-row gap-3 justify-between items-center mt-4">
                     <div className="flex flex-wrap gap-1.5">
                       {(job.tags || []).map((tag: string) => (
                         <Badge key={tag} variant="outline" className="bg-white text-xs">
@@ -269,18 +479,22 @@ export default function JobListings({ filters, savedJobsOnly = false }: JobListi
                     </div>
 
                     <div className="flex gap-2 w-full sm:w-auto">
-                      <Button
-                        variant="outline"
-                        className="flex-1 sm:flex-initial"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          toggleSaveJob(job.job_id, e)
-                        }}
-                      >
-                        {savedJobs.includes(job.job_id) ? "Saved" : "Save"}
-                      </Button>
+                      {user?.role === 'applicant' && (
+                        <Button
+                          variant="outline"
+                          className="flex-1 sm:flex-initial"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            toggleSaveJob(job.job_id, e)
+                          }}
+                        >
+                          {savedJobs.includes(job.job_id) ? "Saved" : "Save"}
+                        </Button>
+                      )}
                       <Link href={`/jobs/${job.job_id}`} className="flex-1 sm:flex-initial">
-                        <Button className="w-full bg-accent hover:bg-accent/90">View Job</Button>
+                        <Button className="w-full bg-accent hover:bg-accent/90">
+                          View Full Details
+                        </Button>
                       </Link>
                     </div>
                   </div>
@@ -288,7 +502,76 @@ export default function JobListings({ filters, savedJobsOnly = false }: JobListi
               </div>
             </div>
           </div>
-        ))
+        ))}
+        {/* Bottom Controls: page size + pagination + summary */}
+        <div className="mt-6 space-y-3">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-sm text-gray-600">Per page:</span>
+              <Select value={pageSizeMode} onValueChange={changePageSize}>
+                <SelectTrigger className="w-[90px] h-8 text-sm" aria-label="Jobs per page">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="10">10</SelectItem>
+                  <SelectItem value="20">20</SelectItem>
+                  <SelectItem value="50">50</SelectItem>
+                  <SelectItem value="100">100</SelectItem>
+                  <SelectItem value="custom">Custom</SelectItem>
+                </SelectContent>
+              </Select>
+              {pageSizeMode === 'custom' && (
+                <div className="flex items-center gap-1">
+                  <Input
+                    type="number"
+                    min={1}
+                    max={100}
+                    value={customPageSize}
+                    onChange={(e) => setCustomPageSize(e.target.value)}
+                    onBlur={applyCustomPageSize}
+                    onKeyDown={(e) => { if (e.key === 'Enter') { applyCustomPageSize(); } }}
+                    className="w-20 h-8 text-sm"
+                    placeholder="1-100"
+                    aria-label="Custom jobs per page"
+                  />
+                  <Button type="button" variant="outline" size="sm" className="h-8 px-2" onClick={applyCustomPageSize}>Set</Button>
+                </div>
+              )}
+            </div>
+            <div className="text-sm text-gray-600">
+              Showing {Math.min(startIdx + 1, totalJobs)}–{Math.min(startIdx + pageSize, totalJobs)} of {totalJobs} jobs
+            </div>
+            <div className="flex flex-wrap items-center gap-1" aria-label="Pagination">
+              <button
+                onClick={() => page > 1 && setPage(page - 1)}
+                disabled={page === 1}
+                className="w-8 h-8 flex items-center justify-center rounded-md border text-gray-600 hover:bg-light-gray disabled:opacity-40"
+                aria-label="Previous page"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map(p => (
+                <button
+                  key={p}
+                  onClick={() => setPage(p)}
+                  className={`min-w-8 h-8 px-2 flex items-center justify-center rounded-md border text-sm ${p === page ? 'bg-accent text-white border-accent' : 'text-gray-700 hover:bg-light-gray'}`}
+                  aria-current={p === page ? 'page' : undefined}
+                >
+                  {p}
+                </button>
+              ))}
+              <button
+                onClick={() => page < totalPages && setPage(page + 1)}
+                disabled={page === totalPages}
+                className="w-8 h-8 flex items-center justify-center rounded-md border text-gray-600 hover:bg-light-gray disabled:opacity-40"
+                aria-label="Next page"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        </div>
+        </>
       )}
     </div>
   )

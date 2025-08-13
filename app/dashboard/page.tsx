@@ -46,7 +46,7 @@ export default function ApplicantDashboardPage() {
             </TabsList>
 
             <TabsContent value="applications" className="p-6">
-              <ApplicationList status="active" />
+              <ApplicationList />
             </TabsContent>
 
             <TabsContent value="saved" className="p-6">
@@ -56,10 +56,10 @@ export default function ApplicantDashboardPage() {
           </Tabs>
 
           <div className="mt-8 space-y-8">
-            <section>
+            {/* <section>
               <h2 className="text-2xl font-bold text-dark-gray mb-4">Your Saved Searches</h2>
               <SavedSearches />
-            </section>
+            </section> */}
 
             <section>
               <h2 className="text-2xl font-bold text-dark-gray mb-4">Recommended Jobs</h2>

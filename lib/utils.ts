@@ -5,11 +5,123 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
+// IST Timezone offset (+5:30)
+const IST_OFFSET = 5.5 * 60 * 60 * 1000; // 5.5 hours in milliseconds
+
+/**
+ * Convert any date to IST timezone
+ */
+export function toIST(date: string | Date | number): Date {
+  const inputDate = new Date(date);
+  // Get UTC time and add IST offset
+  const utcTime = inputDate.getTime() + (inputDate.getTimezoneOffset() * 60000);
+  return new Date(utcTime + IST_OFFSET);
+}
+
+/**
+ * Format date in IST with default format
+ */
 export function formatDate(date: string | Date): string {
-  return new Date(date).toLocaleDateString("en-US", {
+  const istDate = toIST(date);
+  return istDate.toLocaleDateString("en-IN", {
     year: "numeric",
     month: "long",
     day: "numeric",
+    timeZone: "Asia/Kolkata"
+  })
+}
+
+/**
+ * Format date and time in IST
+ */
+export function formatDateTime(date: string | Date): string {
+  const istDate = toIST(date);
+  return istDate.toLocaleString("en-IN", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: "Asia/Kolkata"
+  })
+}
+
+/**
+ * Format time only in IST
+ */
+export function formatTime(date: string | Date): string {
+  const istDate = toIST(date);
+  return istDate.toLocaleTimeString("en-IN", {
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: "Asia/Kolkata"
+  })
+}
+
+/**
+ * Format date for display with IST timezone indicator
+ */
+export function formatDateWithTimezone(date: string | Date): string {
+  const istDate = toIST(date);
+  return istDate.toLocaleString("en-IN", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: "Asia/Kolkata"
+  }) + " IST"
+}
+
+/**
+ * Format time for chat messages (assumes timestamp is already in IST from backend)
+ */
+export function formatChatTime(date: string | Date): string {
+  const inputDate = new Date(date);
+  return inputDate.toLocaleTimeString("en-IN", {
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: "Asia/Kolkata"
+  })
+}
+
+// If same day: show HH:MM AM/PM, else show DD Mon, HH:MM AM/PM (IST)
+export function formatChatTimestampSmart(date: string | Date): string {
+  const dRaw = new Date(date)
+  // Normalize to IST for consistent day comparisons
+  const d = toIST(dRaw)
+  const now = toIST(new Date())
+
+  const sameDay = d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth() && d.getDate() === now.getDate()
+  if (sameDay) {
+    return d.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Kolkata" })
+  }
+
+  // Compute difference in whole days (midnight boundaries in IST)
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+  const startOfGiven = new Date(d.getFullYear(), d.getMonth(), d.getDate())
+  const diffMs = startOfToday.getTime() - startOfGiven.getTime()
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24))
+
+  const timePart = d.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Kolkata" })
+  if (diffDays === 1) {
+    return `Yesterday, ${timePart}`
+  }
+
+  const datePart = d.toLocaleDateString("en-IN", { day: "2-digit", month: "short", timeZone: "Asia/Kolkata" })
+  return `${datePart}, ${timePart}`
+}
+
+/**
+ * Format date for short display (MMM DD, YYYY)
+ */
+export function formatDateShort(date: string | Date): string {
+  const istDate = toIST(date);
+  return istDate.toLocaleDateString("en-IN", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    timeZone: "Asia/Kolkata"
   })
 }
 
@@ -19,8 +131,8 @@ export function truncateText(text: string, maxLength: number): string {
 }
 
 export function calculateDaysAgo(date: string | Date): string {
-  const now = new Date()
-  const pastDate = new Date(date)
+  const now = toIST(new Date())
+  const pastDate = toIST(date)
   const diffTime = Math.abs(now.getTime() - pastDate.getTime())
   const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24))
 
@@ -38,11 +150,13 @@ export function generateRandomId(): string {
 
 export function formatSalaryRange(min?: number | null, max?: number | null): string {
   const formatValue = (value: number): string => {
-    // Simple K formatting for large numbers
-    if (value >= 1000) {
+    // Format with INR locale and add proper comma separators (without ₹ symbol since we use IndianRupee icon)
+    if (value >= 100000) {
+      return `${(value / 100000).toFixed(1)} L`;
+    } else if (value >= 1000) {
       return `${Math.round(value / 1000)}k`;
     }
-    return `${value}`;
+    return `${value.toLocaleString('en-IN')}`;
   };
 
   if (min && max) {
@@ -55,13 +169,13 @@ export function formatSalaryRange(min?: number | null, max?: number | null): str
   } else if (max) {
     return `Up to ${formatValue(max)}/year`;
   } else {
-    return "Salary not specified"; // Or return an empty string or null
+    return "Salary not specified";
   }
 }
 
 export function formatRelativeTime(dateInput: string | Date | number): string {
-  const date = new Date(dateInput);
-  const now = new Date();
+  const date = toIST(dateInput);
+  const now = toIST(new Date());
   const seconds = Math.round((now.getTime() - date.getTime()) / 1000);
 
   const minute = 60;

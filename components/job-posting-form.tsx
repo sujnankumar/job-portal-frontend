@@ -12,13 +12,14 @@ import { Textarea } from "@/components/ui/textarea"
 import { Switch } from "@/components/ui/switch"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Calendar, Upload, Save, Plus, Trash2 } from "lucide-react"
+import { Calendar, Upload, Save, Plus, Trash2, Eye, Edit } from "lucide-react"
 import { cn } from "@/lib/utils"
 import api from "@/lib/axios"
 import { useAuthStore } from "@/store/authStore"
 
 export default function JobPostingForm() {
   const router = useRouter()
+  const [activeTab, setActiveTab] = useState("details")
   const [formData, setFormData] = useState({
     title: "",
     department: "",
@@ -27,14 +28,14 @@ export default function JobPostingForm() {
     employmentType: "Full-time",
     minSalary: "",
     maxSalary: "",
+  singleSalary: "",
+  salaryMode: "range", // 'range' | 'single'
     showSalary: true,
     description: "",
     requirements: "",
     benefits: "",
     applicationDeadline: "",
-    companyLogo: null,
     skills: ["", "", ""],
-    autoExpire: true,
     experienceLevel: "",
     jobCategory: "",
   })
@@ -42,6 +43,58 @@ export default function JobPostingForm() {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState("")
   const [success, setSuccess] = useState("")
+  const [errors, setErrors] = useState<Record<string, string>>({})
+  const [showDescriptionPreview, setShowDescriptionPreview] = useState(false)
+  const [showRequirementsPreview, setShowRequirementsPreview] = useState(false)
+
+  // Simple markdown to HTML converter for preview only
+  const markdownToHtml = (markdown: string) => {
+    return markdown
+      .replace(/^### (.*$)/gim, '<h3 class="text-lg font-semibold text-dark-gray mb-2 mt-4">$1</h3>')
+      .replace(/^## (.*$)/gim, '<h2 class="text-xl font-semibold text-dark-gray mb-3 mt-4">$1</h2>')
+      .replace(/^# (.*$)/gim, '<h1 class="text-2xl font-bold text-dark-gray mb-4 mt-4">$1</h1>')
+      .replace(/^\* (.*$)/gim, '<li class="ml-4">$1</li>')
+      .replace(/^- (.*$)/gim, '<li class="ml-4">$1</li>')
+      .replace(/\*\*(.*)\*\*/gim, '<strong class="font-semibold">$1</strong>')
+      .replace(/\*(.*)\*/gim, '<em class="italic">$1</em>')
+      .replace(/\n\n/gim, '</p><p class="mb-3">')
+      .replace(/^\n/gim, '')
+      .replace(/^(?!<[h|l])/gim, '<p class="mb-3">')
+      .replace(/(<li.*<\/li>)/gim, '<ul class="list-disc ml-6 mb-3">$1</ul>')
+      .replace(/<\/ul>\s*<ul[^>]*>/gim, '')
+  }
+
+  // Convert HTML back to markdown to ensure we always store markdown
+  const htmlToMarkdown = (html: string): string => {
+    if (!html) return ""
+    
+    // If it doesn't contain HTML tags, assume it's already markdown
+    if (!html.includes('<') && !html.includes('>')) {
+      return html
+    }
+    
+    return html
+      .replace(/<h1[^>]*>(.*?)<\/h1>/gi, '# $1')
+      .replace(/<h2[^>]*>(.*?)<\/h2>/gi, '## $1')
+      .replace(/<h3[^>]*>(.*?)<\/h3>/gi, '### $1')
+      .replace(/<strong[^>]*>(.*?)<\/strong>/gi, '**$1**')
+      .replace(/<em[^>]*>(.*?)<\/em>/gi, '*$1*')
+      .replace(/<li[^>]*>(.*?)<\/li>/gi, '- $1')
+      .replace(/<ul[^>]*>|<\/ul>/gi, '')
+      .replace(/<p[^>]*>(.*?)<\/p>/gi, '$1\n\n')
+      .replace(/<br\s*\/?>/gi, '\n')
+      .replace(/\n\n\n+/g, '\n\n')
+      .replace(/^\s+|\s+$/g, '') // Trim whitespace
+      .trim()
+  }
+
+  const handleNext = () => {
+    if (activeTab === "details") {
+      setActiveTab("description")
+    } else if (activeTab === "description") {
+      setActiveTab("requirements")
+    }
+  }
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target
@@ -49,6 +102,13 @@ export default function JobPostingForm() {
       ...formData,
       [name]: value,
     })
+    // Clear error when field is edited
+    if (errors[name]) {
+      setErrors({
+        ...errors,
+        [name]: "",
+      })
+    }
   }
 
   const handleSelectChange = (name: string, value: string) => {
@@ -90,11 +150,91 @@ export default function JobPostingForm() {
     })
   }
 
+  const validateForm = () => {
+    const newErrors: Record<string, string> = {}
+    
+    // Required fields validation
+    if (!formData.title.trim()) {
+      newErrors.title = "Job title is required"
+    }
+    
+    if (!formData.department.trim()) {
+      newErrors.department = "Department is required"
+    }
+    
+    if (!formData.location.trim()) {
+      newErrors.location = "Location is required"
+    }
+    
+    if (!formData.description.trim()) {
+      newErrors.description = "Job description is required"
+    } else if (formData.description.trim().length < 50) {
+      newErrors.description = "Job description must be at least 50 characters"
+    }
+    
+    if (!formData.requirements.trim()) {
+      newErrors.requirements = "Requirements are required"
+    } else if (formData.requirements.trim().length < 30) {
+      newErrors.requirements = "Requirements must be at least 30 characters"
+    }
+    
+    if (!formData.experienceLevel) {
+      newErrors.experienceLevel = "Experience level is required"
+    }
+    
+    if (!formData.jobCategory) {
+      newErrors.jobCategory = "Job category is required"
+    }
+    
+    // Skills validation
+    const validSkills = formData.skills.filter(skill => skill.trim() !== "")
+    if (validSkills.length === 0) {
+      newErrors.skills = "At least one skill is required"
+    }
+    
+    // Salary validation
+    if (formData.showSalary) {
+      if (formData.salaryMode === 'range') {
+        if (!formData.minSalary || isNaN(Number(formData.minSalary))) {
+          newErrors.minSalary = "Valid minimum salary is required"
+        }
+        if (!formData.maxSalary || isNaN(Number(formData.maxSalary))) {
+          newErrors.maxSalary = "Valid maximum salary is required"
+        }
+        if (formData.minSalary && formData.maxSalary && Number(formData.minSalary) >= Number(formData.maxSalary)) {
+          newErrors.maxSalary = "Maximum salary must be greater than minimum salary"
+        }
+      } else { // single
+        if (!formData.singleSalary || isNaN(Number(formData.singleSalary))) {
+          newErrors.singleSalary = "Valid salary amount required"
+        }
+      }
+    }
+    
+    // Application deadline validation
+    if (formData.applicationDeadline) {
+      const deadlineDate = new Date(formData.applicationDeadline)
+      const today = new Date()
+      today.setHours(0, 0, 0, 0)
+      if (deadlineDate < today) {
+        newErrors.applicationDeadline = "Application deadline cannot be in the past"
+      }
+    }
+    
+    setErrors(newErrors)
+    return Object.keys(newErrors).length === 0
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setIsLoading(true)
     setError("")
     setSuccess("")
+    
+    if (!validateForm()) {
+      return
+    }
+    
+    setIsLoading(true)
     try {
       const token = loginUser?.token
       if (!token) {
@@ -102,25 +242,25 @@ export default function JobPostingForm() {
         setIsLoading(false)
         return
       }
+      const isSingle = formData.showSalary && formData.salaryMode === 'single'
       const payload = {
         title: formData.title,
         department: formData.department,
         location: formData.location,
         location_type: formData.locationType,
         employment_type: formData.employmentType,
-        min_salary: formData.showSalary ? formData.minSalary : undefined,
-        max_salary: formData.showSalary ? formData.maxSalary : undefined,
+        min_salary: formData.showSalary ? (isSingle ? formData.singleSalary : formData.minSalary) : undefined,
+        max_salary: formData.showSalary ? (isSingle ? formData.singleSalary : formData.maxSalary) : undefined,
         show_salary: formData.showSalary,
-        description: formData.description,
-        requirements: formData.requirements,
+        description: htmlToMarkdown(formData.description), // Store as markdown, convert any HTML back to markdown
+        requirements: htmlToMarkdown(formData.requirements), // Store as markdown, convert any HTML back to markdown
         benefits: formData.benefits,
         application_deadline: formData.applicationDeadline,
         skills: formData.skills.filter((s) => s.trim() !== ""),
-        auto_expire: formData.autoExpire,
-        validity_days: formData.autoExpire ? 15 : undefined,
+        auto_expire: true,
+        validity_days: 30,
         experience_level: formData.experienceLevel,
         job_category: formData.jobCategory,
-        // company_logo: formData.companyLogo, // handle file upload separately if needed
       }
       const res = await api.post("/job/post_job", payload, {
         headers: {
@@ -140,7 +280,7 @@ export default function JobPostingForm() {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-8">
-      <Tabs defaultValue="details">
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="w-full border-b rounded-t-xl rounded-b-none p-0 bg-light-gray">
           <TabsTrigger
             value="details"
@@ -174,6 +314,7 @@ export default function JobPostingForm() {
                 placeholder="e.g. Senior Frontend Developer"
                 required
               />
+              {errors.title && <p className="text-red-500 text-xs mt-1">{errors.title}</p>}
             </div>
 
             <div className="space-y-2">
@@ -188,6 +329,7 @@ export default function JobPostingForm() {
                 placeholder="e.g. Engineering, Marketing, Sales"
                 required
               />
+              {errors.department && <p className="text-red-500 text-xs mt-1">{errors.department}</p>}
             </div>
 
             <div className="space-y-2">
@@ -202,6 +344,7 @@ export default function JobPostingForm() {
                 placeholder="e.g. San Francisco, CA"
                 required
               />
+              {errors.location && <p className="text-red-500 text-xs mt-1">{errors.location}</p>}
             </div>
 
             <div className="space-y-2">
@@ -263,6 +406,7 @@ export default function JobPostingForm() {
                   <SelectItem value="Executive">Executive</SelectItem>
                 </SelectContent>
               </Select>
+              {errors.experienceLevel && <p className="text-red-500 text-xs mt-1">{errors.experienceLevel}</p>}
             </div>
 
             <div className="space-y-2">
@@ -290,6 +434,7 @@ export default function JobPostingForm() {
                   <SelectItem value="Other">Other</SelectItem>
                 </SelectContent>
               </Select>
+              {errors.jobCategory && <p className="text-red-500 text-xs mt-1">{errors.jobCategory}</p>}
             </div>
 
             <div className="space-y-2">
@@ -304,6 +449,7 @@ export default function JobPostingForm() {
                   onChange={handleChange}
                   className="pl-9"
                 />
+                {errors.applicationDeadline && <p className="text-red-500 text-xs mt-1">{errors.applicationDeadline}</p>}
               </div>
             </div>
           </div>
@@ -311,108 +457,145 @@ export default function JobPostingForm() {
           {/* Salary Information */}
           <div className="space-y-4 pt-4 border-t">
             <div className="flex items-center justify-between">
-              <Label htmlFor="showSalary" className="font-medium">
-                Salary Information
-              </Label>
+              <Label htmlFor="showSalary" className="font-medium">Salary Information</Label>
               <div className="flex items-center space-x-2">
-                <Switch
-                  id="showSalary"
-                  checked={formData.showSalary}
-                  onCheckedChange={(checked) => handleSwitchChange("showSalary", checked)}
-                />
-                <Label htmlFor="showSalary" className="font-normal">
-                  Display salary range on job posting
-                </Label>
+                <Switch id="showSalary" checked={formData.showSalary} onCheckedChange={(checked) => handleSwitchChange("showSalary", checked)} />
+                <Label htmlFor="showSalary" className="font-normal">Display salary on posting</Label>
               </div>
             </div>
-
-            <div className={cn("grid grid-cols-1 md:grid-cols-2 gap-6", !formData.showSalary && "opacity-50")}>
-              <div className="space-y-2">
-                <Label htmlFor="minSalary">Minimum Salary (USD)</Label>
-                <Input
-                  id="minSalary"
-                  name="minSalary"
-                  type="number"
-                  value={formData.minSalary}
-                  onChange={handleChange}
-                  placeholder="e.g. 80000"
-                  disabled={!formData.showSalary}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="maxSalary">Maximum Salary (USD)</Label>
-                <Input
-                  id="maxSalary"
-                  name="maxSalary"
-                  type="number"
-                  value={formData.maxSalary}
-                  onChange={handleChange}
-                  placeholder="e.g. 120000"
-                  disabled={!formData.showSalary}
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Company Logo */}
-          <div className="space-y-4 pt-4 border-t">
-            <Label className="font-medium">Company Logo</Label>
-            <div className="flex items-center gap-4">
-              <div className="w-16 h-16 bg-light-gray flex-shrink-0 rounded-md overflow-hidden border border-gray-200 flex items-center justify-center">
-                {formData.companyLogo ? (
-                  <Image
-                    src="/abstract-circuit-board.png"
-                    width={64}
-                    height={64}
-                    alt="Company Logo"
-                    className="object-contain"
-                  />
+            {formData.showSalary && (
+              <div className="space-y-4">
+                <div className="space-y-2 max-w-xs">
+                  <Label>Display Mode</Label>
+                  <Select value={formData.salaryMode} onValueChange={(v)=> setFormData(f=> ({...f, salaryMode: v, // reset values when switching
+                    ...(v==='single'? {minSalary:'', maxSalary:''}: {singleSalary:''})
+                  }))}>
+                    <SelectTrigger><SelectValue placeholder="Select mode" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="range">Range</SelectItem>
+                      <SelectItem value="single">Single Value</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                {formData.salaryMode === 'range' ? (
+                  <div className={cn("grid grid-cols-1 md:grid-cols-2 gap-6")}>
+                    <div className="space-y-2">
+                      <Label htmlFor="minSalary">Minimum Salary</Label>
+                      <Input id="minSalary" name="minSalary" type="number" value={formData.minSalary} onChange={handleChange} placeholder="e.g. 80000" />
+                      {errors.minSalary && <p className="text-red-500 text-xs mt-1">{errors.minSalary}</p>}
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="maxSalary">Maximum Salary</Label>
+                      <Input id="maxSalary" name="maxSalary" type="number" value={formData.maxSalary} onChange={handleChange} placeholder="e.g. 120000" />
+                      {errors.maxSalary && <p className="text-red-500 text-xs mt-1">{errors.maxSalary}</p>}
+                    </div>
+                  </div>
                 ) : (
-                  <Upload className="h-6 w-6 text-gray-400" />
+                  <div className="space-y-2 max-w-xs">
+                    <Label htmlFor="singleSalary">Salary</Label>
+                    <Input id="singleSalary" name="singleSalary" type="number" value={formData.singleSalary} onChange={handleChange} placeholder="e.g. 100000" />
+                    {errors.singleSalary && <p className="text-red-500 text-xs mt-1">{errors.singleSalary}</p>}
+                    <p className="text-xs text-gray-500">Shown as a single fixed amount (min & max equal).</p>
+                  </div>
                 )}
               </div>
-              <div className="flex-1">
-                <Button type="button" variant="outline" className="mb-2">
-                  <Upload className="h-4 w-4 mr-1" /> Upload Logo
-                </Button>
-                <p className="text-xs text-gray-500">
-                  Recommended size: 200x200px. Max file size: 2MB. Supported formats: PNG, JPG, SVG.
-                </p>
-              </div>
-            </div>
+            )}
           </div>
 
           {/* Auto-Expiry */}
-          <div className="flex items-center justify-between pt-4 border-t">
+          <div className="pt-4 border-t">
             <div>
-              <Label htmlFor="autoExpire" className="font-medium">
-                Auto-Expiry
-              </Label>
-              <p className="text-sm text-gray-500">Automatically remove job posting after 15 days</p>
+              <Label className="font-medium">Auto-Expiry</Label>
+              <p className="text-sm text-gray-500 mt-1">
+                Job posting will be automatically removed after 30 days of deadline to keep listings fresh and relevant.
+              </p>
             </div>
-            <Switch
-              id="autoExpire"
-              checked={formData.autoExpire}
-              onCheckedChange={(checked) => handleSwitchChange("autoExpire", checked)}
-            />
           </div>
         </TabsContent>
 
         <TabsContent value="description" className="pt-6 space-y-6">
           <div className="space-y-2">
-            <Label htmlFor="description">
-              Job Description <span className="text-red-500">*</span>
-            </Label>
-            <Textarea
-              id="description"
-              name="description"
-              value={formData.description}
-              onChange={handleChange}
-              placeholder="Describe the role, responsibilities, and what a typical day looks like..."
-              className="min-h-[200px]"
-              required
-            />
+            <div className="flex items-center justify-between">
+              <Label htmlFor="description">
+                Job Description <span className="text-red-500">*</span>
+              </Label>
+              <div className="flex items-center gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowDescriptionPreview(!showDescriptionPreview)}
+                  className="text-xs"
+                >
+                  {showDescriptionPreview ? (
+                    <>
+                      <Edit className="h-3 w-3 mr-1" /> Edit
+                    </>
+                  ) : (
+                    <>
+                      <Eye className="h-3 w-3 mr-1" /> Preview
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
+
+            {!showDescriptionPreview ? (
+              <>
+                <Textarea
+                  id="description"
+                  name="description"
+                  value={formData.description}
+                  onChange={handleChange}
+                  placeholder={`Describe the role, responsibilities, and what a typical day looks like...
+
+You can use markdown formatting:
+# Main Heading
+## Section Heading  
+### Sub Heading
+**Bold text**
+*Italic text*
+- Bullet point
+- Another bullet point
+
+Example:
+## About the Role
+We are looking for a **Senior Frontend Developer** to join our team.
+
+### Responsibilities:
+- Develop user-facing features
+- Optimize applications for speed
+- Collaborate with backend developers`}
+                  className="min-h-[300px] font-mono text-sm"
+                  required
+                />
+                {errors.description && <p className="text-red-500 text-xs mt-1">{errors.description}</p>}
+                <div className="text-xs text-gray-500 bg-gray-50 p-3 rounded border">
+                  <p className="font-semibold mb-2">Markdown Guide:</p>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <p><code># Heading 1</code></p>
+                      <p><code>## Heading 2</code></p>
+                      <p><code>### Heading 3</code></p>
+                      <p><code>**Bold text**</code></p>
+                    </div>
+                    <div>
+                      <p><code>*Italic text*</code></p>
+                      <p><code>- Bullet point</code></p>
+                      <p><code>* Bullet point</code></p>
+                    </div>
+                  </div>
+                </div>
+              </>
+            ) : (
+              <div className="border rounded-lg p-4 bg-gray-50 min-h-[300px]">
+                <p className="text-sm text-gray-600 mb-3 border-b pb-2">Preview:</p>
+                <div 
+                  className="prose max-w-none text-gray-700"
+                  dangerouslySetInnerHTML={{ __html: markdownToHtml(formData.description) }}
+                />
+              </div>
+            )}
           </div>
 
           <div className="space-y-4 pt-4 border-t">
@@ -443,27 +626,74 @@ export default function JobPostingForm() {
               <Button type="button" variant="outline" size="sm" onClick={addSkill}>
                 <Plus className="h-4 w-4 mr-1" /> Add Skill
               </Button>
+              {errors.skills && <p className="text-red-500 text-xs mt-1">{errors.skills}</p>}
             </div>
           </div>
         </TabsContent>
 
         <TabsContent value="requirements" className="pt-6 space-y-6">
           <div className="space-y-2">
-            <Label htmlFor="requirements">
-              Requirements <span className="text-red-500">*</span>
-            </Label>
-            <Textarea
-              id="requirements"
-              name="requirements"
-              value={formData.requirements}
-              onChange={handleChange}
-              placeholder="List qualifications, experience, education, and other requirements..."
-              className="min-h-[200px]"
-              required
-            />
-            <p className="text-xs text-gray-500">
-              Tip: Use bullet points for better readability. Start each point on a new line with a dash (-).
-            </p>
+            <div className="flex items-center justify-between">
+              <Label htmlFor="requirements">
+                Requirements <span className="text-red-500">*</span>
+              </Label>
+              <div className="flex items-center gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowRequirementsPreview(!showRequirementsPreview)}
+                  className="text-xs"
+                >
+                  {showRequirementsPreview ? (
+                    <>
+                      <Edit className="h-3 w-3 mr-1" /> Edit
+                    </>
+                  ) : (
+                    <>
+                      <Eye className="h-3 w-3 mr-1" /> Preview
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
+
+            {!showRequirementsPreview ? (
+              <>
+                <Textarea
+                  id="requirements"
+                  name="requirements"
+                  value={formData.requirements}
+                  onChange={handleChange}
+                  placeholder={`List qualifications, experience, education, and other requirements...
+
+You can use markdown formatting:
+
+## Required Qualifications:
+- Bachelor's degree in Computer Science
+- **3+ years** of experience with React
+- Experience with *TypeScript*
+
+## Preferred Qualifications:
+- Experience with Next.js
+- Knowledge of GraphQL`}
+                  className="min-h-[300px] font-mono text-sm"
+                  required
+                />
+                {errors.requirements && <p className="text-red-500 text-xs mt-1">{errors.requirements}</p>}
+                <p className="text-xs text-gray-500">
+                  Tip: Use markdown formatting for better readability. Use bullet points (-) for lists and **bold** for emphasis.
+                </p>
+              </>
+            ) : (
+              <div className="border rounded-lg p-4 bg-gray-50 min-h-[300px]">
+                <p className="text-sm text-gray-600 mb-3 border-b pb-2">Preview:</p>
+                <div 
+                  className="prose max-w-none text-gray-700"
+                  dangerouslySetInnerHTML={{ __html: markdownToHtml(formData.requirements) }}
+                />
+              </div>
+            )}
           </div>
 
           <div className="space-y-2">
@@ -482,10 +712,18 @@ export default function JobPostingForm() {
       {error && <p className="text-red-500 text-sm">{error}</p>}
       {success && <p className="text-green-600 text-sm">{success}</p>}
       <div className="flex justify-end gap-3 pt-4 border-t">
-        <Button type="button" variant="outline" onClick={() => router.push("/employer/dashboard")}>Cancel</Button>
-        <Button type="submit" className="bg-accent hover:bg-accent/90" disabled={isLoading}>
-          <Save className="h-4 w-4 mr-1" /> {isLoading ? "Posting..." : "Post Job"}
+        <Button type="button" variant="outline" onClick={() => router.push("/employer/dashboard")}>
+          Cancel
         </Button>
+        {activeTab === "requirements" ? (
+          <Button type="submit" className="bg-accent hover:bg-accent/90" disabled={isLoading}>
+            <Save className="h-4 w-4 mr-1" /> {isLoading ? "Posting..." : "Post Job"}
+          </Button>
+        ) : (
+          <Button type="button" onClick={handleNext} className="bg-accent hover:bg-accent/90">
+            Next
+          </Button>
+        )}
       </div>
     </form>
   )

@@ -3,12 +3,13 @@
 import type React from "react"
 
 import { useState, useRef } from "react" // Add useRef
-import { FileUp, File, X, CheckCircle } from "lucide-react"
+import { FileUp, File, X, CheckCircle, Eye, EyeOff } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { cn } from "@/lib/utils"
 
 interface CompanyDetailsData {
@@ -19,6 +20,8 @@ interface CompanyDetailsData {
   website: string
   companyEmail: string // Added email
   companyPhone: string
+  culture?: string // New optional field
+  benefits?: string // New optional field
   logo: File | null
 }
 
@@ -36,10 +39,53 @@ export default function EmployerCompanyDetails({ data, onNext }: EmployerCompany
     website: data?.website || "",
     companyEmail: data?.companyEmail || "", // Added email state
     companyPhone: data?.companyPhone || "", // Added phone state
+    culture: data?.culture || "", // New optional field
+    benefits: data?.benefits || "", // New optional field
     logo: data?.logo || null,
   })
   const [dragActive, setDragActive] = useState(false)
+  const [showDescriptionPreview, setShowDescriptionPreview] = useState(false)
+  const [showCulturePreview, setShowCulturePreview] = useState(false)
+  const [showBenefitsPreview, setShowBenefitsPreview] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null) // Add ref for file input
+
+  // Simple markdown to HTML converter for preview
+  const markdownToHtml = (markdown: string) => {
+    return markdown
+      .replace(/^### (.*$)/gim, '<h3 class="text-lg font-semibold text-dark-gray mb-2 mt-4">$1</h3>')
+      .replace(/^## (.*$)/gim, '<h2 class="text-xl font-semibold text-dark-gray mb-3 mt-4">$1</h2>')
+      .replace(/^# (.*$)/gim, '<h1 class="text-2xl font-bold text-dark-gray mb-4 mt-4">$1</h1>')
+      .replace(/^\* (.*$)/gim, '<li class="ml-4">$1</li>')
+      .replace(/^- (.*$)/gim, '<li class="ml-4">$1</li>')
+      .replace(/\*\*(.*)\*\*/gim, '<strong class="font-semibold">$1</strong>')
+      .replace(/\*(.*)\*/gim, '<em class="italic">$1</em>')
+      .replace(/\n\n/gim, '</p><p class="mb-3">')
+      .replace(/^\n/gim, '')
+      .replace(/^(?!<[h|l])/gim, '<p class="mb-3">')
+      .replace(/(<li.*<\/li>)/gim, '<ul class="list-disc ml-6 mb-3">$1</ul>')
+      .replace(/<\/ul>\s*<ul[^>]*>/gim, '')
+  }
+
+  // Convert HTML back to markdown to ensure we always store markdown
+  const htmlToMarkdown = (html: string) => {
+    return html
+      .replace(/<h1[^>]*>(.*?)<\/h1>/gim, '# $1')
+      .replace(/<h2[^>]*>(.*?)<\/h2>/gim, '## $1') 
+      .replace(/<h3[^>]*>(.*?)<\/h3>/gim, '### $1')
+      .replace(/<strong[^>]*>(.*?)<\/strong>/gim, '**$1**')
+      .replace(/<em[^>]*>(.*?)<\/em>/gim, '*$1*')
+      .replace(/<li[^>]*>(.*?)<\/li>/gim, '- $1')
+      .replace(/<ul[^>]*>|<\/ul>/gim, '')
+      .replace(/<p[^>]*>(.*?)<\/p>/gim, '$1\n\n')
+      .replace(/<br\s*\/?>/gim, '\n')
+      .replace(/&nbsp;/gim, ' ')
+      .replace(/&amp;/gim, '&')
+      .replace(/&lt;/gim, '<')
+      .replace(/&gt;/gim, '>')
+      .replace(/&quot;/gim, '"')
+      .replace(/&#39;/gim, "'")
+      .trim()
+  }
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target
@@ -130,7 +176,14 @@ export default function EmployerCompanyDetails({ data, onNext }: EmployerCompany
   }
 
   const handleSubmit = () => {
-    onNext(formData)
+    // Ensure all text fields are stored as markdown by converting any HTML back to markdown
+    const cleanedData = {
+      ...formData,
+      description: htmlToMarkdown(formData.description),
+      culture: formData.culture ? htmlToMarkdown(formData.culture) : formData.culture,
+      benefits: formData.benefits ? htmlToMarkdown(formData.benefits) : formData.benefits,
+    }
+    onNext(cleanedData)
   }
 
   const handleButtonClick = () => {
@@ -148,14 +201,48 @@ export default function EmployerCompanyDetails({ data, onNext }: EmployerCompany
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="md:col-span-2">
           <Label htmlFor="description">Company Description <span className="text-red-500">*</span></Label>
-          <Textarea
-            id="description"
-            name="description"
-            placeholder="Describe your company, mission, and culture..."
-            value={formData.description}
-            onChange={handleChange}
-            className="mt-1 min-h-[120px]"
-          />
+          <p className="text-xs text-gray-500 mb-2">
+            You can use markdown formatting:
+            <strong> **bold** </strong>, <em> *italic* </em>, 
+            <strong> # Header </strong>, <strong> - List items </strong>
+          </p>
+          <Tabs defaultValue="write" className="mt-1">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="write">Write</TabsTrigger>
+              <TabsTrigger value="preview">Preview</TabsTrigger>
+            </TabsList>
+            <TabsContent value="write" className="mt-2">
+              <Textarea
+                id="description"
+                name="description"
+                placeholder="Describe your company, mission, and values...&#10;&#10;Example:&#10;## About Us&#10;We are a **leading tech company** focused on innovation.&#10;&#10;### Our Mission&#10;- Transform the industry&#10;- Deliver exceptional value&#10;- Foster innovation"
+                value={formData.description}
+                onChange={handleChange}
+                className="min-h-[120px] font-mono text-sm"
+              />
+              <div className="mt-2 text-xs text-gray-500">
+                <p className="font-semibold mb-2">Markdown Guide:</p>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p><strong># Large Header</strong></p>
+                    <p><strong>## Medium Header</strong></p>
+                    <p><strong>### Small Header</strong></p>
+                  </div>
+                  <div>
+                    <p><strong>**Bold Text**</strong></p>
+                    <p><strong>*Italic Text*</strong></p>
+                    <p><strong>- List Item</strong></p>
+                  </div>
+                </div>
+              </div>
+            </TabsContent>
+            <TabsContent value="preview" className="mt-2">
+              <div 
+                className="min-h-[120px] p-3 border rounded-md bg-gray-50 prose prose-sm max-w-none"
+                dangerouslySetInnerHTML={{ __html: markdownToHtml(formData.description) }}
+              />
+            </TabsContent>
+          </Tabs>
         </div>
 
         <div>
@@ -247,6 +334,66 @@ export default function EmployerCompanyDetails({ data, onNext }: EmployerCompany
             onChange={handleChange}
             className="mt-1"
           />
+        </div>
+
+        {/* New Culture Field */}
+        <div className="md:col-span-2">
+          <Label htmlFor="culture">Company Culture (Optional)</Label>
+          <p className="text-xs text-gray-500 mb-2">
+            Describe your company culture, values, and work environment. Supports markdown formatting.
+          </p>
+          <Tabs defaultValue="write" className="mt-1">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="write">Write</TabsTrigger>
+              <TabsTrigger value="preview">Preview</TabsTrigger>
+            </TabsList>
+            <TabsContent value="write" className="mt-2">
+              <Textarea
+                id="culture"
+                name="culture"
+                placeholder="Tell candidates about your company culture...&#10;&#10;Example:&#10;## Our Values&#10;- **Innovation** - We embrace new ideas&#10;- **Collaboration** - We work better together&#10;- **Growth** - Continuous learning and development"
+                value={formData.culture}
+                onChange={handleChange}
+                className="min-h-[100px] font-mono text-sm"
+              />
+            </TabsContent>
+            <TabsContent value="preview" className="mt-2">
+              <div 
+                className="min-h-[100px] p-3 border rounded-md bg-gray-50 prose prose-sm max-w-none"
+                dangerouslySetInnerHTML={{ __html: markdownToHtml(formData.culture || "No culture information provided.") }}
+              />
+            </TabsContent>
+          </Tabs>
+        </div>
+
+        {/* New Benefits Field */}
+        <div className="md:col-span-2">
+          <Label htmlFor="benefits">Employee Benefits (Optional)</Label>
+          <p className="text-xs text-gray-500 mb-2">
+            List the benefits and perks you offer to employees. Supports markdown formatting.
+          </p>
+          <Tabs defaultValue="write" className="mt-1">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="write">Write</TabsTrigger>
+              <TabsTrigger value="preview">Preview</TabsTrigger>
+            </TabsList>
+            <TabsContent value="write" className="mt-2">
+              <Textarea
+                id="benefits"
+                name="benefits"
+                placeholder="List your employee benefits...&#10;&#10;Example:&#10;## Benefits Package&#10;- **Health Insurance** - Comprehensive medical coverage&#10;- **Flexible Hours** - Work-life balance&#10;- **Professional Development** - Training and conferences&#10;- **Stock Options** - Equity participation"
+                value={formData.benefits}
+                onChange={handleChange}
+                className="min-h-[100px] font-mono text-sm"
+              />
+            </TabsContent>
+            <TabsContent value="preview" className="mt-2">
+              <div 
+                className="min-h-[100px] p-3 border rounded-md bg-gray-50 prose prose-sm max-w-none"
+                dangerouslySetInnerHTML={{ __html: markdownToHtml(formData.benefits || "No benefits information provided.") }}
+              />
+            </TabsContent>
+          </Tabs>
         </div>
 
         <div className="md:col-span-2 mt-4">

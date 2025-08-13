@@ -7,8 +7,10 @@ import { Button } from "@/components/ui/button"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Save, Shield } from "lucide-react"
+import { useToast } from "@/hooks/use-toast"
 
 export default function PrivacySettings() {
+  const { toast } = useToast()
   const [profileVisibility, setProfileVisibility] = useState("public")
   const [resumeVisibility, setResumeVisibility] = useState("registered")
   const [contactVisibility, setContactVisibility] = useState("connections")
@@ -21,12 +23,42 @@ export default function PrivacySettings() {
     showSalaryExpectations: false,
     allowDataSharing: false,
   })
+  const [isLoading, setIsLoading] = useState(false)
 
   const handleSettingChange = (setting: string, value: boolean) => {
     setSettings({
       ...settings,
       [setting]: value,
     })
+  }
+
+  const handleSaveSettings = async () => {
+    setIsLoading(true)
+    try {
+      // Here you would normally make an API call to save the settings
+      // await api.post('/user/privacy-settings', {
+      //   profileVisibility,
+      //   resumeVisibility,
+      //   contactVisibility,
+      //   ...settings
+      // })
+      
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 1000))
+      
+      toast({
+        title: "Settings saved successfully",
+        description: "Your privacy settings have been updated.",
+      })
+    } catch (error) {
+      toast({
+        title: "Error saving settings",
+        description: "There was a problem updating your privacy settings. Please try again.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   return (
@@ -239,8 +271,13 @@ export default function PrivacySettings() {
 
       {/* Save Button */}
       <div className="flex justify-end">
-        <Button className="bg-accent hover:bg-accent/90">
-          <Save className="h-4 w-4 mr-1" /> Save Privacy Settings
+        <Button 
+          className="bg-accent hover:bg-accent/90" 
+          onClick={handleSaveSettings}
+          disabled={isLoading}
+        >
+          <Save className="h-4 w-4 mr-1" /> 
+          {isLoading ? "Saving..." : "Save Privacy Settings"}
         </Button>
       </div>
     </div>

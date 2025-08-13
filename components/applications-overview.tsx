@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Search, Calendar, Download, CheckCircle, XCircle, Clock } from "lucide-react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { formatDate, formatDateTime } from "@/lib/utils"
 
 // Mock data for applications
 const applications = [
@@ -254,7 +255,7 @@ function ApplicationList({ applications, getStatusBadge }: ApplicationListProps)
               </div>
 
               <div className="flex flex-col items-end gap-1">
-                <div className="text-xs text-gray-500">Applied: {new Date(app.appliedDate).toLocaleDateString()}</div>
+                <div className="text-xs text-gray-500">Applied: {formatDate(app.appliedDate)}</div>
                 {getStatusBadge(app.status)}
               </div>
 
@@ -270,7 +271,7 @@ function ApplicationList({ applications, getStatusBadge }: ApplicationListProps)
               <div>
                 <span className="font-medium text-blue-700">Interview Scheduled: </span>
                 <span className="text-blue-600">
-                  {new Date(app.interviewDate).toLocaleDateString()} at {app.interviewTime}
+                  {formatDate(app.interviewDate)} at {app.interviewTime}
                 </span>
               </div>
             </div>

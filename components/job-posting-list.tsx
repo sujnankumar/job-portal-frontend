@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react"
 import api from "@/lib/axios"
 import { useAuthStore } from "@/store/authStore"
+import { formatDate } from "@/lib/utils"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -132,19 +133,19 @@ export default function JobPostingList({ onSelectJob }: JobPostingListProps) {
                 </tr>
               </thead>
               <tbody className="divide-y">
-                {filteredJobs.map((job) => {
+        {filteredJobs.map((job) => {
                   const daysInfo = getDaysInfo(job.expiryDate)
                   return (
-                    <tr key={job.id} className="hover:bg-light-gray">
+          <tr key={job.id || job.job_id} className="hover:bg-light-gray">
                       <td className="px-4 py-4 text-sm">
                         <button
-                          onClick={() => onSelectJob?.(job.id)}
+              onClick={() => onSelectJob?.(job.id || job.job_id)}
                           className="font-medium text-dark-gray hover:text-accent text-left"
                         >
                           {job.title}
                         </button>
                         <div className="text-xs text-gray-500">
-                          Posted: {new Date(job.postedDate).toLocaleDateString()}
+                          Posted: {formatDate(job.postedDate)}
                         </div>
                       </td>
                       <td className="px-4 py-4 text-sm text-gray-600">{job.location}</td>
@@ -181,13 +182,13 @@ export default function JobPostingList({ onSelectJob }: JobPostingListProps) {
                             <DropdownMenuLabel>Actions</DropdownMenuLabel>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem>
-                              <Link href={`/employer/dashboard/jobs/${job.id}`} className="flex items-center w-full">
+                              <Link href={`/employer/dashboard/jobs/${job.id || job.job_id}`} className="flex items-center w-full">
                                 <Eye className="mr-2 h-4 w-4" /> View Details
                               </Link>
                             </DropdownMenuItem>
-                            <DropdownMenuItem>
-                              <Link href={`/employer/dashboard/jobs/${job.id}/edit`} className="flex items-center w-full">
-                                <Edit className="mr-2 h-4 w-4" /> Edit Job
+                            <DropdownMenuItem disabled={job.status !== 'active'}>
+                              <Link aria-disabled={job.status !== 'active'} href={`/employer/dashboard/jobs/${job.id || job.job_id}/edit`} className={`flex items-center w-full ${job.status !== 'active' ? 'pointer-events-none opacity-50' : ''}`}>
+                                <Edit className="mr-2 h-4 w-4" /> {job.status === 'active' ? 'Edit Job' : 'Expired'}
                               </Link>
                             </DropdownMenuItem>
                             {job.status === "expired" && (

@@ -7,7 +7,7 @@ import Image from "next/image"
 import { Send, X, Paperclip, ChevronDown, ChevronUp, MinusCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
-import { cn } from "@/lib/utils"
+import { cn, formatChatTime } from "@/lib/utils"
 import { useAuthStore } from "@/store/authStore"
 import { useChatSocket } from "@/hooks/use-chat-socket"
 import api from "@/lib/axios"
@@ -48,7 +48,7 @@ export default function JobChat({ jobId, employerId, companyName, companyLogo, j
           id: incomingMsg.id, // keep for compatibility
           sender_id: incomingMsg.sender_id,
           text: incomingMsg.text,
-          timestamp: new Date(incomingMsg.time),
+          timestamp: new Date(incomingMsg.time), // Backend already sends IST timestamp
           read: incomingMsg.read ?? false,
         };
         setMessages((prev) => [...prev, formattedMessage]);
@@ -218,7 +218,7 @@ export default function JobChat({ jobId, employerId, companyName, companyLogo, j
                   >
                     <div className="text-sm">{msg.text}</div>
                     <div className={cn("text-xs mt-1", msg.sender_id === user?.id ? "text-white/70" : "text-gray-500")}> 
-                      {msg.timestamp?.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                      {msg.timestamp ? formatChatTime(msg.timestamp) : ""}
                     </div>
                   </div>
                 </div>

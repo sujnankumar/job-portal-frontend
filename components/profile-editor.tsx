@@ -1,5 +1,6 @@
 "use client"
 
+import { useState } from "react"
 import { PlusCircle, Trash2, Save } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -10,7 +11,7 @@ import { Label } from "@/components/ui/label"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
 import axios from "@/lib/axios"
 import { useAuthStore } from "@/store/authStore"
-import { useToast } from "@/hooks/use-toast"
+import { toast } from "sonner"
 
 interface Education {
   id: string
@@ -67,9 +68,87 @@ export default function ProfileEditor({
   onCancel,
 }: ProfileEditorProps) {
   const { user } = useAuthStore()
-  const { toast } = useToast()
+  const [errors, setErrors] = useState<Record<string, string>>({})
+
+  const validateForm = () => {
+    const newErrors: Record<string, string> = {}
+    
+    // Personal info validation
+    if (!personalInfo.first_name?.trim()) {
+      newErrors.first_name = "First name is required"
+    }
+    
+    if (!personalInfo.last_name?.trim()) {
+      newErrors.last_name = "Last name is required"
+    }
+    
+    if (!personalInfo.email?.trim()) {
+      newErrors.email = "Email is required"
+    } else if (!/\S+@\S+\.\S+/.test(personalInfo.email)) {
+      newErrors.email = "Email is invalid"
+    }
+    
+    if (personalInfo.phone && !/^[\+]?[0-9\s\-\(\)]{10,}$/.test(personalInfo.phone.replace(/\s/g, ""))) {
+      newErrors.phone = "Please enter a valid phone number"
+    }
+    
+    if (personalInfo.website && !/^https?:\/\/[^\s]+$/.test(personalInfo.website)) {
+      newErrors.website = "Please enter a valid website URL (including http:// or https://)"
+    }
+    
+    if (personalInfo.linkedin && !/^(https?:\/\/)?(www\.)?linkedin\.com\/in\/[a-zA-Z0-9\-]+\/?$/.test(personalInfo.linkedin)) {
+      newErrors.linkedin = "Please enter a valid LinkedIn profile URL"
+    }
+    
+    if (personalInfo.github && !/^(https?:\/\/)?(www\.)?github\.com\/[a-zA-Z0-9\-]+\/?$/.test(personalInfo.github)) {
+      newErrors.github = "Please enter a valid GitHub profile URL"
+    }
+    
+    // Education validation
+    education.forEach((edu, index) => {
+      if (edu.school?.trim() && !edu.degree?.trim()) {
+        newErrors[`education_${index}_degree`] = "Degree is required when school is provided"
+      }
+      if (edu.degree?.trim() && !edu.school?.trim()) {
+        newErrors[`education_${index}_school`] = "School is required when degree is provided"
+      }
+      if (edu.startDate && edu.endDate && !edu.current && new Date(edu.startDate) >= new Date(edu.endDate)) {
+        newErrors[`education_${index}_endDate`] = "End date must be after start date"
+      }
+    })
+    
+    // Experience validation
+    experience.forEach((exp, index) => {
+      if (exp.company?.trim() && !exp.title?.trim()) {
+        newErrors[`experience_${index}_title`] = "Job title is required when company is provided"
+      }
+      if (exp.title?.trim() && !exp.company?.trim()) {
+        newErrors[`experience_${index}_company`] = "Company is required when job title is provided"
+      }
+      if (exp.startDate && exp.endDate && !exp.current && new Date(exp.startDate) >= new Date(exp.endDate)) {
+        newErrors[`experience_${index}_endDate`] = "End date must be after start date"
+      }
+    })
+    
+    // Skills validation
+    const validSkills = skills.filter(skill => skill.name?.trim())
+    if (validSkills.length === 0) {
+      newErrors.skills = "Please add at least one skill"
+    }
+    
+  setErrors(newErrors)
+  return { isValid: Object.keys(newErrors).length === 0, newErrors }
+  }
 
   const handleSave = async () => {
+    const { isValid, newErrors } = validateForm()
+    if (!isValid) {
+      const messages = Object.values(newErrors)
+      messages.slice(0, 5).forEach((m, idx) => setTimeout(() => toast.error(m), idx * 60))
+      if (messages.length > 5) setTimeout(() => toast.error(`${messages.length - 5} more validation errors...`), 6 * 60)
+      return
+    }
+    
     try {
       await axios.put(
         "/profile/update_profile",
@@ -86,9 +165,10 @@ export default function ProfileEditor({
         }
       )
       setIsEditing(false)
-      toast({ title: "Profile updated successfully!" })
+      setErrors({})
+  toast.success("Profile updated successfully")
     } catch (e: any) {
-      toast({ title: "Failed to update profile", description: e?.response?.data?.detail || "Unknown error", variant: "destructive" })
+  toast.error(e?.response?.data?.detail || "Failed to update profile")
     }
   }
 
@@ -371,10 +451,9 @@ export default function ProfileEditor({
                         newExperience[index].endDate = e.target.value
                         setExperience(newExperience)
                       }}
-                      disabled={exp.current}
+                      disabled={exp.current || !isEditing}
                       className="mt-1"
                       readOnly={!isEditing}
-                      disabled={!isEditing}
                     />
                   </div>
                   <div className="md:col-span-2">
@@ -505,10 +584,9 @@ export default function ProfileEditor({
                         newEducation[index].endDate = e.target.value
                         setEducation(newEducation)
                       }}
-                      disabled={edu.current}
+                      disabled={edu.current || !isEditing}
                       className="mt-1"
                       readOnly={!isEditing}
-                      disabled={!isEditing}
                     />
                   </div>
                 </div>
