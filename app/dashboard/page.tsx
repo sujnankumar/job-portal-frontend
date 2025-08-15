@@ -4,13 +4,15 @@ import { useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { useAuthStore } from "@/store/authStore"
 import ProtectedRoute from "@/components/auth/protected-route"
+import { toast } from "sonner"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import JobCategories from "@/components/job-categories"
 import FeaturedJobs from "@/components/featured-jobs"
-import SavedSearches from "@/components/saved-searches"
+// import SavedSearches from "@/components/saved-searches"
 import ApplicationList from "@/components/application-list"
 import OnboardingMiddleware from "@/components/auth/onboarding-middleware";
 import JobListings from "@/components/job-listings"
+import Link from "next/link"
 
 
 export default function ApplicantDashboardPage() {
@@ -19,6 +21,7 @@ export default function ApplicantDashboardPage() {
 
   useEffect(() => {
     if (isAuthenticated && user?.role === "employer") {
+      toast("Redirected", { description: "You need to login as job seeker to view that page." })
       router.push("/employer/dashboard")
     }
   }, [isAuthenticated, user, router])
@@ -50,8 +53,23 @@ export default function ApplicantDashboardPage() {
             </TabsContent>
 
             <TabsContent value="saved" className="p-6">
-              {/* Replace hardcoded text with JobListings component for saved jobs */}
-              <JobListings savedJobsOnly={true} />
+              {/* Limited view of saved jobs (first 5) with Show All link */}
+              <div className="space-y-4">
+                <JobListings savedJobsOnly={true} hideControls limit={5} filters={{
+                  jobTypes: [],
+                  experienceLevels: [],
+                  salaryRange: [0,20],
+                  location: "",
+                  industries: [],
+                  skills: [],
+                  locationTypes: [],
+                  search: "",
+                  booleanQuery: ""
+                }} showExpired={false} />
+                <div className="flex justify-center pt-2">
+                  <Link href="/saved-jobs" className="text-accent text-sm font-medium hover:underline">Show all saved jobs →</Link>
+                </div>
+              </div>
             </TabsContent>
           </Tabs>
 

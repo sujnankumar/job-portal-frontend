@@ -66,9 +66,11 @@ interface JobListingsProps {
   filters?: JobFiltersState
   savedJobsOnly?: boolean
   showExpired?: boolean
+  limit?: number // limit number of jobs shown (e.g., dashboard preview)
+  hideControls?: boolean // hide pagination & page-size controls
 }
 
-export default function JobListings({ filters, savedJobsOnly = false, showExpired = false }: JobListingsProps) {
+export default function JobListings({ filters, savedJobsOnly = false, showExpired = false, limit, hideControls = false }: JobListingsProps) {
   const [expandedJob, setExpandedJob] = useState<string | null>(null)
   const [savedJobs, setSavedJobs] = useState<string[]>([])
   const [allJobs, setAllJobs] = useState<any[]>([]) // Store all fetched jobs
@@ -307,13 +309,15 @@ export default function JobListings({ filters, savedJobsOnly = false, showExpire
     setPage(1)
   }, [JSON.stringify(filters), showExpired])
 
-  const totalJobs = filteredJobs.length
+  const limitedJobs = typeof limit === 'number' ? filteredJobs.slice(0, limit) : filteredJobs
+  const totalJobs = limitedJobs.length
   const totalPages = Math.max(1, Math.ceil(totalJobs / pageSize))
   if (page > totalPages) {
     setPage(totalPages)
   }
   const startIdx = (page - 1) * pageSize
-  const currentPageJobs = filteredJobs.slice(startIdx, startIdx + pageSize)
+  const currentPageJobsSource = limitedJobs
+  const currentPageJobs = hideControls ? currentPageJobsSource : currentPageJobsSource.slice(startIdx, startIdx + pageSize)
 
   const changePageSize = (val: string) => {
     setPageSizeMode(val)
@@ -346,7 +350,7 @@ export default function JobListings({ filters, savedJobsOnly = false, showExpire
   return (
     <div className="space-y-4">
   {/* Toasts handle save/unsave feedback; removed inline messages */}
-      {filteredJobs.length === 0 ? (
+  {limitedJobs.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-16 bg-white rounded-xl shadow-sm border border-gray-100">
           <img src="/job_placeholder.jpeg" alt="No jobs" className="w-20 h-20 mb-4 opacity-60" />
           <h2 className="text-xl font-semibold text-gray-700 mb-2">
@@ -503,8 +507,8 @@ export default function JobListings({ filters, savedJobsOnly = false, showExpire
             </div>
           </div>
         ))}
-        {/* Bottom Controls: page size + pagination + summary */}
-        <div className="mt-6 space-y-3">
+  {!hideControls && (
+  <div className="mt-6 space-y-3">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div className="flex items-center gap-2 flex-wrap">
               <span className="text-sm text-gray-600">Per page:</span>
@@ -570,7 +574,8 @@ export default function JobListings({ filters, savedJobsOnly = false, showExpire
               </button>
             </div>
           </div>
-        </div>
+  </div>
+  )}
         </>
       )}
     </div>

@@ -5,9 +5,47 @@ import { useSearchParams, useRouter } from "next/navigation"
 import JobFilters, { JobFiltersState } from "@/components/job-filters"
 import JobListings from "@/components/job-listings"
 import JobSearch from "@/components/job-search"
-import { Switch } from "@/components/ui/switch"
-import { Label } from "@/components/ui/label"
-import { console } from "inspector"
+import { motion } from "framer-motion"
+
+function ExpiredToggle({ value, onChange }: { value: boolean; onChange: (v: boolean) => void }) {
+  const knobTranslate = value ? 28 : 0
+  return (
+    <button
+      type="button"
+      onClick={() => onChange(!value)}
+      className="group inline-flex items-center gap-3 select-none"
+      data-state={value ? 'on' : 'off'}
+        aria-label={value ? 'showing expired jobs' : 'show expired jobs'}
+    >
+      <span className="text-sm font-medium text-gray-600 group-hover:text-gray-800 transition-colors hidden sm:inline">
+          {value ? 'showing expired jobs' : 'show expired jobs'}
+      </span>
+      <div className="relative h-7 w-14 flex items-center">
+        <div className={`absolute inset-0 rounded-full border transition-colors duration-300 ${value ? 'bg-accent/90 border-accent/70' : 'bg-gray-300 border-gray-300'} shadow-inner`} />
+        <div className="relative h-full w-full flex items-center px-1">
+          <motion.div
+            initial={false}
+            animate={{ x: knobTranslate }}
+            transition={{ type: 'spring', stiffness: 260, damping: 22 }}
+            className="h-5 w-5 rounded-full bg-white shadow-md border border-gray-200 flex items-center justify-center text-[11px] font-semibold text-accent"
+          >
+            {value && (
+              <motion.span
+                key="tick"
+                initial={{ scale: 0.4, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.4, opacity: 0 }}
+                transition={{ type: 'spring', stiffness: 300, damping: 18 }}
+              >
+                ✓
+              </motion.span>
+            )}
+          </motion.div>
+        </div>
+      </div>
+    </button>
+  )
+}
 
 export default function JobListingsPage() {
   const searchParams = useSearchParams()
@@ -96,7 +134,10 @@ export default function JobListingsPage() {
 
   return (
     <div className="container mx-auto max-w-6xl py-10 px-4">
-      <h1 className="text-3xl font-bold text-dark-gray mb-6">Browse Jobs</h1>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+        <h1 className="text-3xl font-bold text-dark-gray">Browse Jobs</h1>
+        <ExpiredToggle value={showExpired} onChange={setShowExpired} />
+      </div>
 
       {/* Pass down exactly the same props you already had */}
       <div className="mb-8">
@@ -114,15 +155,7 @@ export default function JobListingsPage() {
           <JobFilters filters={filters} setFilters={setFilters} />
         </div>
         <div className="w-full lg:w-3/4 space-y-4">
-          <div className="flex items-center gap-4 justify-end pr-1 flex-wrap">
-            <div className="flex items-center gap-2">
-              <Switch id="show-expired" checked={showExpired} onCheckedChange={(v) => { setShowExpired(v); }} />
-            <Label htmlFor="show-expired" className="text-sm text-gray-600 cursor-pointer">
-              Show expired jobs
-            </Label>
-            </div>
-            {/* Per-page selector removed: handled inside JobListings bottom controls */}
-          </div>
+          {/* Top right controls removed; toggle moved next to heading */}
           <JobListings
             filters={{ ...filters, search, location }}
             showExpired={showExpired}
