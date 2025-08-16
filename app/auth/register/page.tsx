@@ -316,7 +316,7 @@ export default function RegisterPage() {
                 <Checkbox id="agree-terms" checked={formData.agreeTerms} onCheckedChange={handleCheckboxChange} className="mt-1" />
                 <div>
                   <Label htmlFor="agree-terms" className="text-sm font-normal">
-                    I agree to the <Link href="/terms" className="text-accent hover:underline">Terms of Service</Link> and <Link href="/privacy" className="text-accent hover:underline">Privacy Policy</Link>
+                    I agree to the <Link href="/terms" className="text-accent hover:underline">Terms &amp; Privacy Policy</Link>
                   </Label>
                   {errors.agreeTerms && <p className="text-red-500 text-xs mt-1">{errors.agreeTerms}</p>}
                 </div>
