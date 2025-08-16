@@ -1,21 +1,18 @@
 "use client"
 
-import { useEffect } from "react"
-import { useRouter } from "next/navigation"
-import { useAuthStore } from "@/store/authStore"
+import ProtectedRoute from "@/components/auth/protected-route"
+import OnboardingMiddleware from "@/components/auth/onboarding-middleware"
+import ApplicationList from "@/components/application-list"
 
-export default function ApplicationsRedirectPage() {
-  const { user, isAuthenticated } = useAuthStore()
-  const router = useRouter()
-
-  useEffect(() => {
-    if (!isAuthenticated) {
-      router.replace("/auth/login")
-      return
-    }
-    if (user?.role === 'employer') router.replace('/employer/dashboard')
-    else router.replace('/dashboard')
-  }, [isAuthenticated, user, router])
-
-  return <div className="py-24 text-center text-gray-500">Redirecting...</div>
+export default function ApplicationsPage() {
+  return (
+    <OnboardingMiddleware>
+      <ProtectedRoute allowedRoles={["applicant"]}>
+        <div className="container mx-auto max-w-5xl py-8 px-4">
+          <h1 className="text-2xl font-bold text-dark-gray mb-4">My Applications</h1>
+          <ApplicationList />
+        </div>
+      </ProtectedRoute>
+    </OnboardingMiddleware>
+  )
 }

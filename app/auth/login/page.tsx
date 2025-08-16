@@ -137,25 +137,14 @@ export default function LoginPage() {
       <div className="w-full max-w-4xl bg-white rounded-3xl shadow-2xl overflow-hidden flex flex-col md:flex-row">
         {/* Illustration Side */}
         <div className="hidden md:flex flex-col justify-center items-center w-1/2 bg-gradient-to-br from-purple-100 to-purple-200 p-10 relative">
-          {/* Blended illustration with gradient mask and drop shadow */}
-          <div className="relative w-[320px] h-[320px] flex items-center justify-center">
+          <div className="relative w-[320px] h-[320px] flex items-center justify-center soft-image-wrap">
             <Image
               src={loginImg}
               alt="Login"
               width={320}
               height={320}
-              className="object-contain rounded-2xl shadow-xl"
-              style={{ zIndex: 2 }}
-            />
-            {/* Gradient mask overlay for blending edges */}
-            <div
-              className="absolute inset-0 pointer-events-none rounded-2xl"
-              style={{
-                background: "radial-gradient(circle at 60% 60%, rgba(255,255,255,0.7) 0%, rgba(255,255,255,0.2) 60%, rgba(255,255,255,0) 100%)",
-                zIndex: 3,
-                mixBlendMode: "lighten",
-                filter: "blur(2px)"
-              }}
+              className="object-contain soft-blend-img"
+              priority
             />
           </div>
           <h2 className="mt-8 text-2xl font-bold text-purple-700">Welcome Back!</h2>

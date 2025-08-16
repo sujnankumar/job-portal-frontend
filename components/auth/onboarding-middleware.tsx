@@ -5,10 +5,15 @@ import type React from "react"
 import { useEffect } from "react"
 import { useRouter, usePathname } from "next/navigation"
 import { useAuthStore } from "@/store/authStore"
-import { toast } from "@/components/ui/use-toast"
+import { toast } from "sonner"
 
-// Paths that are exempt from onboarding redirection
-const EXEMPT_PATHS = ["/onboarding", "/auth/login", "/auth/register", "/auth/forgot-password"]
+// Paths exempt from onboarding enforcement
+const EXEMPT_PATHS = [
+  "/onboarding",
+  "/auth/login",
+  "/auth/register",
+  "/auth/forgot-password",
+]
 
 export default function OnboardingMiddleware({ children }: { children: React.ReactNode }) {
   const { user, isAuthenticated } = useAuthStore()
@@ -19,24 +24,16 @@ export default function OnboardingMiddleware({ children }: { children: React.Rea
     // Only check if user is authenticated
     if (!isAuthenticated || !user) return
 
-    if (user.role === "employer") {
-      return
-    }
-
     // Check if current path is exempt
     const isExemptPath = EXEMPT_PATHS.some((path) => pathname.startsWith(path))
     if (isExemptPath) return
 
     // If onboarding is not complete, redirect to onboarding
     if (!user.onboarding?.isComplete) {
-      // Show toast notification to inform the user
-      toast({
-        title: "Complete your profile",
-        description: "Please complete your profile to access all features.",
+      toast.warning("Onboarding required", {
+        description: "Complete onboarding to access the dashboard.",
         duration: 5000,
       })
-
-      console.log("Redirecting to onboarding page - onboarding not complete")
       router.push("/onboarding")
     }
   }, [isAuthenticated, user, router, pathname])

@@ -2,7 +2,7 @@
 
 import type React from "react"
 import { useEffect, useState } from "react"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -18,6 +18,7 @@ import Image from "next/image"
 export default function RegisterPage() {
   const router = useRouter()
   const login = useAuthStore((state) => state.login)
+  const searchParams = useSearchParams()
   const [role, setRole] = useState<UserRole>("applicant")
   const [formData, setFormData] = useState({
     firstName: "",
@@ -35,8 +36,26 @@ export default function RegisterPage() {
   const seekerImg = "/job-seeker-illustration.png"
   const employerImg = "/employer-illustration.png"
 
-  // Toggle role
-  const handleRoleChange = (r: UserRole) => setRole(r)
+  // Initialize role from query param if present
+  useEffect(() => {
+    const qp = (searchParams?.get("role") || "").toLowerCase()
+    if (qp === "employer" && role !== "employer") setRole("employer")
+    if (["applicant", "job_seeker", "seeker"].includes(qp) && role !== "applicant") setRole("applicant")
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // Toggle role + reflect in URL for shareable deep link
+  const handleRoleChange = (r: UserRole) => {
+    if (r === role) return
+    setRole(r)
+    try {
+      const params = new URLSearchParams(window.location.search)
+      params.set("role", r === "applicant" ? "applicant" : "employer")
+      const newUrl = `${window.location.pathname}?${params.toString()}`
+      // shallow replace so back button isn't polluted
+      router.replace(newUrl)
+    } catch {}
+  }
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target
@@ -182,57 +201,53 @@ export default function RegisterPage() {
         {role === "applicant" ? (
           <div className="hidden md:flex flex-col justify-center items-center w-1/2 bg-gradient-to-br from-purple-100 to-purple-200 p-10 relative">
             {/* Blended illustration for job-seeker */}
-            <div className="relative w-[320px] h-[320px] flex items-center justify-center">
+            <div className="relative w-[320px] h-[320px] flex items-center justify-center soft-image-wrap">
               <Image
                 src={seekerImg}
                 alt="Job Seeker"
                 width={320}
                 height={320}
-                className="object-contain rounded-2xl shadow-xl"
-                style={{ zIndex: 2 }}
-              />
-              <div
-                className="absolute inset-0 pointer-events-none rounded-2xl"
-                style={{
-                  background: "radial-gradient(circle at 60% 60%, rgba(255,255,255,0.7) 0%, rgba(255,255,255,0.2) 60%, rgba(255,255,255,0) 100%)",
-                  zIndex: 3,
-                  mixBlendMode: "lighten",
-                  filter: "blur(2px)"
-                }}
+                className="object-contain soft-blend-img"
               />
             </div>
             <h2 className="mt-8 text-2xl font-bold text-purple-700">Find Your Dream Job</h2>
             <p className="mt-2 text-gray-600 text-center">Join thousands of job seekers landing their next opportunity.</p>
-            <div className="mt-8 flex gap-2">
-              <Button variant="ghost" onClick={() => handleRoleChange("employer")}>I'm an Employer</Button>
+            <div className="mt-8">
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={() => handleRoleChange("employer")}
+                className="bg-white/70 backdrop-blur-sm hover:bg-white shadow-sm"
+              >
+                I'm an Employer
+              </Button>
             </div>
           </div>
         ) : (
           <div className="hidden md:flex flex-col justify-center items-center w-1/2 bg-gradient-to-br from-purple-100 to-purple-200 p-10 order-2 relative">
             {/* Blended illustration for employer */}
-            <div className="relative w-[320px] h-[320px] flex items-center justify-center">
+            <div className="relative w-[320px] h-[320px] flex items-center justify-center soft-image-wrap">
               <Image
                 src={employerImg}
                 alt="Employer"
                 width={320}
                 height={320}
-                className="object-contain rounded-2xl shadow-xl"
-                style={{ zIndex: 2 }}
-              />
-              <div
-                className="absolute inset-0 pointer-events-none rounded-2xl"
-                style={{
-                  background: "radial-gradient(circle at 60% 60%, rgba(255,255,255,0.7) 0%, rgba(255,255,255,0.2) 60%, rgba(255,255,255,0) 100%)",
-                  zIndex: 3,
-                  mixBlendMode: "lighten",
-                  filter: "blur(2px)"
-                }}
+                className="object-contain soft-blend-img"
               />
             </div>
             <h2 className="mt-8 text-2xl font-bold text-purple-700">Hire Top Talent</h2>
             <p className="mt-2 text-gray-600 text-center">Post jobs, manage applications, and grow your team with ease.</p>
-            <div className="mt-8 flex gap-2">
-              <Button variant="ghost" onClick={() => handleRoleChange("applicant")}>I'm a Job Seeker</Button>
+            <div className="mt-8">
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={() => handleRoleChange("applicant")}
+                className="bg-white/70 backdrop-blur-sm hover:bg-white shadow-sm"
+              >
+                I'm a Job Seeker
+              </Button>
             </div>
           </div>
         )}
@@ -240,8 +255,24 @@ export default function RegisterPage() {
         {/* Form Side */}
         <div className={`flex-1 flex flex-col justify-center items-center p-8 md:p-12 ${role === "applicant" ? "order-2" : "order-1"}`}>
           <div className="w-full max-w-md">
-            <h1 className="text-3xl font-bold text-dark-gray mb-2">Create an Account</h1>
-            <p className="text-gray-500 mb-6">{role === "applicant" ? "Join our platform to find your dream job" : "Start hiring with the best job portal"}</p>
+            <div className="mb-6 flex flex-col gap-3">
+              <div className="flex items-center justify-between gap-3 flex-wrap">
+                <h1 className="text-3xl font-bold text-dark-gray">Register as {role === "applicant" ? "Job Seeker" : "Employer"}</h1>
+                {/* Mobile role switch link */}
+                <button
+                  type="button"
+                  onClick={() => handleRoleChange(role === "applicant" ? "employer" : "applicant")}
+                  className="md:hidden text-xs text-accent underline font-medium"
+                >
+                  I'm a {role === "applicant" ? "Employer" : "Job Seeker"}
+                </button>
+              </div>
+              <p className="text-gray-500 text-sm md:text-base">
+                {role === "applicant"
+                  ? "100% free. Apply, track applications & use resume tools at no cost."
+                  : "First 5 job posts free. Upgrade only when you need more reach."}
+              </p>
+            </div>
             <form onSubmit={handleSubmit} noValidate className="space-y-4" role="form" aria-label="Registration form">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
@@ -256,8 +287,19 @@ export default function RegisterPage() {
                 </div>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <Input id="email" name="email" type="email" placeholder={role === "applicant" ? "you@example.com" : "company@example.com"} value={formData.email} onChange={handleChange} />
+                <Label htmlFor="email">Email {role === "employer" && <span className="text-xs font-normal text-gray-400">(work)</span>}</Label>
+                <Input
+                  id="email"
+                  name="email"
+                  type="email"
+                  placeholder={role === "applicant" ? "you@example.com" : "talent@yourcompany.com"}
+                  value={formData.email}
+                  onChange={handleChange}
+                  aria-describedby="email-hint"
+                />
+                <p id="email-hint" className="text-[11px] text-gray-400 mt-1">
+                  {role === "applicant" ? "Use a personal email you can access for updates." : "Use a company / role-based email for trust."}
+                </p>
                 {errors.email && <p className="text-red-500 text-xs mt-1">{errors.email}</p>}
               </div>
               <div className="space-y-2">
@@ -274,16 +316,19 @@ export default function RegisterPage() {
                 <Checkbox id="agree-terms" checked={formData.agreeTerms} onCheckedChange={handleCheckboxChange} className="mt-1" />
                 <div>
                   <Label htmlFor="agree-terms" className="text-sm font-normal">
-                    I agree to the <Link href="/terms" className="text-accent hover:underline">Terms of Service</Link> and <Link href="/privacy" className="text-accent hover:underline">Privacy Policy</Link>
+                    I agree to the <Link href="/terms" className="text-accent hover:underline">Terms &amp; Privacy Policy</Link>
                   </Label>
                   {errors.agreeTerms && <p className="text-red-500 text-xs mt-1">{errors.agreeTerms}</p>}
                 </div>
               </div>
               <Button type="submit" className="w-full bg-accent hover:bg-accent/90" disabled={isLoading}>
-                {isLoading ? "Creating Account..." : "Create Account"}
+                {isLoading ? (role === "applicant" ? "Creating Job Seeker Account..." : "Creating Employer Account...") : (role === "applicant" ? "Create Job Seeker Account" : "Create Employer Account")}
               </Button>
               <div className="text-center text-sm text-gray-500">
                 Already have an account? <Link href="/auth/login" className="text-accent hover:underline">Sign in</Link>
+              </div>
+              <div className="text-[11px] text-gray-400 text-center mt-2">
+                {role === "applicant" ? "You can switch to an employer account later if you start hiring." : "Employer accounts can also create a separate seeker profile if applying."}
               </div>
             </form>
           </div>

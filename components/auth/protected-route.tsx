@@ -6,6 +6,7 @@ import { useEffect } from "react"
 import { useRouter, usePathname } from "next/navigation"
 import { useAuthStore } from "@/store/authStore"
 import type { UserRole } from "@/store/authStore"
+import { toast } from "sonner"
 
 interface ProtectedRouteProps {
   children: React.ReactNode
@@ -21,14 +22,17 @@ export default function ProtectedRoute({ children, allowedRoles }: ProtectedRout
     if (!hydrated) return;
     // If not authenticated, redirect to login
     if (!isAuthenticated) {
+      toast("Please log in", { description: "You need to sign in to continue." })
       router.push("/auth/login")
       return
     }
     // If roles are specified and user's role is not included, redirect to appropriate dashboard
     if (allowedRoles && user?.role && !allowedRoles.includes(user.role)) {
       if (user.role === "applicant") {
+        toast("Redirected", { description: "You need to login as employer to view this page." })
         router.push("/dashboard")
       } else if (user.role === "employer") {
+        toast("Redirected", { description: "You need to login as job seeker to view this page." })
         router.push("/employer/dashboard")
       }
     }

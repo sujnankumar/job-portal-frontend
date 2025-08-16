@@ -81,38 +81,6 @@
   scrollbar-width: thin;
   scrollbar-color: #8f5caf transparent;
 }
-
-/* Sonner toast theme overrides */
-[data-sonner-toaster] .sonner-toast,
-[data-sonner-toaster] .sonner-toast[data-type],
-[data-sonner-toaster] .sonner-toast[data-type="success"],
-[data-sonner-toaster] .sonner-toast[data-type="error"],
-[data-sonner-toaster] .sonner-toast[data-type="info"],
-[data-sonner-toaster] .sonner-toast[data-type="warning"] {
-  --toast-bg: #ffffff;
-  --toast-border: #e5d4f7; /* light purple */
-  --toast-fg: #4b1f6f; /* deep purple text */
-  background: var(--toast-bg) !important;
-  color: var(--toast-fg) !important;
-  border: 1px solid var(--toast-border) !important;
-  box-shadow: 0 4px 14px -2px rgba(111, 37, 168, 0.12), 0 2px 4px rgba(111, 37, 168, 0.08) !important;
-}
-
-[data-sonner-toaster] .sonner-toast [data-icon] {
-  color: #6f25a8 !important; /* icon purple */
-}
-
-[data-sonner-toaster] .sonner-toast button[aria-label="Close"] {
-  background: #6f25a8 !important;
-  color: #fff !important;
-  border: 1px solid #6f25a8 !important;
-}
-
-[data-sonner-toaster] .sonner-toast button[aria-label="Close"]:hover {
-  background: #581c85 !important;
-  border-color: #581c85 !important;
-}
-
 [data-sonner-toaster] .sonner-toast .sonner-button {
   background: #6f25a8 !important;
   color: #fff !important;
@@ -124,4 +92,45 @@
 
 [data-sonner-toaster] .sonner-toast[data-y-position][data-expanded] {
   border-color: #d9b9f0 !important;
+}
+
+/* Simplified flat embedded image utility */
+.soft-image-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 1.25rem;
+  /* Make wrapper itself visually disappear into parent */
+  background: transparent;
+  overflow: hidden; /* still clip any image overflow */
+}
+.soft-blend-img {
+  border-radius: 0; /* remove internal rounding so blend is uniform */
+  box-shadow: none; /* ensure completely flat */
+  background: transparent;
+  /* Hard blend: let underlying gradient influence tones */
+  mix-blend-mode: multiply;
+  opacity: 0.92; /* reduce prominence slightly */
+  filter: saturate(1.05) contrast(0.95) brightness(1.02);
+  transition: opacity 180ms ease, filter 180ms ease;
+}
+.soft-image-wrap:hover .soft-blend-img {
+  opacity: 0.98;
+  filter: saturate(1.08) contrast(1.0) brightness(1.03);
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .soft-blend-img { mix-blend-mode: normal; opacity: 1; filter: none; }
+}
+
+/* Dark mode adjustments for blend so images remain visible */
+.dark .soft-blend-img {
+  mix-blend-mode: screen;
+  opacity: 0.85;
+  filter: saturate(1.05) contrast(1.05) brightness(1.05);
+}
+.dark .soft-image-wrap:hover .soft-blend-img {
+  opacity: 0.92;
+  filter: saturate(1.08) contrast(1.08) brightness(1.08);
 }

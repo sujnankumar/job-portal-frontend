@@ -7,7 +7,8 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import CompanyJobs from "@/components/company-jobs"
-import { useState, useEffect, use as usePromise } from "react" // Import hooks including experimental use
+import { useState, useEffect, use as usePromise } from "react"
+import { toast } from "sonner"
 import api from "@/lib/axios"
 import { useAuthStore } from "@/store/authStore"
 import { DEFAULT_COMPANY_LOGO, DEFAULT_COVER_IMAGE } from "@/lib/placeholders"
@@ -62,7 +63,59 @@ export default function CompanyDetailPage({ params }: { params: Promise<{ id: st
   const [logoUrl, setLogoUrl] = useState<string | null>(null)
   const [logoLoading, setLogoLoading] = useState(false)
   const [openPositions, setOpenPositions] = useState(0)
+  // Follow state
+  const [isFollowing, setIsFollowing] = useState(false)
+  const [followLoading, setFollowLoading] = useState(false)
   // Rating & Review state
+  // Check if user is following this company
+  const user = useAuthStore((s) => s.user)
+  const isJobSeeker = user?.role === "applicant" // mapping backend job_seeker ~ applicant
+  const [totalRatings, setTotalRatings] = useState<number>(0)
+
+  useEffect(() => {
+    const checkFollowing = async () => {
+      if (!isJobSeeker || !user?.token || !companyId) return setIsFollowing(false)
+      try {
+        const res = await api.get("/following", { headers: { Authorization: `Bearer ${user.token}` } })
+        const following = res.data?.following || []
+        setIsFollowing(following.includes(companyId))
+      } catch {
+        setIsFollowing(false)
+      }
+    }
+    checkFollowing()
+  }, [isJobSeeker, user?.token, companyId])
+  // Follow company handler
+  const handleFollowCompany = async () => {
+    if (!isJobSeeker) return toast.error("Only job seekers can follow companies")
+    if (!user?.token) return toast.error("Please login to follow companies")
+    setFollowLoading(true)
+    try {
+      const response = await api.post(`/follow/${companyId}`, {}, { headers: { Authorization: `Bearer ${user.token}` } })
+      setIsFollowing(true)
+      toast.success(response?.data?.detail || "You are now following this company!")
+    } catch (e: any) {
+      toast.error(e?.response?.data?.detail || "Failed to follow company")
+    } finally {
+      setFollowLoading(false)
+    }
+  }
+
+  // Unfollow company handler
+  const handleUnfollowCompany = async () => {
+    if (!isJobSeeker) return toast.error("Only job seekers can unfollow companies")
+    if (!user?.token) return toast.error("Please login to unfollow companies")
+    setFollowLoading(true)
+    try {
+      const response = await api.delete(`/follow/${companyId}`, { headers: { Authorization: `Bearer ${user.token}` } })
+      setIsFollowing(false)
+      toast.success(response?.data?.detail ||"You have unfollowed this company.")
+    } catch (e: any) {
+      toast.error(e?.response?.data?.detail || "Failed to unfollow company")
+    } finally {
+      setFollowLoading(false)
+    }
+  }
   const [showRatingModal, setShowRatingModal] = useState(false)
   const [showReviewModal, setShowReviewModal] = useState(false)
   const [ratingValue, setRatingValue] = useState<number>(0)
@@ -73,10 +126,6 @@ export default function CompanyDetailPage({ params }: { params: Promise<{ id: st
   const [existingReviewRating, setExistingReviewRating] = useState<number | null>(null)
   const [reviewText, setReviewText] = useState("")
   const [feedbackMsg, setFeedbackMsg] = useState<string | null>(null)
-  const user = useAuthStore((s) => s.user)
-  const isJobSeeker = user?.role === "applicant" // mapping backend job_seeker ~ applicant
-
-  const [totalRatings, setTotalRatings] = useState<number>(0)
 
   useEffect(() => {
     const fetchCompanyData = async () => {
@@ -462,9 +511,21 @@ export default function CompanyDetailPage({ params }: { params: Promise<{ id: st
                 </Link>
               </Button>
 
-              <Button variant="outline" className="w-full">
-                Follow Company {/* Add follow functionality later */}
-              </Button>
+              {isJobSeeker && (
+                <Button
+                  variant={isFollowing ? "default" : "outline"}
+                  className="w-full"
+                  disabled={followLoading}
+                  onClick={isFollowing ? handleUnfollowCompany : handleFollowCompany}
+                >
+                  {followLoading ? "Processing..." : isFollowing ? "Following" : "Follow Company"}
+                </Button>
+              )}
+              {!isJobSeeker && (
+                <Button variant="outline" className="w-full" disabled>
+                  Follow Company
+                </Button>
+              )}
 
               <Button variant="outline" className="w-full" asChild>
                 <Link href={`/reviews/${displayCompany.id}`} className="w-full">

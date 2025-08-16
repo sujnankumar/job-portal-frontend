@@ -4,6 +4,7 @@ import { Inter } from "next/font/google"
 import "./globals.css"
 import Navbar from "@/components/navbar"
 import Footer from "@/components/footer"
+import OnboardingMiddleware from "@/components/auth/onboarding-middleware"
 // Using sonner toaster for unified bottom-right notifications
 import { Toaster } from "@/components/ui/sonner"
 
@@ -25,7 +26,9 @@ export default function RootLayout({
       <body className={inter.className}>
         <div className="flex min-h-screen flex-col">
           <Navbar />
-          <main className="flex-1 bg-light-cream">{children}</main>
+          <OnboardingMiddleware>
+            <main className="flex-1 bg-light-cream">{children}</main>
+          </OnboardingMiddleware>
           <Footer />
         </div>
   <Toaster

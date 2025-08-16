@@ -4,6 +4,7 @@ import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { useAuthStore } from "@/store/authStore"
 import ProtectedRoute from "@/components/auth/protected-route"
+import { toast } from "sonner"
 import EmployerDashboardHeader from "@/components/employer-dashboard-header"
 import JobPostingList from "@/components/job-posting-list"
 import JobApplications from "@/components/job-applications"
@@ -19,6 +20,7 @@ export default function EmployerDashboardPage() {
 
   useEffect(() => {
     if (isAuthenticated && user?.role === "applicant") {
+      toast("Redirected", { description: "You need to login as employer to view that page." })
       router.push("/dashboard")
     }
   }, [isAuthenticated, user, router])
