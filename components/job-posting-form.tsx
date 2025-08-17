@@ -1,8 +1,7 @@
 "use client"
 
-import type React from "react"
-
-import { useState } from "react"
+import React, { useState } from "react"
+import { toast } from "sonner"
 import { useRouter } from "next/navigation"
 import Image from "next/image"
 import { Button } from "@/components/ui/button"
@@ -16,9 +15,12 @@ import { Calendar, Upload, Save, Plus, Trash2, Eye, Edit } from "lucide-react"
 import { cn } from "@/lib/utils"
 import api from "@/lib/axios"
 import { useAuthStore } from "@/store/authStore"
+// Using global 'sonner' toast imported above
+
 
 export default function JobPostingForm() {
   const router = useRouter()
+  // toast provided by sonner
   const [activeTab, setActiveTab] = useState("details")
   const [formData, setFormData] = useState({
     title: "",
@@ -46,6 +48,22 @@ export default function JobPostingForm() {
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [showDescriptionPreview, setShowDescriptionPreview] = useState(false)
   const [showRequirementsPreview, setShowRequirementsPreview] = useState(false)
+  const [upgradeModalOpen, setUpgradeModalOpen] = useState(false)
+  const [canPostChecked, setCanPostChecked] = useState(false)
+
+  // initial eligibility check
+  React.useEffect(()=> {
+    const run = async () => {
+      try {
+        if(!loginUser?.token) return
+        const r = await api.get('/subscription/can-post', { headers: { Authorization: `Bearer ${loginUser.token}` } })
+        if(!r.data.allowed){
+          setUpgradeModalOpen(true)
+        }
+      } catch(e){ /* ignore */ } finally { setCanPostChecked(true) }
+    }
+    run()
+  }, [loginUser?.token])
 
   // Simple markdown to HTML converter for preview only
   const markdownToHtml = (markdown: string) => {
@@ -88,12 +106,34 @@ export default function JobPostingForm() {
       .trim()
   }
 
-  const handleNext = () => {
-    if (activeTab === "details") {
-      setActiveTab("description")
-    } else if (activeTab === "description") {
-      setActiveTab("requirements")
+  const requiredFirstTab = ['title','department','location','experienceLevel','jobCategory','applicationDeadline']
+
+  const validateFirstTab = () => {
+    const newErrors: Record<string,string> = {}
+    requiredFirstTab.forEach(f=> { if(!String((formData as any)[f]||'').trim()) newErrors[f] = 'This field is required' })
+    setErrors(prev => ({...prev, ...newErrors}))
+    if(Object.keys(newErrors).length){
+      const first = Object.keys(newErrors)[0]
+  toast.error(`${first.replace(/([A-Z])/g,' $1')} is mandatory, please fill it`)
+      return false
     }
+    return true
+  }
+
+  const handleNext = () => {
+    if (activeTab === 'details') {
+      if(!validateFirstTab()) return
+      setActiveTab('description')
+    } else if (activeTab === 'description') {
+      // minimal description tab validation
+  if(!formData.description.trim()) { setErrors(e=>({...e, description:'Job description is required'})); toast.error('Description is mandatory'); return }
+      setActiveTab('requirements')
+    }
+  }
+
+  const handlePrev = () => {
+    if(activeTab === 'description') setActiveTab('details')
+    else if(activeTab === 'requirements') setActiveTab('description')
   }
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -219,7 +259,7 @@ export default function JobPostingForm() {
       if (deadlineDate < today) {
         newErrors.applicationDeadline = "Application deadline cannot be in the past"
       }
-    }
+    } else { newErrors.applicationDeadline = 'Application deadline is required' }
     
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
@@ -272,7 +312,12 @@ export default function JobPostingForm() {
         router.push("/employer/dashboard")
       }, 1200)
     } catch (err: any) {
-      setError(err.response?.data?.detail || "Failed to post job. Please try again.")
+      const detail = err.response?.data?.detail || "Failed to post job. Please try again."
+      setError(detail)
+      if (err.response?.status === 403 && /limit|upgrade/i.test(detail)) {
+        // open upgrade modal for limit exceeded
+        setUpgradeModalOpen(true)
+      }
     } finally {
       setIsLoading(false)
     }
@@ -280,6 +325,8 @@ export default function JobPostingForm() {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-8">
+      {/* Toasts */}
+  {/* Sonner toasts rendered via provider at app root */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="w-full border-b rounded-t-xl rounded-b-none p-0 bg-light-gray">
           <TabsTrigger
@@ -711,20 +758,36 @@ You can use markdown formatting:
       </Tabs>
       {error && <p className="text-red-500 text-sm">{error}</p>}
       {success && <p className="text-green-600 text-sm">{success}</p>}
-      <div className="flex justify-end gap-3 pt-4 border-t">
-        <Button type="button" variant="outline" onClick={() => router.push("/employer/dashboard")}>
-          Cancel
-        </Button>
-        {activeTab === "requirements" ? (
-          <Button type="submit" className="bg-accent hover:bg-accent/90" disabled={isLoading}>
-            <Save className="h-4 w-4 mr-1" /> {isLoading ? "Posting..." : "Post Job"}
-          </Button>
-        ) : (
-          <Button type="button" onClick={handleNext} className="bg-accent hover:bg-accent/90">
-            Next
-          </Button>
-        )}
+      <div className="flex justify-between gap-3 pt-4 border-t">
+        <div className="flex gap-3">
+          <Button type="button" variant="outline" onClick={() => router.push('/employer/dashboard')}>Cancel</Button>
+        </div>
+        <div className="flex gap-3">
+          {activeTab !== 'details' && (
+            <Button type="button" variant="secondary" onClick={handlePrev}>Prev</Button>
+          )}
+          {activeTab === 'requirements' ? (
+            <Button type="submit" className="bg-accent hover:bg-accent/90" disabled={isLoading}>
+              <Save className="h-4 w-4 mr-1" /> {isLoading ? 'Posting...' : 'Post Job'}
+            </Button>
+          ) : (
+            <Button type="button" onClick={handleNext} className="bg-accent hover:bg-accent/90">Next</Button>
+          )}
+        </div>
       </div>
+      {upgradeModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/40" />
+          <div className="relative mx-auto max-w-md w-full bg-white rounded-xl p-6 shadow-lg space-y-4 animate-in fade-in zoom-in">
+            <h2 className="text-lg font-semibold">Posting Limit Reached</h2>
+            <p className="text-sm text-gray-600">You have exceeded your current plan's job posting limit. Upgrade to continue posting new jobs.</p>
+            <div className="flex justify-end gap-3 pt-2">
+              <Button type="button" variant="outline" onClick={()=> { router.push('/employer/dashboard') }}>Dashboard</Button>
+              <Button type="button" onClick={()=> { router.push('/subscribe') }}>Upgrade Plan</Button>
+            </div>
+          </div>
+        </div>
+      )}
     </form>
   )
 }
