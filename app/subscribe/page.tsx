@@ -115,20 +115,27 @@ export default function SubscriptionPage() {
     setLoading(true); setError(null)
     try {
       const res = await api.post(`/subscription/initiate/${planId}`, {}, { headers: { Authorization: `Bearer ${user.token}` } })
-      if (res.data?.message === 'Free plan activated') {
+      console.log(res.data)
+      const data = res.data
+      if (data?.message === 'Free plan activated') {
         setActivePlan('free');
         toast.success('Free plan activated')
         return
       }
-      // PhonePe redirect URL nested: instrumentResponse.redirectInfo.url OR data.data.instrumentResponse.redirectInfo.url depending on env
-      const redirectUrl = res.data?.data?.instrumentResponse?.redirectInfo?.url || res.data?.instrumentResponse?.redirectInfo?.url
-      if (redirectUrl) {
+      if (data?.redirectUrl) {
         toast.info('Redirecting to secure payment...')
-        window.location.href = redirectUrl
-      } else {
-        setError("Unable to get payment redirect URL. Please try again.")
-        toast.error('Payment redirect unavailable')
+        window.location.href = data.redirectUrl
+        return
       }
+      // Fallback legacy shapes
+      const legacyRedirect = data?.data?.instrumentResponse?.redirectInfo?.url || data?.instrumentResponse?.redirectInfo?.url
+      if (legacyRedirect) {
+        toast.info('Redirecting to secure payment...')
+        window.location.href = legacyRedirect
+        return
+      }
+      setError(data?.error || 'Unable to get payment redirect URL. Please try again.')
+      toast.error(data?.error || 'Payment redirect unavailable')
     } catch (e: any) {
       setError(e?.response?.data?.detail || 'Failed to initiate payment')
       toast.error(e?.response?.data?.detail || 'Failed to initiate payment')
