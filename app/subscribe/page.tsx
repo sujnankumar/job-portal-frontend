@@ -86,6 +86,21 @@ export default function SubscriptionPage() {
   const [activePlan, setActivePlan] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [initializing, setInitializing] = useState(true)
+  const [statusModal, setStatusModal] = useState<{type:'success'|'pending'|'error'|null; plan?:string; txn?:string}>({type:null})
+
+  //   // In your subscription page component
+  // useEffect(() => {
+  //   const urlParams = new URLSearchParams(window.location.search);
+    
+  //   if (urlParams.get('success') === '1') {
+  //     toast.success('Payment successful! Your subscription is now active.');
+  //   } else if (urlParams.get('pending') === '1') {
+  //     toast.info('Payment is being processed. Your subscription will be activated shortly.');
+  //   } else if (urlParams.get('error') === '1') {
+  //     toast.error('Payment failed. Please try again.');
+  //   }
+  // }, []);
+
 
   useEffect(() => {
     if (!user?.role) return
@@ -110,25 +125,47 @@ export default function SubscriptionPage() {
     }
   }, [user?.role, user?.token])
 
+  // Detect payment redirect query params and open modal
+  useEffect(()=> {
+    if (typeof window === 'undefined') return
+    const params = new URLSearchParams(window.location.search)
+    const plan = params.get('plan') || undefined
+    const txn = params.get('txn') || undefined
+    if (params.get('success') === '1') {
+      setStatusModal({type:'success', plan, txn})
+    } else if (params.get('pending') === '1') {
+      setStatusModal({type:'pending', plan, txn})
+    } else if (params.get('error') === '1') {
+      setStatusModal({type:'error', plan, txn})
+    }
+  }, [])
+
   const initiate = async (planId: string) => {
     if (!user?.token) { router.push("/auth/login"); return }
     setLoading(true); setError(null)
     try {
       const res = await api.post(`/subscription/initiate/${planId}`, {}, { headers: { Authorization: `Bearer ${user.token}` } })
-      if (res.data?.message === 'Free plan activated') {
+      console.log(res.data)
+      const data = res.data
+      if (data?.message === 'Free plan activated') {
         setActivePlan('free');
         toast.success('Free plan activated')
         return
       }
-      // PhonePe redirect URL nested: instrumentResponse.redirectInfo.url OR data.data.instrumentResponse.redirectInfo.url depending on env
-      const redirectUrl = res.data?.data?.instrumentResponse?.redirectInfo?.url || res.data?.instrumentResponse?.redirectInfo?.url
-      if (redirectUrl) {
+      if (data?.redirectUrl) {
         toast.info('Redirecting to secure payment...')
-        window.location.href = redirectUrl
-      } else {
-        setError("Unable to get payment redirect URL. Please try again.")
-        toast.error('Payment redirect unavailable')
+        window.location.href = data.redirectUrl
+        return
       }
+      // Fallback legacy shapes
+      const legacyRedirect = data?.data?.instrumentResponse?.redirectInfo?.url || data?.instrumentResponse?.redirectInfo?.url
+      if (legacyRedirect) {
+        toast.info('Redirecting to secure payment...')
+        window.location.href = legacyRedirect
+        return
+      }
+      setError(data?.error || 'Unable to get payment redirect URL. Please try again.')
+      toast.error(data?.error || 'Payment redirect unavailable')
     } catch (e: any) {
       setError(e?.response?.data?.detail || 'Failed to initiate payment')
       toast.error(e?.response?.data?.detail || 'Failed to initiate payment')
@@ -141,7 +178,10 @@ export default function SubscriptionPage() {
     const popular = pid === 'pro'
     const Icon = ICON_MAP[pid]
     const marketing = MARKETING_FEATURES[pid] || []
-    return { pid, p, isActive, popular, Icon, marketing }
+    // Determine if this plan is a downgrade relative to activePlan
+    const orderIndex = (id: string | null) => id ? ORDERED.indexOf(id as any) : 0
+    const isDowngrade = activePlan ? orderIndex(pid) < orderIndex(activePlan) : false
+    return { pid, p, isActive, popular, Icon, marketing, isDowngrade }
   }), [plans, activePlan])
 
   const comparisonFeatures = [
@@ -174,6 +214,46 @@ export default function SubscriptionPage() {
 
   return (
     <div className="relative min-h-screen overflow-hidden">
+      {statusModal.type && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={()=> setStatusModal({type:null})} />
+          <div className="relative w-full max-w-md rounded-2xl overflow-hidden shadow-2xl">
+            <div className={cn('p-6 md:p-8 space-y-5',
+              statusModal.type==='success' && 'bg-gradient-to-br from-green-600 via-emerald-500 to-teal-500 text-white',
+              statusModal.type==='pending' && 'bg-gradient-to-br from-amber-500 via-yellow-500 to-orange-500 text-white',
+              statusModal.type==='error' && 'bg-gradient-to-br from-rose-600 via-red-600 to-red-500 text-white'
+            )}>
+              <div className="flex items-start gap-4">
+                {statusModal.type==='success' && <div className="h-12 w-12 rounded-xl bg-white/15 flex items-center justify-center ring-1 ring-white/30"><Check className="h-7 w-7"/></div>}
+                {statusModal.type==='pending' && <div className="h-12 w-12 rounded-xl bg-white/15 flex items-center justify-center ring-1 ring-white/30"><Loader2 className="h-7 w-7 animate-spin"/></div>}
+                {statusModal.type==='error' && <div className="h-12 w-12 rounded-xl bg-white/15 flex items-center justify-center ring-1 ring-white/30"><Flame className="h-7 w-7"/></div>}
+                <div className="flex-1">
+                  <h3 className="text-2xl font-bold tracking-tight">
+                    {statusModal.type==='success' && 'Payment Successful'}
+                    {statusModal.type==='pending' && 'Payment Processing'}
+                    {statusModal.type==='error' && 'Payment Failed'}
+                  </h3>
+                  <p className="mt-2 text-sm leading-relaxed opacity-90">
+                    {statusModal.type==='success' && `Your ${statusModal.plan || ''} plan is now active. You can start enjoying the benefits immediately.`}
+                    {statusModal.type==='pending' && 'We are waiting for confirmation from the payment gateway. Your subscription will activate once confirmed.'}
+                    {statusModal.type==='error' && 'We could not process your payment. No charges were made. You can retry or choose a different method.'}
+                  </p>
+                  {statusModal.txn && (
+                    <div className="mt-3 text-xs font-mono bg-white/10 rounded-md px-3 py-2 inline-block tracking-wide">
+                      TXN: {statusModal.txn}
+                    </div>
+                  )}
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-3 pt-4">
+                <button onClick={()=> { setStatusModal({type:null}); router.replace('/subscribe') }} className="px-4 py-2 rounded-lg text-sm font-medium bg-white/20 hover:bg-white/30 backdrop-blur border border-white/30">Close</button>
+                {statusModal.type==='error' && <button onClick={()=> { setStatusModal({type:null}); }} className="px-4 py-2 rounded-lg text-sm font-semibold bg-white text-rose-600 hover:bg-gray-100">Try Again</button>}
+                {statusModal.type==='success' && <button onClick={()=> { router.push('/employer/dashboard') }} className="px-4 py-2 rounded-lg text-sm font-semibold bg-white text-green-600 hover:bg-gray-100">Go to Dashboard</button>}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
       {/* Decorative background */}
       <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-white via-purple-50 to-white"/>
       <div className="absolute -top-40 -left-32 w-[32rem] h-[32rem] rounded-full bg-purple-200/40 blur-3xl"/>
@@ -206,7 +286,7 @@ export default function SubscriptionPage() {
         <section className="px-4 pb-10">
           <div className="max-w-7xl mx-auto">
             <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
-              {planCards.map(({pid,p,popular,isActive,Icon,marketing}) => (
+              {planCards.map(({pid,p,popular,isActive,Icon,marketing,isDowngrade}) => (
                 <div key={pid} className={cn(
                   'relative flex flex-col overflow-hidden rounded-3xl border bg-white backdrop-blur-sm transition-all duration-300',
                   'hover:-translate-y-1 hover:shadow-xl',
@@ -250,17 +330,19 @@ export default function SubscriptionPage() {
                       ))}
                     </ul>
                     <button
-                      disabled={loading || isActive || initializing}
-                      onClick={() => initiate(pid)}
+                      disabled={loading || isActive || initializing || isDowngrade}
+                      onClick={() => !isDowngrade && initiate(pid)}
                       className={cn(
                         'mt-6 rounded-xl px-4 py-3 text-sm font-semibold transition-colors shadow-sm border',
                         isActive ? 'bg-green-100 text-green-700 border-green-200 cursor-default' : '',
-                        !isActive && pid !== 'free' && 'bg-purple-600 text-white border-purple-600 hover:bg-purple-700',
-                        !isActive && pid === 'free' && 'bg-white text-purple-600 border-purple-300 hover:bg-purple-50',
+                        !isActive && !isDowngrade && pid !== 'free' && 'bg-purple-600 text-white border-purple-600 hover:bg-purple-700',
+                        !isActive && !isDowngrade && pid === 'free' && 'bg-white text-purple-600 border-purple-300 hover:bg-purple-50',
+                        isDowngrade && 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed',
                         (loading || initializing) && 'opacity-60 cursor-not-allowed'
                       )}
+                      title={isDowngrade ? 'Downgrade not allowed' : ''}
                     >
-                      {isActive ? 'Current Plan' : pid==='free'? 'Get Started' : 'Upgrade'}
+                      {isActive ? 'Current Plan' : isDowngrade ? 'Not Available' : pid==='free'? 'Get Started' : 'Upgrade'}
                     </button>
                   </div>
                 </div>
