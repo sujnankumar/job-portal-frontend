@@ -489,6 +489,7 @@ export default function ResumeBuilder() {
   const resumeRef = useRef<HTMLDivElement | null>(null)
   const [profileImage, setProfileImage] = useState<string | null>(null)
   const [selectedTemplate, setSelectedTemplate] = useState<'modern' | 'classic'>('modern')
+  const [formErrors, setFormErrors] = useState<{ [key: string]: string }>({})
 
   // Load PDF libs
   useEffect(() => {
@@ -550,7 +551,25 @@ export default function ResumeBuilder() {
     }
   }
 
+  function validateForm() {
+    const errors: { [key: string]: string } = {}
+    if (!personalInfo.firstName.trim()) errors.firstName = "First name is required."
+    if (!personalInfo.lastName.trim()) errors.lastName = "Last name is required."
+    if (!personalInfo.email.trim()) errors.email = "Email is required."
+    else if (!/^\S+@\S+\.\S+$/.test(personalInfo.email)) errors.email = "Invalid email format."
+    if (!personalInfo.phone.trim()) errors.phone = "Phone is required."
+    if (!personalInfo.location.trim()) errors.location = "Location is required."
+    if (!personalInfo.headline.trim()) errors.headline = "Professional headline is required."
+    if (education.some(e => !e.school.trim() || !e.degree.trim() || !e.field.trim())) errors.education = "All education fields are required."
+    if (!isFresher && experience.some(e => !e.company.trim() || !e.title.trim())) errors.experience = "All experience fields are required."
+    if (skills.some(s => !s.name.trim())) errors.skills = "All skill names are required."
+    return errors
+  }
+
   const handleGenerate = async () => {
+    const errors = validateForm()
+    setFormErrors(errors)
+    if (Object.keys(errors).length > 0) return
     setIsGenerating(true)
     setError("")
     setAiContent(null)
@@ -693,7 +712,9 @@ export default function ResumeBuilder() {
                 id="profile-upload"
                 type="file"
                 accept="image/*"
-                style={{ display: 'none' }}
+                className="hidden"
+                placeholder="Upload your profile photo"
+                title="Upload your profile photo"
                 onChange={e => {
                   const file = e.target.files?.[0];
                   if (file) {
@@ -723,6 +744,7 @@ export default function ResumeBuilder() {
               onChange={(e) => setPersonalInfo({ ...personalInfo, firstName: e.target.value })}
               className="mt-1"
             />
+            {formErrors.firstName && <span className="text-xs text-red-600">{formErrors.firstName}</span>}
           </div>
           <div>
             <label className="text-sm font-medium text-dark-gray">Last Name</label>
@@ -731,6 +753,7 @@ export default function ResumeBuilder() {
               onChange={(e) => setPersonalInfo({ ...personalInfo, lastName: e.target.value })}
               className="mt-1"
             />
+            {formErrors.lastName && <span className="text-xs text-red-600">{formErrors.lastName}</span>}
           </div>
           <div>
             <label className="text-sm font-medium text-dark-gray">Email</label>
@@ -740,6 +763,7 @@ export default function ResumeBuilder() {
               onChange={(e) => setPersonalInfo({ ...personalInfo, email: e.target.value })}
               className="mt-1"
             />
+            {formErrors.email && <span className="text-xs text-red-600">{formErrors.email}</span>}
           </div>
           <div>
             <label className="text-sm font-medium text-dark-gray">Phone</label>
@@ -749,6 +773,7 @@ export default function ResumeBuilder() {
               onChange={(e) => setPersonalInfo({ ...personalInfo, phone: e.target.value })}
               className="mt-1"
             />
+            {formErrors.phone && <span className="text-xs text-red-600">{formErrors.phone}</span>}
           </div>
           <div>
             <label className="text-sm font-medium text-dark-gray">Location</label>
@@ -758,6 +783,7 @@ export default function ResumeBuilder() {
               placeholder="City, State"
               className="mt-1"
             />
+            {formErrors.location && <span className="text-xs text-red-600">{formErrors.location}</span>}
           </div>
           <div className="md:col-span-2">
             <label className="text-sm font-medium text-dark-gray">Professional Headline</label>
@@ -767,6 +793,7 @@ export default function ResumeBuilder() {
               placeholder="e.g., Senior Frontend Developer with 5+ years of experience"
               className="mt-1"
             />
+            {formErrors.headline && <span className="text-xs text-red-600">{formErrors.headline}</span>}
           </div>
         </div>
       </div>
@@ -867,6 +894,8 @@ export default function ResumeBuilder() {
                         setEducation(newEducation)
                       }}
                       className="accent-accent mr-2"
+                      title="Currently studying here"
+                      placeholder="Currently studying here"
                     />
                     <span className="text-xs text-gray-500">Currently studying here</span>
                   </div>
@@ -878,6 +907,7 @@ export default function ResumeBuilder() {
         <Button variant="outline" size="sm" onClick={handleAddEducation} className="mt-2">
           <PlusCircle className="h-4 w-4 mr-1" /> Add Education
         </Button>
+        {formErrors.education && <span className="text-xs text-red-600">{formErrors.education}</span>}
       </div>
 
       {/* Experience (optional, hidden if fresher) */}
@@ -983,6 +1013,8 @@ export default function ResumeBuilder() {
                             setExperience(newExperience)
                           }}
                           className="accent-accent mr-2"
+                          title="Currently working here"
+                          placeholder="Currently working here"
                         />
                         <span className="text-xs text-gray-500">Currently working here</span>
                       </div>
@@ -1009,6 +1041,7 @@ export default function ResumeBuilder() {
             </Button>
           </>
         )}
+        {formErrors.experience && <span className="text-xs text-red-600">{formErrors.experience}</span>}
       </div>
       {/* Projects (optional) */}
       <div>
@@ -1111,6 +1144,7 @@ export default function ResumeBuilder() {
             <PlusCircle className="h-4 w-4 mr-1" /> Add Skill
           </Button>
         </div>
+        {formErrors.skills && <span className="text-xs text-red-600">{formErrors.skills}</span>}
       </div>
 
       {/* Certifications (optional) */}
