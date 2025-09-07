@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { useSearchParams, useRouter } from "next/navigation"
 import JobFilters, { JobFiltersState } from "@/components/job-filters"
 import JobListings from "@/components/job-listings"
@@ -73,6 +73,8 @@ export default function JobListingsPage() {
   })
   const initialShowExpired = searchParams.get("showExpired") === "1"
   const [showExpired, setShowExpired] = useState(initialShowExpired)
+  const [newJobsCount, setNewJobsCount] = useState(0)
+  const newJobsRef = useRef<any[]>([])
 
   
   // 3) Keep input-fields in sync if the user hits back/forward
@@ -132,11 +134,43 @@ export default function JobListingsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams])
 
+  // Real-time: subscribe to SSE for new jobs and accumulate until user clicks the banner
+  useEffect(() => {
+    const base = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000/api"
+    const url = `${base}/job/stream`
+    const es = new EventSource(url)
+    es.onmessage = (evt) => {
+      try {
+        const payload = JSON.parse(evt.data)
+        if (payload?.type === 'job_created' && payload.job) {
+          newJobsRef.current.unshift(payload.job)
+          setNewJobsCount(newJobsRef.current.length)
+        }
+      } catch {}
+    }
+    es.onerror = () => {
+      // Auto-close on error; browser may reconnect by recreating component
+      es.close()
+    }
+    return () => { es.close() }
+  }, [])
+
+  // When user clicks the floating bar, push a param to trigger JobListings to re-fetch itself via key change
+  const [feedBump, setFeedBump] = useState(0)
+  const onShowNewJobs = () => {
+    try { window.scrollTo({ top: 0, behavior: 'smooth' }) } catch {}
+    setFeedBump((x) => x + 1)
+    setNewJobsCount(0)
+    newJobsRef.current = []
+  }
+
   return (
     <div className="container mx-auto max-w-6xl py-10 px-4">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+      <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <h1 className="text-3xl font-bold text-dark-gray">Browse Jobs</h1>
-        <ExpiredToggle value={showExpired} onChange={setShowExpired} />
+        <div className="flex items-center gap-3">
+          <ExpiredToggle value={showExpired} onChange={setShowExpired} />
+        </div>
       </div>
 
       {/* Pass down exactly the same props you already had */}
@@ -160,9 +194,32 @@ export default function JobListingsPage() {
             filters={{ ...filters, search, location }}
             showExpired={showExpired}
             // key props to force internal pagination reset when external changes
+            key={`feed-${feedBump}`}
           />
         </div>
       </div>
+
+      {/* Fixed floating new-jobs bar (glass + golden theme), centered below navbar */}
+      {newJobsCount > 0 && (
+        <div className="fixed inset-x-0 top-16 sm:top-24 z-50 px-3 pointer-events-none flex justify-center">
+          <motion.button
+            onClick={onShowNewJobs}
+            initial={{ y: -10, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ type: 'spring', stiffness: 320, damping: 24 }}
+            className="pointer-events-auto w-full max-w-sm md:max-w-sm inline-flex items-center justify-center gap-2 sm:gap-3 rounded-full px-4 sm:px-6 py-2.5 sm:py-3 shadow-lg backdrop-blur-xl bg-white/60 border border-accent/40 hover:bg-white/75 focus:outline-none focus:ring-2 focus:ring-accent/40"
+            aria-live="polite"
+          >
+            <span className="flex h-7 w-7 sm:h-9 sm:w-9 items-center justify-center rounded-full bg-accent text-white text-xs sm:text-sm font-bold shadow">
+              {newJobsCount}
+            </span>
+            <span className="text-sm sm:text-base font-semibold text-dark-gray">
+              {newJobsCount === 1 ? 'New job' : 'New jobs'} available
+            </span>
+            <span className="text-xs sm:text-[12px] text-gray-600">Click to view</span>
+          </motion.button>
+        </div>
+      )}
     </div>
   )
 }

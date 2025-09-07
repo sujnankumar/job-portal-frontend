@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import Image from "next/image"
 import Link from "next/link"
-import { MapPin, IndianRupee, Clock, Briefcase, Building, Calendar, Share2, Bookmark, BookmarkCheck, X, Facebook, Twitter, Send, Copy, MessageCircle, Loader2, AlertTriangle } from "lucide-react"
+import { MapPin, IndianRupee, Clock, Briefcase, Building, Calendar, Share2, Bookmark, BookmarkCheck, X, Facebook, Twitter, Send, Copy, MessageCircle, Loader2, AlertTriangle, UserPlus, UserCheck } from "lucide-react"
 import { toast } from "sonner"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -56,9 +56,31 @@ export default function JobDetail({ jobId, jobDetails, is_saved }: { jobId: stri
   const [logoLoading, setLogoLoading] = useState(false)
   const [companyDetails, setCompanyDetails] = useState<any>(null)
   const [companyLoading, setCompanyLoading] = useState(false)
+  // Follow state
+  const [isFollowing, setIsFollowing] = useState(false)
+  const [followLoading, setFollowLoading] = useState(false)
   const user = useAuthStore((state) => state.user)
   const job = jobDetails
   const shareUrl = typeof window !== "undefined" ? window.location.href : ""
+  const isJobSeeker = user?.role === "applicant"
+  const companyId = companyDetails?.company_id || job.company_id
+
+  // Format salary with fallbacks: hide => "Undisclosed", missing => "Undisclosed"
+  const formatSalaryDisplay = (j: any) => {
+    if (j && j.show_salary === false) return "Undisclosed"
+    const min = Number(j?.min_salary)
+    const max = Number(j?.max_salary)
+    const hasMin = Number.isFinite(min)
+    const hasMax = Number.isFinite(max)
+    if (!hasMin && !hasMax) return "Undisclosed"
+    if (hasMin && hasMax) {
+      if (min === max) return `${min.toLocaleString('en-IN')}/year`
+      return `${min.toLocaleString('en-IN')} - ${max.toLocaleString('en-IN')}/year`
+    }
+    if (hasMin) return `${min.toLocaleString('en-IN')}/year`
+    if (hasMax) return `${max.toLocaleString('en-IN')}/year`
+    return "Undisclosed"
+  }
 
   useEffect(() => {
     const checkApplied = async () => {
@@ -153,6 +175,53 @@ export default function JobDetail({ jobId, jobDetails, is_saved }: { jobId: stri
       }
     }
   }, [logoUrl])
+
+  // Check if user is following this company (reuse logic from companies/[id])
+  useEffect(() => {
+    const checkFollowing = async () => {
+      if (!isJobSeeker || !user?.token || !companyId) return setIsFollowing(false)
+      try {
+        const res = await api.get("/following", { headers: { Authorization: `Bearer ${user.token}` } })
+        const following = res.data?.following || []
+        setIsFollowing(following.includes(companyId))
+      } catch {
+        setIsFollowing(false)
+      }
+    }
+    checkFollowing()
+  }, [isJobSeeker, user?.token, companyId])
+
+  const handleFollowCompany = async () => {
+    if (!isJobSeeker) return toast.error("Only job seekers can follow companies")
+    if (!user?.token) return toast.error("Please login to follow companies")
+    if (!companyId) return
+    setFollowLoading(true)
+    try {
+      const response = await api.post(`/follow/${companyId}`, {}, { headers: { Authorization: `Bearer ${user.token}` } })
+      setIsFollowing(true)
+      toast.success(response?.data?.detail || "You are now following this company!")
+    } catch (e: any) {
+      toast.error(e?.response?.data?.detail || "Failed to follow company")
+    } finally {
+      setFollowLoading(false)
+    }
+  }
+
+  const handleUnfollowCompany = async () => {
+    if (!isJobSeeker) return toast.error("Only job seekers can unfollow companies")
+    if (!user?.token) return toast.error("Please login to unfollow companies")
+    if (!companyId) return
+    setFollowLoading(true)
+    try {
+      const response = await api.delete(`/follow/${companyId}`, { headers: { Authorization: `Bearer ${user.token}` } })
+      setIsFollowing(false)
+      toast.success(response?.data?.detail || "You have unfollowed this company.")
+    } catch (e: any) {
+      toast.error(e?.response?.data?.detail || "Failed to unfollow company")
+    } finally {
+      setFollowLoading(false)
+    }
+  }
 
   const toggleSave = async (e: React.MouseEvent) => {
     e.stopPropagation && e.stopPropagation()
@@ -312,11 +381,7 @@ export default function JobDetail({ jobId, jobDetails, is_saved }: { jobId: stri
               )}
               <div className="flex items-center">
                 <IndianRupee className="h-4 w-4 mr-1" />
-                {job.min_salary && job.max_salary ? (
-                  parseInt(job.min_salary) === parseInt(job.max_salary)
-                    ? `${parseInt(job.min_salary).toLocaleString('en-IN')}/year`
-                    : `${parseInt(job.min_salary).toLocaleString('en-IN')} - ${parseInt(job.max_salary).toLocaleString('en-IN')}/year`
-                ) : 'NA'}
+                {formatSalaryDisplay(job)}
               </div>
               {job.employment_type && (
                 <div className="flex items-center">
@@ -564,7 +629,26 @@ export default function JobDetail({ jobId, jobDetails, is_saved }: { jobId: stri
                   <Button variant="outline">View All Jobs</Button>
                 </Link>
               )}
-              <Button variant="outline">Follow Company</Button>
+              {isJobSeeker ? (
+                <Button
+                  variant={isFollowing ? "default" : "outline"}
+                  onClick={isFollowing ? handleUnfollowCompany : handleFollowCompany}
+                  disabled={followLoading || !companyId}
+                  title={isFollowing ? "Unfollow company" : "Follow company"}
+                >
+                  {followLoading ? (
+                    "Processing..."
+                  ) : isFollowing ? (
+                    <><UserCheck className="h-4 w-4 mr-2" />Following</>
+                  ) : (
+                    <><UserPlus className="h-4 w-4 mr-2" />Follow Company</>
+                  )}
+                </Button>
+              ) : (
+                <Button variant="outline" disabled>
+                  <UserPlus className="h-4 w-4 mr-2" />Follow Company
+                </Button>
+              )}
             </div>
           </TabsContent>
 
@@ -675,9 +759,27 @@ export default function JobDetail({ jobId, jobDetails, is_saved }: { jobId: stri
                     </Button>
                   </Link>
                 )}
-                <Button variant="outline" className="w-full">
-                  Follow Company
-                </Button>
+                {isJobSeeker ? (
+                  <Button
+                    variant={isFollowing ? "default" : "outline"}
+                    className="w-full"
+                    onClick={isFollowing ? handleUnfollowCompany : handleFollowCompany}
+                    disabled={followLoading || !companyId}
+                    title={isFollowing ? "Unfollow company" : "Follow company"}
+                  >
+                    {followLoading ? (
+                      "Processing..."
+                    ) : isFollowing ? (
+                      <><UserCheck className="h-4 w-4 mr-2" />Following</>
+                    ) : (
+                      <><UserPlus className="h-4 w-4 mr-2" />Follow Company</>
+                    )}
+                  </Button>
+                ) : (
+                  <Button variant="outline" className="w-full" disabled>
+                    <UserPlus className="h-4 w-4 mr-2" />Follow Company
+                  </Button>
+                )}
               </div>
             </CardContent>
           </Card>
