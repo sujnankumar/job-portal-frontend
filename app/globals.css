@@ -10,42 +10,42 @@
     --card-foreground: 240 10% 3.9%;
     --popover: 0 0% 100%;
     --popover-foreground: 240 10% 3.9%;
-    --primary: 270 35% 52%; /* Milka purple */
-    --primary-foreground: 0 0% 100%;
-    --secondary: 270 15% 95%;
-    --secondary-foreground: 270 35% 52%;
-    --muted: 270 10% 95%;
-    --muted-foreground: 270 5% 40%;
-    --accent: 270 45% 42%; /* Darker Milka purple */
-    --accent-foreground: 0 0% 100%;
+    --primary: 48 84% 61%;
+    --primary-foreground: 240 5.9% 10%;
+    --secondary: 240 4.8% 95.9%;
+    --secondary-foreground: 240 5.9% 10%;
+    --muted: 240 4.8% 95.9%;
+    --muted-foreground: 240 3.8% 46.1%;
+    --accent: 42 90% 61%;
+    --accent-foreground: 240 5.9% 10%;
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 98%;
-    --border: 270 10% 85%;
-    --input: 270 10% 85%;
-    --ring: 270 35% 52%;
+    --border: 240 5.9% 90%;
+    --input: 240 5.9% 90%;
+    --ring: 48 84% 61%;
     --radius: 0.5rem;
   }
 
   .dark {
-    --background: 270 30% 10%;
+    --background: 240 10% 3.9%;
     --foreground: 0 0% 98%;
-    --card: 270 30% 12%;
+    --card: 240 10% 3.9%;
     --card-foreground: 0 0% 98%;
-    --popover: 270 30% 12%;
+    --popover: 240 10% 3.9%;
     --popover-foreground: 0 0% 98%;
-    --primary: 270 35% 52%; /* Milka purple */
-    --primary-foreground: 0 0% 100%;
-    --secondary: 270 25% 20%;
+    --primary: 48 84% 61%;
+    --primary-foreground: 240 5.9% 10%;
+    --secondary: 240 3.7% 15.9%;
     --secondary-foreground: 0 0% 98%;
-    --muted: 270 25% 20%;
-    --muted-foreground: 270 10% 70%;
-    --accent: 270 45% 42%; /* Darker Milka purple */
-    --accent-foreground: 0 0% 100%;
+    --muted: 240 3.7% 15.9%;
+    --muted-foreground: 240 5% 64.9%;
+    --accent: 42 90% 61%;
+    --accent-foreground: 240 5.9% 10%;
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 0 0% 98%;
-    --border: 270 25% 25%;
-    --input: 270 25% 25%;
-    --ring: 270 35% 52%;
+    --border: 240 3.7% 15.9%;
+    --input: 240 3.7% 15.9%;
+    --ring: 48 84% 61%;
   }
 }
 
@@ -68,69 +68,16 @@
 }
 
 .scrollbar-thin::-webkit-scrollbar-thumb {
-  background-color: #8f5caf; /* Milka purple */
+  background-color: #d1d5db;
   border-radius: 20px;
 }
 
 .scrollbar-thin::-webkit-scrollbar-thumb:hover {
-  background-color: #6a4097; /* Darker purple */
+  background-color: #9ca3af;
 }
 
 /* For Firefox */
 .scrollbar-thin {
   scrollbar-width: thin;
-  scrollbar-color: #8f5caf transparent;
-}
-[data-sonner-toaster] .sonner-toast .sonner-button {
-  background: #6f25a8 !important;
-  color: #fff !important;
-}
-
-[data-sonner-toaster] .sonner-toast .sonner-button:hover {
-  background: #581c85 !important;
-}
-
-[data-sonner-toaster] .sonner-toast[data-y-position][data-expanded] {
-  border-color: #d9b9f0 !important;
-}
-
-/* Simplified flat embedded image utility */
-.soft-image-wrap {
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 1.25rem;
-  /* Make wrapper itself visually disappear into parent */
-  background: transparent;
-  overflow: hidden; /* still clip any image overflow */
-}
-.soft-blend-img {
-  border-radius: 0; /* remove internal rounding so blend is uniform */
-  box-shadow: none; /* ensure completely flat */
-  background: transparent;
-  /* Hard blend: let underlying gradient influence tones */
-  mix-blend-mode: multiply;
-  opacity: 0.92; /* reduce prominence slightly */
-  filter: saturate(1.05) contrast(0.95) brightness(1.02);
-  transition: opacity 180ms ease, filter 180ms ease;
-}
-.soft-image-wrap:hover .soft-blend-img {
-  opacity: 0.98;
-  filter: saturate(1.08) contrast(1.0) brightness(1.03);
-}
-
-@media (prefers-reduced-transparency: reduce) {
-  .soft-blend-img { mix-blend-mode: normal; opacity: 1; filter: none; }
-}
-
-/* Dark mode adjustments for blend so images remain visible */
-.dark .soft-blend-img {
-  mix-blend-mode: screen;
-  opacity: 0.85;
-  filter: saturate(1.05) contrast(1.05) brightness(1.05);
-}
-.dark .soft-image-wrap:hover .soft-blend-img {
-  opacity: 0.92;
-  filter: saturate(1.08) contrast(1.08) brightness(1.08);
+  scrollbar-color: #d1d5db transparent;
 }

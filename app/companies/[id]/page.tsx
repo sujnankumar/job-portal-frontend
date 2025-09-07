@@ -2,7 +2,7 @@
 
 import Image from "next/image"
 import Link from "next/link"
-import { MapPin, Briefcase, Users, Calendar, ExternalLink, Star, Mail, Phone, Loader2, X } from "lucide-react"
+import { MapPin, Briefcase, Users, Calendar, ExternalLink, Star, Mail, Phone, Loader2, X, UserPlus, UserCheck } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -517,13 +517,20 @@ export default function CompanyDetailPage({ params }: { params: Promise<{ id: st
                   className="w-full"
                   disabled={followLoading}
                   onClick={isFollowing ? handleUnfollowCompany : handleFollowCompany}
+                  title={isFollowing ? "Unfollow company" : "Follow company"}
                 >
-                  {followLoading ? "Processing..." : isFollowing ? "Following" : "Follow Company"}
+                  {followLoading ? (
+                    "Processing..."
+                  ) : isFollowing ? (
+                    <><UserCheck className="h-4 w-4 mr-2" />Following</>
+                  ) : (
+                    <><UserPlus className="h-4 w-4 mr-2" />Follow Company</>
+                  )}
                 </Button>
               )}
               {!isJobSeeker && (
                 <Button variant="outline" className="w-full" disabled>
-                  Follow Company
+                  <UserPlus className="h-4 w-4 mr-2" />Follow Company
                 </Button>
               )}
 

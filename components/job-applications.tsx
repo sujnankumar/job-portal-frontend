@@ -36,7 +36,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { useToast } from "@/components/ui/use-toast"
 import InterviewScheduler from "@/components/interview-scheduler"
 import ResumeActions from "@/components/resume-actions"
-import EmployerJobChat from "@/components/employer-job-chat-open"
+// import EmployerJobChat from "@/components/employer-job-chat-open"
 
 interface JobApplicationsProps {
   jobId: string
@@ -71,13 +71,13 @@ export default function JobApplications({ jobId }: JobApplicationsProps) {
   const [isProcessing, setIsProcessing] = useState(false)
 
   // Multi-chat state: array of open chats with applicantId, jobId, etc.
-  const [openChats, setOpenChats] = useState<{
-    applicantId: string,
-    jobId: string,
-    applicantName: string,
-    applicantAvatar: string,
-    jobTitle: string
-  }[]>([])
+  // const [openChats, setOpenChats] = useState<{
+  //   applicantId: string,
+  //   jobId: string,
+  //   applicantName: string,
+  //   applicantAvatar: string,
+  //   jobTitle: string
+  // }[]>([])
 
   
 
@@ -512,7 +512,7 @@ export default function JobApplications({ jobId }: JobApplicationsProps) {
                           <Download className="h-4 w-4 mr-1" /> Loading Resume...
                         </Button>
                       )}
-                      <Button
+                      {/* <Button
                         variant="outline"
                         size="sm"
                         className="ml-auto"
@@ -520,7 +520,7 @@ export default function JobApplications({ jobId }: JobApplicationsProps) {
                         disabled={openChats.some((c) => c.applicantId === app.candidate.id)}
                       >
                         <MessageSquare className="h-4 w-4 mr-1" /> Chat
-                      </Button>
+                      </Button> */}
                     </div>
                   </DialogContent>
                 </Dialog>
@@ -605,14 +605,14 @@ export default function JobApplications({ jobId }: JobApplicationsProps) {
                 )}
                 
                 {/* Chat button - always available */}
-                <Button
+                {/* <Button
                   variant="outline"
                   size="sm"
                   onClick={() => openChat(app)}
                   disabled={openChats.some((c) => c.applicantId === app.candidate.id)}
                 >
                   <MessageSquare className="h-4 w-4 mr-1" /> Chat
-                </Button>
+                </Button> */}
               </div>
             </div>
           ))
@@ -721,7 +721,7 @@ export default function JobApplications({ jobId }: JobApplicationsProps) {
       </Dialog>
 
       {/* Render all open chat modals, stacked horizontally */}
-      {openChats.map((chat, idx) => (
+      {/* {openChats.map((chat, idx) => (
         <EmployerJobChat
           key={chat.applicantId}
           jobId={chat.jobId}
@@ -733,7 +733,7 @@ export default function JobApplications({ jobId }: JobApplicationsProps) {
           // Position each modal with a horizontal offset
           style={{ right: 24 + idx * 400, bottom: 24, position: 'fixed', zIndex: 50 }}
         />
-      ))}
+      ))} */}
     </div>
   )
 }

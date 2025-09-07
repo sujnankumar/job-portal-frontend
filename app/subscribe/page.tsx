@@ -6,6 +6,7 @@ import { Check, Briefcase, Rocket, Flame, Crown, LockKeyhole, Loader2, ShieldChe
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { toast } from "sonner"
+import TeamManagement from "@/components/team-management"
 
 // Utility for class merging
 const cn = (...classes: (string | false | null | undefined)[]) => classes.filter(Boolean).join(" ")
@@ -26,34 +27,30 @@ const MARKETING_FEATURES: Record<string, string[]> = {
   free: [
     "5 job posts total",
     "Basic listing visibility",
-    "Single employer seat"
+    "Single employer account"
   ],
   basic: [
     "36 posts / year (3 / month)",
     "Standard visibility boost",
-    "Single employer seat",
-    "Email support"
+    "Single employer account"
   ],
   pro: [
     "96 posts / year (8 / month)",
-    "Priority listing placement",
-    "Single employer seat",
-    "Priority email support",
-    "Basic analytics"
+    "Enhanced visibility boost",
+    "Single employer account"
   ],
   premium: [
-    "Unlimited posts (this employer)",
-    "High exposure & smart rotation",
-    "Advanced analytics dashboard",
-    "Interview scheduling assist",
-    "Dedicated success tips"
+    "Unlimited job posts",
+    "Premium visibility boost",
+    "Up to 5 team members",
+    "Shared access management"
   ],
   enterprise: [
-    "Company-wide unlimited posts",
-    "All employer accounts included",
-    "Custom integrations & SSO",
-    "Dedicated account manager",
-    "Custom reporting & SLA"
+    "Unlimited job posts",
+    "Maximum visibility boost", 
+    "Unlimited company employees",
+    "Company-wide access",
+    "Dedicated account manager"
   ]
 }
 
@@ -67,16 +64,14 @@ const ICON_MAP: Record<string, any> = {
 
 const gradientFor = (pid: string) => {
   switch(pid){
-    case 'free': return 'from-purple-50 to-purple-100'
-    case 'basic': return 'from-purple-100 to-purple-50'
-    case 'pro': return 'from-purple-500 to-purple-400 text-white'
-    case 'premium': return 'from-purple-600 to-purple-500 text-white'
-    case 'enterprise': return 'from-purple-800 to-purple-700 text-white'
-    default: return 'from-purple-100 to-purple-50'
+    case 'free': return 'from-light-cream via-white to-light-cream/80'
+    case 'basic': return 'from-primary/10 via-primary/5 to-accent/10'
+    case 'pro': return 'from-primary via-accent to-primary'
+    case 'premium': return 'from-accent via-primary to-accent'
+    case 'enterprise': return 'from-dark-gray via-foreground to-dark-gray'
+    default: return 'from-light-cream via-white to-light-cream/80'
   }
 }
-
-const badgeColor = (pid: string) => pid === 'pro' ? 'bg-purple-600' : 'bg-purple-500'
 
 export default function SubscriptionPage() {
   const { user } = useAuthStore()
@@ -84,6 +79,9 @@ export default function SubscriptionPage() {
   const [plans, setPlans] = useState<Record<string, Plan>>({})
   const [loading, setLoading] = useState(false)
   const [activePlan, setActivePlan] = useState<string | null>(null)
+  const [subscription, setSubscription] = useState<any>(null)
+  const [accessType, setAccessType] = useState<string>("direct")
+  const [isOwner, setIsOwner] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [initializing, setInitializing] = useState(true)
   const [statusModal, setStatusModal] = useState<{type:'success'|'pending'|'error'|null; plan?:string; txn?:string}>({type:null})
@@ -112,16 +110,34 @@ export default function SubscriptionPage() {
     if (user.token) {
       api.get("/subscription/me", { headers: { Authorization: `Bearer ${user.token}` } })
         .then(r => {
-          const pid = r.data.subscription?.plan_id || 'free'
+          const sub = r.data.subscription
+          const pid = sub?.plan_id || 'free'
+          const accessType = r.data.access_type || 'direct'
+          const isOwner = r.data.is_owner !== false // default to true
+          
           setActivePlan(pid)
+          setSubscription(sub)
+          setAccessType(accessType)
+          setIsOwner(isOwner)
           setInitializing(false)
-          if(pid === 'free') {
+          
+          // Show appropriate toast based on access type
+          if (accessType === 'team_member') {
+            toast.info(`Access via team membership - ${pid.charAt(0).toUpperCase()+pid.slice(1)} plan`)
+          } else if(pid === 'free') {
             toast.info('Free plan active')
           } else {
             toast.success(`${pid.charAt(0).toUpperCase()+pid.slice(1)} plan active`)
           }
         })
-        .catch(() => { setActivePlan('free'); setInitializing(false); toast.info('Defaulted to Free plan') })
+        .catch(() => { 
+          setActivePlan('free'); 
+          setSubscription(null);
+          setAccessType('direct');
+          setIsOwner(true);
+          setInitializing(false); 
+          toast.info('Defaulted to Free plan') 
+        })
     }
   }, [user?.role, user?.token])
 
@@ -185,19 +201,19 @@ export default function SubscriptionPage() {
   }), [plans, activePlan])
 
   const comparisonFeatures = [
-    { key: 'posts', label: 'Job Posting', render: (pid: string) => pid==='free'? '5 total' : pid==='basic'? '36 / yr' : pid==='pro'? '96 / yr' : pid==='premium'? 'Unlimited (single acct)' : 'Unlimited (company)' },
+    { key: 'posts', label: 'Job Posting', render: (pid: string) => pid==='free'? '5 total' : pid==='basic'? '36 / yr' : pid==='pro'? '96 / yr' : pid==='premium'? 'Access to 5 employer IDs' : 'Unlimited (company)' },
     { key: 'analytics', label: 'Analytics', render: (pid: string) => pid==='premium' || pid==='enterprise'? 'Advanced' : pid==='pro'? 'Basic' : '—' },
     { key: 'support', label: 'Priority Support', render: (pid: string) => pid==='pro' || pid==='premium' || pid==='enterprise'? 'Yes' : '—' },
     { key: 'manager', label: 'Account Manager', render: (pid: string) => pid==='enterprise'? 'Dedicated' : '—' },
-    { key: 'seats', label: 'Multiple Employer Seats', render: (pid: string) => pid==='enterprise'? 'Unlimited' : pid==='premium'? 'Single' : 'Single' },
+    { key: 'seats', label: 'Multiple Employer Seats', render: (pid: string) => pid==='enterprise'? 'Unlimited' : pid==='premium'? '5 accounts' : 'Single' },
   ]
 
   if (!user) {
     return (
       <div className="max-w-xl mx-auto py-20 text-center space-y-4">
-        <h1 className="text-3xl font-bold">Subscription Plans</h1>
-        <p className="text-gray-600">Please login as an employer to view and purchase plans.</p>
-        <button onClick={() => router.push('/auth/login')} className="px-6 py-3 rounded-lg bg-purple-600 text-white font-medium shadow hover:bg-purple-700">Login</button>
+        <h1 className="text-3xl font-bold text-foreground">Subscription Plans</h1>
+        <p className="text-muted-foreground">Please login as an employer to view and purchase plans.</p>
+        <button onClick={() => router.push('/auth/login')} className="px-6 py-3 rounded-lg bg-primary text-primary-foreground font-medium shadow hover:bg-accent">Login</button>
       </div>
     )
   }
@@ -205,9 +221,9 @@ export default function SubscriptionPage() {
   if (user.role !== 'employer') {
     return (
       <div className="max-w-lg mx-auto py-20 text-center space-y-4">
-        <LockKeyhole className="w-14 h-14 text-purple-500 mx-auto" />
-        <h1 className="text-3xl font-bold">Employers Only</h1>
-        <p className="text-gray-600">Subscription management is restricted to employer accounts.</p>
+        <LockKeyhole className="w-14 h-14 text-primary mx-auto" />
+        <h1 className="text-3xl font-bold text-foreground">Employers Only</h1>
+        <p className="text-muted-foreground">Subscription management is restricted to employer accounts.</p>
       </div>
     )
   }
@@ -255,29 +271,29 @@ export default function SubscriptionPage() {
         </div>
       )}
       {/* Decorative background */}
-      <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-white via-purple-50 to-white"/>
-      <div className="absolute -top-40 -left-32 w-[32rem] h-[32rem] rounded-full bg-purple-200/40 blur-3xl"/>
-      <div className="absolute -bottom-40 -right-32 w-[30rem] h-[30rem] rounded-full bg-purple-300/30 blur-3xl"/>
+  <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-background via-light-cream to-background"/>
+  <div className="absolute -top-40 -left-32 w-[32rem] h-[32rem] rounded-full bg-primary/20 blur-3xl"/>
+  <div className="absolute -bottom-40 -right-32 w-[30rem] h-[30rem] rounded-full bg-accent/20 blur-3xl"/>
 
       <div className="relative z-10">
         {/* Hero */}
         <section className="pt-20 pb-12 px-4">
           <div className="max-w-5xl mx-auto text-center">
-            <span className="inline-flex items-center gap-2 rounded-full bg-purple-100 text-purple-700 px-4 py-1 text-xs font-semibold tracking-wide mb-6 shadow-sm">
-              <ShieldCheck className="h-4 w-4" /> Transparent pricing — scale as you grow
+            <span className="inline-flex items-center gap-2 rounded-full bg-light-cream text-primary px-4 py-1 text-xs font-semibold tracking-wide mb-6 shadow-sm">
+              <ShieldCheck className="h-4 w-4 text-primary" /> Transparent pricing — scale as you grow
             </span>
-            <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight bg-gradient-to-r from-purple-700 via-purple-500 to-purple-400 bg-clip-text text-transparent leading-tight">
+            <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight bg-gradient-to-r from-primary via-accent to-foreground bg-clip-text text-transparent leading-tight">
               Power Up Your Hiring Pipeline
             </h1>
-            <p className="mt-6 text-lg md:text-xl text-gray-600 max-w-3xl mx-auto">
+            <p className="mt-6 text-lg md:text-xl text-muted-foreground max-w-3xl mx-auto">
               Start free with 5 job posts. Upgrade for more capacity, insights, and efficiency — all within the same familiar workflow.
             </p>
             {/* Inline status removed; toast handles feedback */}
-            <div className="mt-8 flex flex-wrap justify-center gap-3 text-xs text-gray-500">
-              <div className="flex items-center gap-1"><Zap className="h-4 w-4 text-purple-500"/> Quick setup</div>
-              <div className="flex items-center gap-1"><Headset className="h-4 w-4 text-purple-500"/> Human support</div>
-              <div className="flex items-center gap-1"><BarChart3 className="h-4 w-4 text-purple-500"/> Actionable insights</div>
-              <div className="flex items-center gap-1"><Infinity className="h-4 w-4 text-purple-500"/> Scale-ready</div>
+            <div className="mt-8 flex flex-wrap justify-center gap-3 text-xs text-muted-foreground">
+              <div className="flex items-center gap-1"><Zap className="h-4 w-4 text-primary"/> Quick setup</div>
+              <div className="flex items-center gap-1"><Headset className="h-4 w-4 text-primary"/> Human support</div>
+              <div className="flex items-center gap-1"><BarChart3 className="h-4 w-4 text-primary"/> Actionable insights</div>
+              <div className="flex items-center gap-1"><Infinity className="h-4 w-4 text-primary"/> Scale-ready</div>
             </div>
           </div>
         </section>
@@ -288,44 +304,77 @@ export default function SubscriptionPage() {
             <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
               {planCards.map(({pid,p,popular,isActive,Icon,marketing,isDowngrade}) => (
                 <div key={pid} className={cn(
-                  'relative flex flex-col overflow-hidden rounded-3xl border bg-white backdrop-blur-sm transition-all duration-300',
-                  'hover:-translate-y-1 hover:shadow-xl',
-                  popular ? 'border-purple-300 shadow-md ring-1 ring-purple-300/60' : 'border-purple-100 shadow-sm',
-                  isActive && 'ring-2 ring-purple-500 shadow-lg'
+                  'relative flex flex-col overflow-hidden rounded-3xl border backdrop-blur-sm transition-all duration-300',
+                  'hover:-translate-y-2 hover:shadow-2xl',
+                  popular ? 'border-primary/30 shadow-lg ring-2 ring-primary/20' : 'border-border/50 shadow-md',
+                  isActive && 'ring-2 ring-green-400/50 shadow-xl',
+                  'bg-white/80'
                 )}>
                   {popular && (
-                    <div className="absolute top-0 right-0 px-3 py-1 text-[10px] font-bold text-white rounded-bl-lg bg-gradient-to-r from-purple-600 to-purple-500 tracking-wide shadow">
+                    <div className="absolute top-0 right-0 px-3 py-1 text-[10px] font-bold text-white rounded-bl-lg bg-gradient-to-r from-primary to-accent tracking-wide shadow-md">
                       POPULAR
                     </div>
                   )}
                   {isActive && (
-                    <div className="absolute top-0 left-0 px-3 py-1 text-[10px] font-bold text-white rounded-br-lg bg-green-500/90 tracking-wide shadow">
+                    <div className="absolute top-0 left-0 px-3 py-1 text-[10px] font-bold text-white rounded-br-lg bg-gradient-to-r from-green-500 to-emerald-500 tracking-wide shadow-md">
                       ACTIVE
                     </div>
                   )}
                   <div className={cn('px-6 pt-8 pb-6 bg-gradient-to-br', gradientFor(pid))}>
                     <div className="flex items-start justify-between gap-4">
                       <div>
-                        <h3 className={cn('text-xl font-bold', pid==='free' && 'text-gray-900')}>{p.name}</h3>
-                        <p className={cn('mt-1 text-xs font-medium tracking-wide uppercase', pid==='pro'||pid==='premium'||pid==='enterprise' ? 'text-purple-100' : 'text-purple-500')}>
+                        <h3 className={cn('text-xl font-bold', 
+                          pid==='free' && 'text-foreground',
+                          pid==='basic' && 'text-foreground',
+                          (pid==='pro' || pid==='premium') && 'text-white',
+                          pid==='enterprise' && 'text-white'
+                        )}>{p.name}</h3>
+                        <p className={cn('mt-1 text-xs font-medium tracking-wide uppercase',
+                          pid==='free' && 'text-muted-foreground',
+                          pid==='basic' && 'text-primary',
+                          (pid==='pro' || pid==='premium') && 'text-white/80',
+                          pid==='enterprise' && 'text-white/80'
+                        )}>
                           {pid==='free'? 'Launch': pid==='basic'? 'Essential': pid==='pro'? 'Growth' : pid==='premium'? 'Performance' : 'Scale'}
                         </p>
                       </div>
-                      <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white shadow-inner ring-1 ring-purple-200">
-                        <Icon className={cn('h-6 w-6', pid==='pro'||pid==='premium'||pid==='enterprise' ? 'text-purple-600' : 'text-purple-500')} />
+                      <div className={cn('flex h-12 w-12 items-center justify-center rounded-2xl shadow-inner ring-1',
+                        pid==='free' && 'bg-white ring-border',
+                        pid==='basic' && 'bg-white ring-primary/20',
+                        (pid==='pro' || pid==='premium') && 'bg-white/10 ring-white/20',
+                        pid==='enterprise' && 'bg-white/10 ring-white/20'
+                      )}>
+                        <Icon className={cn('h-6 w-6',
+                          pid==='free' && 'text-muted-foreground',
+                          pid==='basic' && 'text-primary',
+                          (pid==='pro' || pid==='premium') && 'text-white',
+                          pid==='enterprise' && 'text-white'
+                        )} />
                       </div>
                     </div>
                     <div className="mt-6 flex items-end gap-2">
-                      <p className={cn('text-3xl font-extrabold', pid==='pro'||pid==='premium'||pid==='enterprise' ? 'text-white' : 'text-gray-900')}>₹{p.price.toLocaleString()}</p>
-                      <span className={cn('text-xs font-medium mb-1', pid==='pro'||pid==='premium'||pid==='enterprise' ? 'text-purple-100' : 'text-gray-500')}>{p.price === 0 ? 'Forever' : 'per year'}</span>
+                      <p className={cn('text-3xl font-extrabold',
+                        pid==='free' && 'text-foreground',
+                        pid==='basic' && 'text-foreground',
+                        (pid==='pro' || pid==='premium') && 'text-white',
+                        pid==='enterprise' && 'text-white'
+                      )}>₹{p.price.toLocaleString()}</p>
+                      <span className={cn('text-xs font-medium mb-1',
+                        pid==='free' && 'text-muted-foreground',
+                        pid==='basic' && 'text-muted-foreground',
+                        (pid==='pro' || pid==='premium') && 'text-white/70',
+                        pid==='enterprise' && 'text-white/70'
+                      )}>{p.price === 0 ? 'Forever' : 'per year'}</span>
                     </div>
                   </div>
-                  <div className="flex flex-1 flex-col px-6 py-6">
+                  <div className="flex flex-1 flex-col px-6 py-6 bg-white/50">
                     <ul className="space-y-3 text-sm flex-1">
                       {marketing.map(m => (
-                        <li key={m} className="flex gap-2 items-start">
-                          <Check className="h-5 w-5 text-purple-500 shrink-0 mt-0.5" />
-                          <span className="text-gray-700">{m}</span>
+                        <li key={m} className="flex gap-3 items-start">
+                          <div className="flex h-5 w-5 items-center justify-center rounded-full bg-primary/10 mt-0.5 shrink-0">
+                            <Check className="h-3 w-3 text-primary" />
+                          </div>
+                          <span className="text-foreground/90 leading-relaxed">{m}</span>
                         </li>
                       ))}
                     </ul>
@@ -333,16 +382,17 @@ export default function SubscriptionPage() {
                       disabled={loading || isActive || initializing || isDowngrade}
                       onClick={() => !isDowngrade && initiate(pid)}
                       className={cn(
-                        'mt-6 rounded-xl px-4 py-3 text-sm font-semibold transition-colors shadow-sm border',
-                        isActive ? 'bg-green-100 text-green-700 border-green-200 cursor-default' : '',
-                        !isActive && !isDowngrade && pid !== 'free' && 'bg-purple-600 text-white border-purple-600 hover:bg-purple-700',
-                        !isActive && !isDowngrade && pid === 'free' && 'bg-white text-purple-600 border-purple-300 hover:bg-purple-50',
-                        isDowngrade && 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed',
+                        'mt-6 rounded-xl px-4 py-3 text-sm font-semibold transition-all duration-200 shadow-sm border',
+                        'focus:outline-none focus:ring-2 focus:ring-offset-2',
+                        isActive && 'bg-green-50 text-green-700 border-green-200 cursor-default focus:ring-green-300',
+                        !isActive && !isDowngrade && pid !== 'free' && 'bg-primary text-white border-primary hover:bg-accent hover:border-accent focus:ring-primary/50 shadow-lg hover:shadow-xl',
+                        !isActive && !isDowngrade && pid === 'free' && 'bg-white text-primary border-primary/30 hover:bg-primary hover:text-white focus:ring-primary/50',
+                        isDowngrade && 'bg-muted text-muted-foreground border-border cursor-not-allowed',
                         (loading || initializing) && 'opacity-60 cursor-not-allowed'
                       )}
                       title={isDowngrade ? 'Downgrade not allowed' : ''}
                     >
-                      {isActive ? 'Current Plan' : isDowngrade ? 'Not Available' : pid==='free'? 'Get Started' : 'Upgrade'}
+                      {isActive ? '✓ Current Plan' : isDowngrade ? 'Not Available' : pid==='free'? 'Get Started' : 'Upgrade Now'}
                     </button>
                   </div>
                 </div>
@@ -351,33 +401,57 @@ export default function SubscriptionPage() {
           </div>
         </section>
 
+        {/* Team Management Section */}
+        {subscription && (activePlan === "premium" || activePlan === "enterprise") && (
+          <section className="px-4 py-8">
+            <div className="max-w-4xl mx-auto">
+              <TeamManagement 
+                subscription={subscription}
+                isOwner={isOwner}
+                onMemberUpdate={() => {
+                  // Optionally reload subscription data
+                  if (user?.token) {
+                    api.get("/subscription/me", { headers: { Authorization: `Bearer ${user.token}` } })
+                      .then(r => {
+                        setSubscription(r.data.subscription)
+                        setAccessType(r.data.access_type || 'direct')
+                        setIsOwner(r.data.is_owner !== false)
+                      })
+                      .catch(() => {})
+                  }
+                }}
+              />
+            </div>
+          </section>
+        )}
+
         {/* Comparison Table */}
         <section className="px-4 py-8">
           <div className="max-w-6xl mx-auto">
-            <div className="rounded-3xl border border-purple-100 bg-white/70 backdrop-blur-md shadow-sm overflow-hidden">
+            <div className="rounded-3xl border border-border bg-card/70 backdrop-blur-md shadow-sm overflow-hidden">
               <div className="px-6 pt-8 pb-4 flex items-center justify-between flex-wrap gap-4">
                 <div>
-                  <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2"><BarChart3 className="h-5 w-5 text-purple-500"/> Feature Comparison</h2>
-                  <p className="text-sm text-gray-500 mt-1">Understand how each plan supports your hiring goals.</p>
+                  <h2 className="text-xl font-bold text-foreground flex items-center gap-2"><BarChart3 className="h-5 w-5 text-primary"/> Feature Comparison</h2>
+                  <p className="text-sm text-muted-foreground mt-1">Understand how each plan supports your hiring goals.</p>
                 </div>
-                <Link href="#pricing" className="text-xs font-medium text-purple-600 hover:text-purple-700">Jump to pricing ↑</Link>
+                <Link href="#pricing" className="text-xs font-medium text-primary hover:text-accent">Jump to pricing ↑</Link>
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="bg-purple-50/60 text-left">
-                      <th className="py-3 pl-6 pr-4 font-semibold text-gray-700">Capability</th>
+                    <tr className="bg-light-cream/60 text-left">
+                      <th className="py-3 pl-6 pr-4 font-semibold text-muted-foreground">Capability</th>
                       {planCards.map(c => (
-                        <th key={c.pid} className="py-3 px-4 font-semibold text-gray-700 text-center">{c.p.name}</th>
+                        <th key={c.pid} className="py-3 px-4 font-semibold text-muted-foreground text-center">{c.p.name}</th>
                       ))}
                     </tr>
                   </thead>
                   <tbody>
                     {comparisonFeatures.map(row => (
-                      <tr key={row.key} className="border-t border-purple-100/70">
-                        <td className="py-3 pl-6 pr-4 font-medium text-gray-600">{row.label}</td>
+                      <tr key={row.key} className="border-t border-border/70">
+                        <td className="py-3 pl-6 pr-4 font-medium text-muted-foreground">{row.label}</td>
                         {planCards.map(c => (
-                          <td key={c.pid+row.key} className="py-3 px-4 text-center text-gray-700">{row.render(c.pid)}</td>
+                          <td key={c.pid+row.key} className="py-3 px-4 text-center text-foreground">{row.render(c.pid)}</td>
                         ))}
                       </tr>
                     ))}
@@ -392,31 +466,31 @@ export default function SubscriptionPage() {
         <section className="px-4 pt-4 pb-24">
           <div className="max-w-5xl mx-auto grid md:grid-cols-2 gap-12 items-start">
             <div>
-              <h2 className="text-2xl font-bold mb-4 flex items-center gap-2"><Users2 className="h-6 w-6 text-purple-500"/> Frequently Asked</h2>
-              <ul className="space-y-5 text-sm text-gray-700">
+              <h2 className="text-2xl font-bold mb-4 flex items-center gap-2"><Users2 className="h-6 w-6 text-primary"/> Frequently Asked</h2>
+              <ul className="space-y-5 text-sm text-foreground">
                 <li>
-                  <p className="font-semibold text-gray-900">Can I upgrade at any time?</p>
-                  <p className="mt-1">Yes. Upgrading activates immediately—remaining value of your previous period can be prorated in future billing iterations.</p>
+                  <p className="font-semibold text-foreground">Can I upgrade at any time?</p>
+                  <p className="mt-1 text-muted-foreground">Yes. Upgrading activates immediately—remaining value of your previous period can be prorated in future billing iterations.</p>
                 </li>
                 <li>
-                  <p className="font-semibold text-gray-900">What happens when I hit my post limit?</p>
-                  <p className="mt-1">You'll be prompted to upgrade; existing posts stay live until expiry.</p>
+                  <p className="font-semibold text-foreground">What happens when I hit my post limit?</p>
+                  <p className="mt-1 text-muted-foreground">You'll be prompted to upgrade; existing posts stay live until expiry.</p>
                 </li>
                 <li>
-                  <p className="font-semibold text-gray-900">Enterprise vs Premium?</p>
-                  <p className="mt-1"><span className="font-medium">Premium</span> gives unlimited posts for a single employer account. <span className="font-medium">Enterprise</span> gives unlimited posts across all employer accounts under the same company.</p>
+                  <p className="font-semibold text-foreground">Enterprise vs Premium?</p>
+                  <p className="mt-1 text-muted-foreground"><span className="font-medium">Premium</span> gives unlimited posts for a single employer account. <span className="font-medium">Enterprise</span> gives unlimited posts across all employer accounts under the same company.</p>
                 </li>
               </ul>
             </div>
-            <div className="relative overflow-hidden rounded-3xl border border-purple-200 bg-gradient-to-br from-purple-600 via-purple-500 to-purple-400 p-8 text-white shadow-lg">
-              <div className="absolute inset-0 opacity-20 bg-[radial-gradient(circle_at_30%_20%,white,transparent_60%)]"/>
-              <div className="relative">
-                <h3 className="text-2xl font-extrabold mb-3 tracking-tight">Need a tailored solution?</h3>
-                <p className="text-purple-100 mb-6 text-sm leading-relaxed">We partner with high-growth teams to deliver custom workflows, integrations and SLAs that reduce time-to-hire.</p>
-                <a href="mailto:sales@example.com" className="inline-flex items-center gap-2 rounded-xl bg-white/10 hover:bg-white/20 text-white px-5 py-3 text-sm font-semibold backdrop-blur border border-white/30 transition">
+            <div className="relative overflow-hidden rounded-3xl border border-primary/20 bg-gradient-to-br from-primary/90 via-accent to-primary shadow-xl">
+              <div className="absolute inset-0 opacity-30 bg-[radial-gradient(circle_at_30%_20%,white,transparent_60%)]"/>
+              <div className="relative p-8">
+                <h3 className="text-2xl font-extrabold mb-3 tracking-tight text-white">Need a tailored solution?</h3>
+                <p className="text-white/90 mb-6 text-sm leading-relaxed">We partner with high-growth teams to deliver custom workflows, integrations and SLAs that reduce time-to-hire.</p>
+                <a href="mailto:sales@example.com" className="inline-flex items-center gap-2 rounded-xl bg-white/15 hover:bg-white/25 text-white px-5 py-3 text-sm font-semibold backdrop-blur border border-white/20 transition-all duration-200 shadow-md hover:shadow-lg">
                   <Building2 className="h-4 w-4"/> Contact Sales
                 </a>
-                <p className="mt-4 text-[11px] text-purple-200">Response within 1 business day.</p>
+                <p className="mt-4 text-[11px] text-white/75">Response within 1 business day.</p>
               </div>
             </div>
           </div>

@@ -9,6 +9,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import ProfileEditor from "@/components/profile-editor"
 import PrivacySettings from "@/components/privacy-settings"
 import ProfileHeader from "@/components/profile-header"
+import React from "react"
+import ResumeBuilder from "@/components/resume-builder"
 
 export default function ProfilePage() {
   const { user, isAuthenticated, hydrated } = useAuthStore()
@@ -114,6 +116,12 @@ export default function ProfilePage() {
               Profile
             </TabsTrigger>
             <TabsTrigger
+              value="resume"
+              className="flex-1 py-3"
+            >
+              Resume
+            </TabsTrigger>
+            <TabsTrigger
               value="privacy"
               className="flex-1 rounded-tr-xl rounded-tl-none rounded-bl-none rounded-br-none py-3"
             >
@@ -134,6 +142,18 @@ export default function ProfilePage() {
               setSkills={setSkills}
               onCancel={handleCancel}
             />
+          </TabsContent>
+          <TabsContent value="resume" className="bg-white rounded-b-xl shadow-sm p-6 border border-t-0">
+            {/* ResumeBuilder now available in profile page */}
+            <div className="max-w-3xl mx-auto">
+              <h2 className="text-xl font-bold mb-4 text-dark-gray">Resume Builder</h2>
+              <p className="mb-6 text-gray-600">Generate and download your resume using AI. Your resume will be saved to your profile for easy access.</p>
+              <div className="bg-light-gray rounded-xl p-6">
+                <React.Suspense fallback={<div>Loading Resume Builder...</div>}>
+                  <ResumeBuilder />
+                </React.Suspense>
+              </div>
+            </div>
           </TabsContent>
           <TabsContent value="privacy" className="bg-white rounded-b-xl shadow-sm p-6 border border-t-0">
             <PrivacySettings />

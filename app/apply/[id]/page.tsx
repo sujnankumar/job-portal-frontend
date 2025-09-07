@@ -126,12 +126,6 @@ export default function ApplyPage({ params }: { params: Promise<{ id: string }> 
               >
                 Upload Resume
               </TabsTrigger>
-              <TabsTrigger
-                value="build"
-                className="flex-1 rounded-tr-xl rounded-tl-none rounded-bl-none rounded-br-none py-3"
-              >
-                Resume Builder
-              </TabsTrigger>
             </TabsList>
 
             <TabsContent value="upload" className="p-6">
@@ -144,7 +138,7 @@ export default function ApplyPage({ params }: { params: Promise<{ id: string }> 
             </TabsContent>
 
             <TabsContent value="build" className="p-6">
-              <ResumeBuilder />
+              {/* ResumeBuilder removed from apply page */}
             </TabsContent>
           </Tabs>
 

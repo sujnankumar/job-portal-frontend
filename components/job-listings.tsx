@@ -99,6 +99,26 @@ export default function JobListings({ filters, savedJobsOnly = false, showExpire
     return truncatedText + "..."
   }
 
+  // Format salary display with sensible fallbacks
+  const formatSalaryDisplay = (job: any) => {
+    // If employer chose to hide salary explicitly
+    if (job && job.show_salary === false) return "Undisclosed"
+    const minRaw = job?.min_salary
+    const maxRaw = job?.max_salary
+    const min = Number(minRaw)
+    const max = Number(maxRaw)
+    const hasMin = Number.isFinite(min)
+    const hasMax = Number.isFinite(max)
+    if (!hasMin && !hasMax) return "Undisclosed"
+    if (hasMin && hasMax) {
+      if (min === max) return `${min.toLocaleString('en-IN')}/year`
+      return `${min.toLocaleString('en-IN')} - ${max.toLocaleString('en-IN')}/year`
+    }
+    if (hasMin) return `${min.toLocaleString('en-IN')}/year`
+    if (hasMax) return `${max.toLocaleString('en-IN')}/year`
+    return "Undisclosed"
+  }
+
   useEffect(() => {
     const fetchJobs = async () => {
       setLoading(true)
@@ -417,9 +437,7 @@ export default function JobListings({ filters, savedJobsOnly = false, showExpire
                       </div>
                       <div className="flex items-center">
                         <IndianRupee className="h-3.5 w-3.5 mr-1" />
-                        {job.min_salary === job.max_salary ? 
-                          `${parseInt(job.min_salary).toLocaleString('en-IN')}/year` : 
-                          `${parseInt(job.min_salary).toLocaleString('en-IN')} - ${parseInt(job.max_salary).toLocaleString('en-IN')}/year`}
+                        {formatSalaryDisplay(job)}
                       </div>
                       <div className="flex items-center">
                         <Clock className="h-3.5 w-3.5 mr-1" />
