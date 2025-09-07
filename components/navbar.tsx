@@ -176,13 +176,13 @@ export default function Navbar() {
     ...(isAuthenticated && user?.role === "applicant"
       ? [
           { name: "Dashboard", path: "/dashboard" },
-          { name: "Chat", path: "/chat" },
+          // { name: "Chat", path: "/chat" }, // Chat option commented out
         ]
       : []),
     ...(isAuthenticated && user?.role === "employer"
       ? [
           { name: "Dashboard", path: "/employer/dashboard" },
-          { name: "Chat", path: "/employer/chat" },
+          // { name: "Chat", path: "/employer/chat" }, // Chat option commented out
         ]
       : []),
   ]
@@ -220,8 +220,9 @@ export default function Navbar() {
           {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center space-x-6">
             {navLinks.map((link) => {
-              const isChat = link.name === 'Chat'
-              const showBadge = isChat && unreadChatThreads > 0
+              // const isChat = link.name === 'Chat'
+              // const showBadge = isChat && unreadChatThreads > 0
+              // if (isChat) return null // Chat option commented out
               return (
                 <Link
                   key={link.path}
@@ -233,11 +234,11 @@ export default function Navbar() {
                 >
                   <span className="relative z-10 flex items-center gap-2">
                     {link.name}
-                    {showBadge && (
+                    {/* {showBadge && (
                       <span className="inline-flex items-center justify-center rounded-full bg-accent text-white text-[10px] font-bold min-w-[18px] h-[18px] px-1">
                         {unreadChatThreads > 99 ? '99+' : unreadChatThreads}
                       </span>
-                    )}
+                    )} */}
                   </span>
                   <span
                     className={cn(
@@ -364,8 +365,9 @@ export default function Navbar() {
           <div className="container mx-auto px-4 py-4 space-y-4">
             <nav className="flex flex-col space-y-4">
               {navLinks.map((link) => {
-                const isChat = link.name === 'Chat'
-                const showBadge = isChat && unreadChatThreads > 0
+                // const isChat = link.name === 'Chat'
+                // const showBadge = isChat && unreadChatThreads > 0
+                // if (isChat) return null // Chat option commented out
                 return (
                   <Link
                     key={link.path}
@@ -377,11 +379,11 @@ export default function Navbar() {
                     onClick={() => setIsMenuOpen(false)}
                   >
                     <span>{link.name}</span>
-                    {showBadge && (
+                    {/* {showBadge && (
                       <span className="inline-flex items-center justify-center rounded-full bg-accent text-white text-[10px] font-bold min-w-[18px] h-[18px] px-1">
                         {unreadChatThreads > 99 ? '99+' : unreadChatThreads}
                       </span>
-                    )}
+                    )} */}
                   </Link>
                 )
               })}

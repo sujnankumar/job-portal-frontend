@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import JobDetail from "@/components/job-detail"
 import SimilarJobs from "@/components/similar-jobs"
-import JobChat from "@/components/job-chat"
+// import JobChat from "@/components/job-chat"
 import api from "@/lib/axios"
 import { useAuthStore } from "@/store/authStore"
 import React from "react"
@@ -62,9 +62,9 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
           </div>
         </div>
       </div>
-      {user?.role === 'applicant' && (
+      {/* {user?.role === 'applicant' && (
         <JobChat jobId={id} employerId={job.employer_id} companyName={job.company} companyLogo={job.logo} jobTitle={job.title} />
-      )}
+      )} */}
     </OnboardingMiddleware>
   )
 }

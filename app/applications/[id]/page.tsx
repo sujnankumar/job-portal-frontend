@@ -48,7 +48,7 @@ import ApplicationTimeline from "@/components/application-timeline"
 import api from "@/lib/axios"
 import { set } from "date-fns"
 import ResumeActions from "@/components/resume-actions"
-import ContactRecruiterChatModal from "@/components/contact-recruiter-chat-modal"
+// import ContactRecruiterChatModal from "@/components/contact-recruiter-chat-modal"
 
 export default function ApplicationDetailsPage({ params }: { params: Promise<{ id: string }> }) {
   const { user, isAuthenticated, hydrated } = useAuthStore()
@@ -360,12 +360,12 @@ export default function ApplicationDetailsPage({ params }: { params: Promise<{ i
     }
   }
 
-  // Extract job and employer info for chat modal
-  const jobId = application?.job_id || application?.job?._id || ""
-  const employerId = application?.job?.employer_id || application?.job?.employer || ""
-  const companyName = companyDetails?.company_name || application?.job?.company_name || application?.job?.company || ""
-  const companyLogo = logoUrl || application?.job?.logo || "/company_placeholder.jpeg"
-  const jobTitle = application?.job?.title || ""
+  // // Extract job and employer info for chat modal
+  // const jobId = application?.job_id || application?.job?._id || ""
+  // const employerId = application?.job?.employer_id || application?.job?.employer || ""
+  // const companyName = companyDetails?.company_name || application?.job?.company_name || application?.job?.company || ""
+  // const companyLogo = logoUrl || application?.job?.logo || "/company_placeholder.jpeg"
+  // const jobTitle = application?.job?.title || ""
 
   return (
     <OnboardingMiddleware>
@@ -942,8 +942,10 @@ export default function ApplicationDetailsPage({ params }: { params: Promise<{ i
             </DialogContent>
           </Dialog>
 
+
+
           {/* Chat Modal */}
-          <ContactRecruiterChatModal
+          {/* <ContactRecruiterChatModal
             jobId={jobId}
             employerId={employerId}
             companyName={companyName}
@@ -951,7 +953,10 @@ export default function ApplicationDetailsPage({ params }: { params: Promise<{ i
             jobTitle={jobTitle}
             open={showChat}
             onClose={() => setShowChat(false)}
-          />
+          /> */}
+
+
+
         </div>
         )}
       </ProtectedRoute>

@@ -244,15 +244,17 @@ const TemplateModern = React.forwardRef<HTMLDivElement, { data: ResumePreviewDat
     </header>
 
     <section className="mb-6">
-      <h2 className="text-lg font-semibold text-dark-gray border-b border-gray-200 pb-1 mb-2">Professional Summary</h2>
-      <p className="text-gray-700 leading-relaxed">{data.aiContent?.summary || "AI generated summary will appear here."}</p>
+  <h2 className="text-lg font-semibold text-dark-gray border-b border-gray-200 pb-1 mb-4">Professional Summary</h2>
+  <div className="h-2" />
+  <p className="text-gray-700 leading-relaxed mt-2">{data.aiContent?.summary || "AI generated summary will appear here."}</p>
     </section>
 
     <div className="grid grid-cols-3 gap-8">
       <div className="col-span-2">
         {data.aiContent?.experience && data.aiContent.experience.length > 0 && (
           <section className="mb-6">
-            <h2 className="text-lg font-semibold text-dark-gray border-b border-gray-200 pb-1 mb-2">Work Experience</h2>
+            <h2 className="text-lg font-semibold text-dark-gray border-b border-gray-200 pb-1 mb-4">Work Experience</h2>
+            <div className="h-2" />
             {data.aiContent.experience.map((job, index) => (
               <div key={index} className="mb-4">
                 <h3 className="font-semibold text-gray-900">{job.role}</h3>
@@ -272,7 +274,8 @@ const TemplateModern = React.forwardRef<HTMLDivElement, { data: ResumePreviewDat
 
         {data.userProjects && data.userProjects.length > 0 && (
           <section className="mb-6">
-            <h2 className="text-lg font-semibold text-dark-gray border-b border-gray-200 pb-1 mb-2">Projects</h2>
+            <h2 className="text-lg font-semibold text-dark-gray border-b border-gray-200 pb-1 mb-4">Projects</h2>
+            <div className="h-2" />
               {(data.aiContent?.projects && data.aiContent.projects.length > 0
                 ? data.aiContent.projects.map((project, index) => (
                     <div key={index} className="mb-3">
@@ -291,7 +294,8 @@ const TemplateModern = React.forwardRef<HTMLDivElement, { data: ResumePreviewDat
         )}
 
         <section className="mb-6">
-          <h2 className="text-lg font-semibold text-dark-gray border-b border-gray-200 pb-1 mb-2">Education</h2>
+          <h2 className="text-lg font-semibold text-dark-gray border-b border-gray-200 pb-1 mb-4">Education</h2>
+          <div className="h-2" />
           {data.aiContent?.education?.map((edu, index) => (
             <div key={index} className="mb-2">
               <h3 className="font-medium text-gray-900">{edu.institution}</h3>
@@ -304,8 +308,9 @@ const TemplateModern = React.forwardRef<HTMLDivElement, { data: ResumePreviewDat
 
       <aside className="col-span-1">
         <section className="mb-6">
-          <h2 className="text-lg font-semibold text-dark-gray border-b border-gray-200 pb-1 mb-2">Skills</h2>
-          <ul className="flex flex-wrap gap-2">
+          <h2 className="text-lg font-semibold text-dark-gray border-b border-gray-200 pb-1 mb-4">Skills</h2>
+          <div className="h-2" />
+          <ul className="flex flex-wrap gap-2 mt-2">
             {data.userSkills?.map((skill, index) => (
               <li key={index} className="bg-light-gray text-dark-gray text-xs font-medium px-2.5 py-0.5 rounded-full border">
                 {skill}
@@ -316,7 +321,8 @@ const TemplateModern = React.forwardRef<HTMLDivElement, { data: ResumePreviewDat
 
         {data.userCertifications && data.userCertifications.length > 0 && (
           <section className="mb-6">
-            <h2 className="text-lg font-semibold text-dark-gray border-b border-gray-200 pb-1 mb-2">Certifications</h2>
+            <h2 className="text-lg font-semibold text-dark-gray border-b border-gray-200 pb-1 mb-4">Certifications</h2>
+            <div className="h-2" />
             {data.userCertifications.map((cert, index) => (
               <div key={index} className="mb-2">
                 <h3 className="font-medium text-gray-800 text-sm">{cert.name}</h3>
