@@ -6,6 +6,7 @@ import { Check, Briefcase, Rocket, Flame, Crown, LockKeyhole, Loader2, ShieldChe
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { toast } from "sonner"
+import TeamManagement from "@/components/team-management"
 
 // Utility for class merging
 const cn = (...classes: (string | false | null | undefined)[]) => classes.filter(Boolean).join(" ")
@@ -26,27 +27,29 @@ const MARKETING_FEATURES: Record<string, string[]> = {
   free: [
     "5 job posts total",
     "Basic listing visibility",
-    "Single employer seat"
+    "Single employer account"
   ],
   basic: [
     "36 posts / year (3 / month)",
     "Standard visibility boost",
-    "Single employer seat"
+    "Single employer account"
   ],
   pro: [
     "96 posts / year (8 / month)",
-    "Standard visibility boost",
-    "Single employer seat"
+    "Enhanced visibility boost",
+    "Single employer account"
   ],
   premium: [
-    "Access to 5 employer mail IDs",
-    "Standard visibility boost",
-    "Same company access",
+    "Unlimited job posts",
+    "Premium visibility boost",
+    "Up to 5 team members",
+    "Shared access management"
   ],
   enterprise: [
-    "Access to job fair",
-    "Unlimited access to employer of same company",
-    "Direct access to colleges and institutions",
+    "Unlimited job posts",
+    "Maximum visibility boost", 
+    "Unlimited company employees",
+    "Company-wide access",
     "Dedicated account manager"
   ]
 }
@@ -76,6 +79,9 @@ export default function SubscriptionPage() {
   const [plans, setPlans] = useState<Record<string, Plan>>({})
   const [loading, setLoading] = useState(false)
   const [activePlan, setActivePlan] = useState<string | null>(null)
+  const [subscription, setSubscription] = useState<any>(null)
+  const [accessType, setAccessType] = useState<string>("direct")
+  const [isOwner, setIsOwner] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [initializing, setInitializing] = useState(true)
   const [statusModal, setStatusModal] = useState<{type:'success'|'pending'|'error'|null; plan?:string; txn?:string}>({type:null})
@@ -104,16 +110,34 @@ export default function SubscriptionPage() {
     if (user.token) {
       api.get("/subscription/me", { headers: { Authorization: `Bearer ${user.token}` } })
         .then(r => {
-          const pid = r.data.subscription?.plan_id || 'free'
+          const sub = r.data.subscription
+          const pid = sub?.plan_id || 'free'
+          const accessType = r.data.access_type || 'direct'
+          const isOwner = r.data.is_owner !== false // default to true
+          
           setActivePlan(pid)
+          setSubscription(sub)
+          setAccessType(accessType)
+          setIsOwner(isOwner)
           setInitializing(false)
-          if(pid === 'free') {
+          
+          // Show appropriate toast based on access type
+          if (accessType === 'team_member') {
+            toast.info(`Access via team membership - ${pid.charAt(0).toUpperCase()+pid.slice(1)} plan`)
+          } else if(pid === 'free') {
             toast.info('Free plan active')
           } else {
             toast.success(`${pid.charAt(0).toUpperCase()+pid.slice(1)} plan active`)
           }
         })
-        .catch(() => { setActivePlan('free'); setInitializing(false); toast.info('Defaulted to Free plan') })
+        .catch(() => { 
+          setActivePlan('free'); 
+          setSubscription(null);
+          setAccessType('direct');
+          setIsOwner(true);
+          setInitializing(false); 
+          toast.info('Defaulted to Free plan') 
+        })
     }
   }, [user?.role, user?.token])
 
@@ -376,6 +400,30 @@ export default function SubscriptionPage() {
             </div>
           </div>
         </section>
+
+        {/* Team Management Section */}
+        {subscription && (activePlan === "premium" || activePlan === "enterprise") && (
+          <section className="px-4 py-8">
+            <div className="max-w-4xl mx-auto">
+              <TeamManagement 
+                subscription={subscription}
+                isOwner={isOwner}
+                onMemberUpdate={() => {
+                  // Optionally reload subscription data
+                  if (user?.token) {
+                    api.get("/subscription/me", { headers: { Authorization: `Bearer ${user.token}` } })
+                      .then(r => {
+                        setSubscription(r.data.subscription)
+                        setAccessType(r.data.access_type || 'direct')
+                        setIsOwner(r.data.is_owner !== false)
+                      })
+                      .catch(() => {})
+                  }
+                }}
+              />
+            </div>
+          </section>
+        )}
 
         {/* Comparison Table */}
         <section className="px-4 py-8">
