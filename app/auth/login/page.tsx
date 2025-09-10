@@ -133,54 +133,66 @@ export default function LoginPage() {
   }, [hydrated, isAuthenticated, user, router])
 
   return (
-  <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-50 to-white px-4 pt-0 pb-2">
-      <div className="w-full max-w-4xl bg-white rounded-3xl shadow-2xl overflow-hidden flex flex-col md:flex-row">
-        {/* Illustration Side */}
-        <div className="hidden md:flex flex-col justify-center items-center w-1/2 bg-gradient-to-br from-purple-100 to-purple-200 p-10 relative">
-          <div className="relative w-[320px] h-[320px] flex items-center justify-center soft-image-wrap">
-            <Image
-              src={loginImg}
-              alt="Login"
-              width={320}
-              height={320}
-              className="object-contain soft-blend-img"
-              priority
-            />
-          </div>
-          <h2 className="mt-8 text-2xl font-bold text-purple-700">Welcome Back!</h2>
-          <p className="mt-2 text-gray-600 text-center">Sign in to access your dashboard and opportunities.</p>
-        </div>
-        {/* Form Side */}
-        <div className="flex-1 flex flex-col justify-center items-center p-8 md:p-12">
-          <div className="w-full max-w-md">
-            <h1 className="text-3xl font-bold text-dark-gray mb-2">Sign In</h1>
-            <p className="text-gray-500 mb-6">Enter your credentials to continue</p>
-            <form onSubmit={handleSubmit} noValidate className="space-y-4" role="form" aria-label="Login form">
-              <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <Input id="email" name="email" type="email" placeholder="you@example.com" value={formData.email} onChange={handleChange} required />
-                {errors.email && <p className="text-red-500 text-xs mt-1">{errors.email}</p>}
+    <div className="container mx-auto max-w-md py-12 px-4">
+      <div className="text-center mb-8">
+        <h1 className="text-3xl font-bold text-dark-gray">Welcome Back</h1>
+        <p className="text-gray-500 mt-2">Sign in to your account to continue</p>
+      </div>
+
+      <div className="bg-white rounded-xl shadow-md overflow-hidden">
+        <div className="p-6">
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
+                name="email"
+                type="email"
+                placeholder="you@example.com"
+                value={formData.email}
+                onChange={handleChange}
+                required
+              />
+              {errors.email && <p className="text-red-500 text-xs mt-1">{errors.email}</p>}
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="password">Password</Label>
+                <Link href="/auth/forgot-password" className="text-xs text-accent hover:underline">
+                  Forgot password?
+                </Link>
               </div>
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="password">Password</Label>
-                  <Link href="/auth/forgot-password" className="text-xs text-accent hover:underline">Forgot password?</Link>
-                </div>
-                <Input id="password" name="password" type="password" placeholder="••••••••" value={formData.password} onChange={handleChange} required />
-                {errors.password && <p className="text-red-500 text-xs mt-1">{errors.password}</p>}
-              </div>
-              <div className="flex items-center space-x-2">
-                <Checkbox id="remember-me" checked={formData.rememberMe} onCheckedChange={handleCheckboxChange} />
-                <Label htmlFor="remember-me" className="text-sm font-normal">Remember me for 30 days</Label>
-              </div>
-              <Button type="submit" className="w-full bg-accent hover:bg-accent/90" disabled={isLoading}>
-                {isLoading ? "Signing in..." : "Sign In"}
-              </Button>
-              <div className="text-center text-sm text-gray-500">
-                Don't have an account? <Link href="/auth/register" className="text-accent hover:underline">Register now</Link>
-              </div>
-            </form>
-          </div>
+              <Input
+                id="password"
+                name="password"
+                type="password"
+                placeholder="••••••••"
+                value={formData.password}
+                onChange={handleChange}
+                required
+              />
+              {errors.password && <p className="text-red-500 text-xs mt-1">{errors.password}</p>}
+            </div>
+
+            <div className="flex items-center space-x-2">
+              <Checkbox id="remember-me" checked={formData.rememberMe} onCheckedChange={handleCheckboxChange} />
+              <Label htmlFor="remember-me" className="text-sm font-normal">
+                Remember me for 30 days
+              </Label>
+            </div>
+
+            <Button type="submit" className="w-full bg-accent hover:bg-accent/90" disabled={isLoading}>
+              {isLoading ? "Signing in..." : "Sign In"}
+            </Button>
+
+            <div className="text-center text-sm text-gray-500">
+              Don't have an account?{" "}
+              <Link href="/auth/register" className="text-accent hover:underline">
+                Register now
+              </Link>
+            </div>
+          </form>
         </div>
       </div>
     </div>
