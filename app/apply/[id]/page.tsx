@@ -15,6 +15,8 @@ import ResumeBuilder from "@/components/resume-builder"
 import api from "@/lib/axios"
 import React from "react"
 import OnboardingMiddleware from "@/components/auth/onboarding-middleware";
+import { toast } from "sonner"
+import { Loader2, CheckCircle2 } from "lucide-react"
 
 interface FormValues {
   coverLetter: string
@@ -27,6 +29,8 @@ export default function ApplyPage({ params }: { params: Promise<{ id: string }> 
   const router = useRouter()
   const [resumeConfirmed, setResumeConfirmed] = useState(false)
   const [selectedResume, setSelectedResume] = useState<any>(null)
+  const [submitting, setSubmitting] = useState(false)
+  const [submitted, setSubmitted] = useState(false)
 
   // Initialize form with react-hook-form
   const form = useForm<FormValues>({
@@ -55,7 +59,13 @@ export default function ApplyPage({ params }: { params: Promise<{ id: string }> 
   // Note: In a real app, you would fetch the job details based on the id
 
   const onSubmit = async (data: FormValues) => {
-    if (!selectedResume) return;
+    if (submitted) return; // prevent duplicate submits
+    if (!selectedResume) {
+  toast.warning("Resume required", { description: "Please upload or select a resume before submitting." })
+      return;
+    }
+    setSubmitting(true)
+  toast.loading("Submitting application", { description: "Please wait while we send your application...", id: "apply-submit" })
     const formData = new FormData();
     // Attach resume file
     if (selectedResume.type === "custom") {
@@ -97,15 +107,24 @@ export default function ApplyPage({ params }: { params: Promise<{ id: string }> 
     formData.append("portfolio", data.portfolio || "");
     console.log("Form Data:", formData.get("resume"), data.coverLetter, data.linkedIn, data.portfolio)
     try {
-      await api.post(`/application/apply/${unwrappedParams.id}`, formData, {
+      const id = (unwrappedParams as any)?.id
+      await api.post(`/application/apply/${id}`, formData, {
         headers: {
           "Content-Type": "multipart/form-data",
           Authorization: user && "token" in user ? `Bearer ${user.token}` : "",
         },
       });
-      router.push("/applications");
+      setSubmitted(true)
+      toast.success("Application submitted", { description: "Your application was sent successfully.", id: "apply-submit" })
+      setTimeout(() => {
+        router.push("/applications")
+      }, 1200)
+      // Optionally delay navigation so user sees success state; comment out if immediate redirect desired
+      // router.push("/applications");
     } catch (err: any) {
-      alert(err.response?.data?.detail || "Failed to submit application.");
+  toast.error("Submission failed", { description: err.response?.data?.detail || "Failed to submit application.", id: "apply-submit" })
+    } finally {
+      setSubmitting(false)
     }
   }
 
@@ -192,8 +211,22 @@ export default function ApplyPage({ params }: { params: Promise<{ id: string }> 
                 />
 
                 <div className="pt-4">
-                  <Button type="submit" className="w-full bg-accent hover:bg-accent/90" disabled={!resumeConfirmed || !coverLetter.trim()}>
-                    Submit Application
+                  <Button
+                    type="submit"
+                    className={`w-full ${submitted ? "bg-green-600 hover:bg-green-600/90" : "bg-accent hover:bg-accent/90"}`}
+                    disabled={!resumeConfirmed || !coverLetter.trim() || submitting || submitted}
+                  >
+                    {submitted ? (
+                      <span className="flex items-center justify-center gap-2">
+                        <CheckCircle2 className="h-4 w-4" /> Submitted
+                      </span>
+                    ) : submitting ? (
+                      <span className="flex items-center justify-center gap-2">
+                        <Loader2 className="h-4 w-4 animate-spin" /> Submitting...
+                      </span>
+                    ) : (
+                      "Submit Application"
+                    )}
                   </Button>
                 </div>
               </form>

@@ -1055,8 +1055,8 @@ export default function ResumeBuilder() {
         <div className="border rounded-md p-4 bg-light-gray">
           <div className="space-y-3">
             {projects.map((project, index) => (
-              <div key={project.id} className="flex gap-3 items-center">
-                <div className="flex-1">
+              <div key={project.id} className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
+                <div className="flex-1 min-w-0 w-full">
                   <Input
                     value={project.name}
                     onChange={(e) => {
@@ -1067,7 +1067,7 @@ export default function ResumeBuilder() {
                     placeholder="Project name (e.g., Portfolio Website)"
                   />
                 </div>
-                <div className="flex-1">
+                <div className="flex-1 min-w-0 w-full">
                   <Input
                     value={project.description}
                     onChange={(e) => {
@@ -1082,7 +1082,7 @@ export default function ResumeBuilder() {
                   variant="ghost"
                   size="sm"
                   onClick={() => handleRemoveProject(project.id)}
-                  className="text-gray-500 hover:text-red-500"
+                  className="text-gray-500 hover:text-red-500 self-start sm:self-auto"
                 >
                   <Trash2 className="h-4 w-4" />
                 </Button>
@@ -1101,8 +1101,8 @@ export default function ResumeBuilder() {
         <div className="border rounded-md p-4 bg-light-gray">
           <div className="space-y-3">
             {skills.map((skill, index) => (
-              <div key={skill.id} className="flex gap-3 items-center">
-                <div className="flex-1">
+              <div key={skill.id} className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
+                <div className="flex-1 min-w-0 w-full">
                   <Input
                     value={skill.name}
                     onChange={(e) => {
@@ -1113,7 +1113,7 @@ export default function ResumeBuilder() {
                     placeholder="e.g., JavaScript, Project Management"
                   />
                 </div>
-                <div className="w-40">
+                <div className="sm:w-40 w-full">
                   <Select
                     value={skill.level}
                     onValueChange={(value) => {
@@ -1138,7 +1138,7 @@ export default function ResumeBuilder() {
                   size="sm"
                   onClick={() => handleRemoveSkill(skill.id)}
                   disabled={skills.length <= 1}
-                  className="text-gray-500 hover:text-red-500"
+                  className="text-gray-500 hover:text-red-500 self-start sm:self-auto"
                 >
                   <Trash2 className="h-4 w-4" />
                 </Button>
@@ -1159,8 +1159,8 @@ export default function ResumeBuilder() {
         <div className="border rounded-md p-4 bg-light-gray">
           <div className="space-y-3">
             {certifications.map((cert, index) => (
-              <div key={cert.id} className="flex gap-3 items-center">
-                <div className="flex-1">
+              <div key={cert.id} className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
+                <div className="flex-1 min-w-0 w-full">
                   <Input
                     value={cert.name}
                     onChange={(e) => {
@@ -1171,7 +1171,7 @@ export default function ResumeBuilder() {
                     placeholder="Certification name (e.g., AWS Certified Developer)"
                   />
                 </div>
-                <div className="flex-1">
+                <div className="flex-1 min-w-0 w-full">
                   <Input
                     value={cert.issuer}
                     onChange={(e) => {
@@ -1186,7 +1186,7 @@ export default function ResumeBuilder() {
                   variant="ghost"
                   size="sm"
                   onClick={() => handleRemoveCertification(cert.id)}
-                  className="text-gray-500 hover:text-red-500"
+                  className="text-gray-500 hover:text-red-500 self-start sm:self-auto"
                 >
                   <Trash2 className="h-4 w-4" />
                 </Button>
