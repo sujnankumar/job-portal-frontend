@@ -355,13 +355,14 @@ export default function ProfileEditor({
           <AccordionContent>
             {experience.map((exp, index) => (
               <div key={exp.id} className="border rounded-md p-4 mb-4 bg-light-gray">
-                <div className="flex justify-between items-center mb-3">
+                <div className="flex flex-col gap-2 sm:flex-row sm:justify-between sm:items-center mb-3">
                   <h4 className="font-medium text-dark-gray">{exp.title ? exp.title : `Experience #${index + 1}`}</h4>
                   <Button
                     variant="ghost"
                     size="sm"
                     onClick={() => handleRemoveExperience(exp.id)}
-                    className="text-gray-500 hover:text-red-500"
+                    className="text-gray-500 hover:text-red-500 self-start sm:self-auto w-full sm:w-auto"
+                    disabled={!isEditing}
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>
@@ -423,6 +424,7 @@ export default function ProfileEditor({
                         }
                         setExperience(newExperience)
                       }}
+                      disabled={!isEditing}
                     />
                     <Label htmlFor={`current-job-${exp.id}`}>I currently work here</Label>
                   </div>
@@ -475,7 +477,7 @@ export default function ProfileEditor({
               </div>
             ))}
 
-            <Button variant="outline" size="sm" onClick={handleAddExperience} className="mt-2">
+            <Button variant="outline" size="sm" onClick={handleAddExperience} className="mt-2 w-full sm:w-auto" disabled={!isEditing}>
               <PlusCircle className="h-4 w-4 mr-1" /> Add Experience
             </Button>
           </AccordionContent>
@@ -487,13 +489,14 @@ export default function ProfileEditor({
           <AccordionContent>
             {education.map((edu, index) => (
               <div key={edu.id} className="border rounded-md p-4 mb-4 bg-light-gray">
-                <div className="flex justify-between items-center mb-3">
+                <div className="flex flex-col gap-2 sm:flex-row sm:justify-between sm:items-center mb-3">
                   <h4 className="font-medium text-dark-gray">{edu.school ? edu.school : `Education #${index + 1}`}</h4>
                   <Button
                     variant="ghost"
                     size="sm"
                     onClick={() => handleRemoveEducation(edu.id)}
-                    className="text-gray-500 hover:text-red-500"
+                    className="text-gray-500 hover:text-red-500 self-start sm:self-auto w-full sm:w-auto"
+                    disabled={!isEditing}
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>
@@ -556,6 +559,7 @@ export default function ProfileEditor({
                         }
                         setEducation(newEducation)
                       }}
+                      disabled={!isEditing}
                     />
                     <Label htmlFor={`current-edu-${edu.id}`}>I'm currently studying here</Label>
                   </div>
@@ -593,7 +597,7 @@ export default function ProfileEditor({
               </div>
             ))}
 
-            <Button variant="outline" size="sm" onClick={handleAddEducation} className="mt-2">
+            <Button variant="outline" size="sm" onClick={handleAddEducation} className="mt-2 w-full sm:w-auto" disabled={!isEditing}>
               <PlusCircle className="h-4 w-4 mr-1" /> Add Education
             </Button>
           </AccordionContent>
@@ -606,7 +610,7 @@ export default function ProfileEditor({
             <div className="border rounded-md p-4 bg-light-gray">
               <div className="space-y-3">
                 {skills.map((skill, index) => (
-                  <div key={skill.id} className="flex gap-3 items-center">
+                  <div key={skill.id} className="flex flex-col sm:flex-row gap-3 sm:items-center">
                     <div className="flex-1">
                       <Input
                         value={skill.name}
@@ -620,7 +624,7 @@ export default function ProfileEditor({
                         disabled={!isEditing}
                       />
                     </div>
-                    <div className="w-40">
+                    <div className="w-full sm:w-40">
                       <Select
                         value={skill.level}
                         onValueChange={(value) => {
@@ -629,7 +633,7 @@ export default function ProfileEditor({
                           setSkills(newSkills)
                         }}
                       >
-                        <SelectTrigger>
+                        <SelectTrigger disabled={!isEditing}>
                           <SelectValue placeholder="Select level" />
                         </SelectTrigger>
                         <SelectContent>
@@ -644,7 +648,8 @@ export default function ProfileEditor({
                       variant="ghost"
                       size="sm"
                       onClick={() => handleRemoveSkill(skill.id)}
-                      className="text-gray-500 hover:text-red-500"
+                      className="text-gray-500 hover:text-red-500 w-full sm:w-auto"
+                      disabled={!isEditing}
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>
@@ -652,7 +657,7 @@ export default function ProfileEditor({
                 ))}
               </div>
 
-              <Button variant="outline" size="sm" onClick={handleAddSkill} className="mt-3">
+              <Button variant="outline" size="sm" onClick={handleAddSkill} className="mt-3 w-full sm:w-auto" disabled={!isEditing}>
                 <PlusCircle className="h-4 w-4 mr-1" /> Add Skill
               </Button>
             </div>
@@ -661,13 +666,13 @@ export default function ProfileEditor({
       </Accordion>
 
       {/* Save Button */}
-      <div className="flex justify-end gap-2">
+      <div className="flex flex-col sm:flex-row sm:justify-end gap-2">
         {isEditing && (
-          <Button variant="outline" onClick={onCancel} type="button">
+          <Button variant="outline" onClick={onCancel} type="button" className="w-full sm:w-auto">
             Cancel
           </Button>
         )}
-        <Button className="bg-accent hover:bg-accent/90" disabled={!isEditing} onClick={handleSave} type="button">
+        <Button className="bg-accent hover:bg-accent/90 w-full sm:w-auto" disabled={!isEditing} onClick={handleSave} type="button">
           <Save className="h-4 w-4 mr-1" /> Save Profile
         </Button>
       </div>

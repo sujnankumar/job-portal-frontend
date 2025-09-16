@@ -16,6 +16,7 @@ export default function ProfilePage() {
   const { user, isAuthenticated, hydrated } = useAuthStore()
   const router = useRouter()
   const [isEditing, setIsEditing] = useState(false)
+  const [activeTab, setActiveTab] = useState("profile")
 
   // Profile data state in parent
   const [personalInfo, setPersonalInfo] = useState({
@@ -106,8 +107,8 @@ export default function ProfilePage() {
   return (
     <ProtectedRoute allowedRoles={["applicant"]}>
       <div className="container mx-auto max-w-6xl py-8 px-4">
-        <ProfileHeader isEditing={isEditing} setIsEditing={setIsEditing} personalInfo={personalInfo} education={education} experience={experience} skills={skills} />
-        <Tabs defaultValue="profile" className="mt-6">
+  <ProfileHeader isEditing={isEditing} setIsEditing={setIsEditing} personalInfo={personalInfo} education={education} experience={experience} skills={skills} onStartEdit={() => setActiveTab("profile")} />
+  <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-6">
           <TabsList className="w-full border-b rounded-t-xl rounded-b-none p-0 bg-white">
             <TabsTrigger
               value="profile"
