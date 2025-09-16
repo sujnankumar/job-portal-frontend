@@ -20,7 +20,7 @@ import NotificationBadge from "@/components/notification-badge"
 import { DEFAULT_USER_AVATAR } from "@/lib/placeholders"
 import { useAuthStore } from "@/store/authStore"
 import api from "@/lib/axios"
-import { useChatStore } from "@/store/chatStore"
+// import { useChatStore } from "@/store/chatStore"
 
 export default function Navbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
@@ -30,8 +30,8 @@ export default function Navbar() {
   const pathname = usePathname()
   const router = useRouter()
   const { user, isAuthenticated, logout } = useAuthStore()
-  const unreadChatThreads = useChatStore(s => s.unreadThreadCount)
-  const refreshChatThreads = useChatStore(s => s.refreshFromServer)
+  // const unreadChatThreads = useChatStore(s => s.unreadThreadCount)
+  // const refreshChatThreads = useChatStore(s => s.refreshFromServer)
 
   // Real subscription plan state
   const [subscriptionPlan, setSubscriptionPlan] = useState<string | null>(null)
@@ -187,14 +187,14 @@ export default function Navbar() {
       : []),
   ]
 
-  // Initial fetch & window focus refresh
-  useEffect(()=>{
-    if(!isAuthenticated || !user?.token) return
-    refreshChatThreads(user.token)
-    const onFocus = () => { if(user?.token) refreshChatThreads(user.token) }
-    window.addEventListener('focus', onFocus)
-    return ()=> window.removeEventListener('focus', onFocus)
-  }, [isAuthenticated, user?.token, refreshChatThreads])
+  // // Initial fetch & window focus refresh
+  // useEffect(()=>{
+  //   if(!isAuthenticated || !user?.token) return
+  //   refreshChatThreads(user.token)
+  //   const onFocus = () => { if(user?.token) refreshChatThreads(user.token) }
+  //   window.addEventListener('focus', onFocus)
+  //   return ()=> window.removeEventListener('focus', onFocus)
+  // }, [isAuthenticated, user?.token, refreshChatThreads])
 
   return (
     <header
