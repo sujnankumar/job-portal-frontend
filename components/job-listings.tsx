@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react"
 import Link from "next/link"
-import { MapPin, IndianRupee, Clock, Briefcase, Building, ExternalLink, ChevronDown, ChevronUp, Eye, Bookmark, BookmarkCheck, ChevronLeft, ChevronRight } from "lucide-react"
+import { MapPin, IndianRupee, Clock, Briefcase, Building, ExternalLink, ChevronDown, ChevronUp, Eye, Bookmark, BookmarkCheck, ChevronLeft, ChevronRight, Loader2 } from "lucide-react"
 import { toast } from "sonner"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -61,6 +61,73 @@ const truncateMarkdown = (markdown: string, maxLength: number = 150) => {
 
 import type { JobFiltersState } from "./job-filters"
 import Image from "next/image"
+
+// Local image component that mirrors company-listings blob fetch logic
+function JobLogo({ job }: { job: any }) {
+  const [logoUrl, setLogoUrl] = React.useState<string | null>(null)
+  const [loading, setLoading] = React.useState(false)
+
+  React.useEffect(() => {
+    let objectUrl: string | null = null
+
+    const fetchLogo = async () => {
+      // Determine identifier or URL to fetch
+      const logoId: string | null = job?.logo ?? null
+      const logoUrlStr: string | null = job?.logo_url ?? null
+
+      if (!logoId && !logoUrlStr) {
+        setLogoUrl(null)
+        return
+      }
+
+      setLoading(true)
+      try {
+        let path = ''
+        if (logoId) {
+          path = `/company/logo/${logoId}`
+        } else if (logoUrlStr) {
+          // Try to extract the id from '/company/logo/{id}' pattern to ensure same-origin request
+          const m = String(logoUrlStr).match(/\/company\/logo\/([^\/?#]+)/)
+          path = m ? `/company/logo/${m[1]}` : logoUrlStr
+        }
+        const res = await api.get(path, { responseType: 'blob' })
+        objectUrl = URL.createObjectURL(res.data)
+        setLogoUrl(objectUrl)
+      } catch (err) {
+        // Fallback to no logo
+        setLogoUrl(null)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchLogo()
+
+    return () => {
+      if (objectUrl) {
+        URL.revokeObjectURL(objectUrl)
+      }
+    }
+  }, [job?.logo, job?.logo_url])
+
+  return (
+    <>
+      {loading ? (
+        <div className="w-full h-full flex items-center justify-center">
+          <Loader2 className="h-4 w-4 animate-spin text-gray-400" />
+        </div>
+      ) : (
+        <Image
+          src={logoUrl || "/company_placeholder.jpeg"}
+          width={48}
+          height={48}
+          alt={`${job?.company || 'Company'} logo`}
+          className="w-full h-full object-contain"
+        />
+      )}
+    </>
+  )
+}
 
 interface JobListingsProps {
   filters?: JobFiltersState
@@ -393,13 +460,7 @@ export default function JobListings({ filters, savedJobsOnly = false, showExpire
               >
                 <div className="flex items-start gap-4">
                   <div className="w-12 h-12 bg-light-gray flex-shrink-0 rounded-md overflow-hidden border border-gray-200">
-                    <Image
-                      src={job.logo_url || "/company_placeholder.jpeg"}
-                      width={48}
-                      height={48}
-                      alt={`${job.company} logo`}
-                      className="w-full h-full object-contain"
-                    />
+                    <JobLogo job={job} />
                   </div>
 
                   <div className="flex-1 min-w-0">
