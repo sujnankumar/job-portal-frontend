@@ -449,8 +449,9 @@ export default function JobListings({ filters, savedJobsOnly = false, showExpire
         </div>
       ) : (
   <>
-  {currentPageJobs.map((job) => (
-          <div key={ job.job_id} className="relative">
+  {currentPageJobs.map((job, idx) => (
+    <React.Fragment key={job.job_id}>
+    <div className="relative">
             {/* Job Card */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
               {/* Job Card Header */}
@@ -585,6 +586,34 @@ export default function JobListings({ filters, savedJobsOnly = false, showExpire
               </div>
             </div>
           </div>
+          {/* Sponsored Ad Placeholder after every 6th job globally (only on main listings) */}
+          {( ((startIdx + idx + 1) % 6) === 0 ) && !savedJobsOnly && !limit && !hideControls && (
+            <div className="relative">
+              <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                <div className="p-5">
+                  <div className="flex items-start gap-4">
+                    <div className="w-12 h-12 bg-light-gray flex-shrink-0 rounded-md overflow-hidden border border-gray-200" />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <div className="flex items-center flex-wrap gap-2">
+                            <h3 className="font-medium text-dark-gray">Sponsored</h3>
+                            <Badge className="bg-yellow-500 text-white">Ad</Badge>
+                          </div>
+                          <p className="text-sm text-gray-500">Promote your job or brand here</p>
+                        </div>
+                      </div>
+                      <div className="mt-3 flex flex-wrap gap-y-2 gap-x-3 text-xs text-gray-600">
+                        <div className="flex items-center">Reach thousands of candidates on WOWR</div>
+                      </div>
+                      <div className="mt-3 text-xs text-gray-500">Boost visibility with sponsored placements</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+          </React.Fragment>
         ))}
   {!hideControls && (
   <div className="mt-6 space-y-3">
