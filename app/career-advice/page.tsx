@@ -6,7 +6,7 @@ import RecentArticles from "@/components/recent-articles"
 import { Separator } from "@/components/ui/separator"
 
 export const metadata: Metadata = {
-  title: "Career Advice | JobPortal",
+  title: "Career Advice | WOWR",
   description: "Career advice, tips, and resources for job seekers",
 }
 

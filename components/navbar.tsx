@@ -209,12 +209,12 @@ export default function Navbar() {
           <Link href="/" className="flex items-center">
             <Image
               src="/WOWr1.jpg"
-              alt="JobPortal Logo"
+              alt="WOWR Logo"
               width={40}
               height={40}
               className="mr-2"
             />
-            <span className="text-xl font-bold text-dark-gray font-sans">JobPortal</span>
+            {/* <span className="text-xl font-bold text-dark-gray font-sans">WOWR</span> */}
           </Link>
 
           {/* Desktop Navigation */}

@@ -8,7 +8,7 @@ import { Separator } from "@/components/ui/separator"
 import RelatedArticles from "@/components/related-articles"
 
 export const metadata: Metadata = {
-  title: "Article Title | Career Advice | JobPortal",
+  title: "Article Title | Career Advice | WOWR",
   description: "Read our career advice article to help you in your job search",
 }
 

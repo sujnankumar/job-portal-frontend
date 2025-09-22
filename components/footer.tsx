@@ -10,12 +10,12 @@ export default function Footer() {
           {/* Logo and Description */}
           <div className="lg:col-span-2">
             <Link href="/" className="flex items-center mb-4">
-              <Image src="/WOWr1.jpg" alt="JobPortal Logo" width={40} height={40} className="mr-2" />
-              <span className="text-xl font-bold text-dark-gray">JobPortal</span>
+              <Image src="/WOWr1.jpg" alt="WOWR Logo" width={40} height={40} className="mr-2" />
+              {/* <span className="text-xl font-bold text-dark-gray">WOWR</span> */}
             </Link>
             <p className="text-gray-600 mb-6">
               Connecting talented professionals with great companies. Find your dream job or the perfect candidate with
-              JobPortal.
+              WOWR.
             </p>
             <div className="flex space-x-4">
               <a href="#" className="text-gray-400 hover:text-accent" aria-label="Facebook">
@@ -107,7 +107,7 @@ export default function Footer() {
 
         <div className="border-t border-gray-200 mt-12 pt-8 flex flex-col md:flex-row justify-between items-center">
           <p className="text-gray-500 text-sm mb-4 md:mb-0">
-            &copy; {new Date().getFullYear()} JobPortal. All rights reserved.
+            &copy; {new Date().getFullYear()} WOWR. All rights reserved.
           </p>
           </div>
       </div>
