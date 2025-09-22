@@ -22,6 +22,7 @@ interface ProfileHeaderProps {
   education: any[];
   experience: any[];
   skills: any[];
+  onStartEdit?: () => void;
 }
 
 function getProfileCompleteness(
@@ -62,6 +63,7 @@ export default function ProfileHeader({
   education,
   experience,
   skills,
+  onStartEdit,
 }: ProfileHeaderProps) {
   const completeness = getProfileCompleteness(
     personalInfo,
@@ -404,20 +406,20 @@ export default function ProfileHeader({
 
       {/* Profile Info */}
       <div className="px-6 pb-6 relative">
-        {/* Responsive flex: column on mobile, row on desktop */}
-        <div className="flex flex-col md:block">
+        {/* Responsive layout: improved mobile alignment */}
+        <div className="flex flex-col">
           {/* Profile Picture */}
-          <div className="absolute -top-12 left-6 z-20 bg-white shadow-md w-32 h-32 flex items-center justify-center rounded-full border-3 border-white">
+          <div className="md:absolute md:-top-12 md:left-6 z-20 bg-white shadow-md w-24 h-24 md:w-32 md:h-32 flex items-center justify-center rounded-full border-3 border-white mx-auto -mt-12 md:mt-0 md:mx-0">
             {profileLoading ? (
               <Loader2 className="animate-spin h-10 w-10 text-gray-400" />
             ) : (
-              <div className="relative w-32 h-32">
+              <div className="relative w-24 h-24 md:w-32 md:h-32">
                 <img
                   src={profilePreview || profileUrl || "/mystical-forest-spirit.png"}
                   width={128}
                   height={128}
                   alt="Profile"
-                  className="rounded-full h-32 w-32 object-cover absolute top-0 left-0 border-4 border-white"
+                  className="rounded-full h-24 w-24 md:h-32 md:w-32 object-cover absolute top-0 left-0 border-4 border-white"
                   onLoad={() => setProfileLoading(false)}
                 />
                 <Button
@@ -475,10 +477,10 @@ export default function ProfileHeader({
           </Dialog>
           
           {/* Profile Details */}
-          <div className="mt-5 md:mt-5 md:ml-44 flex flex-col md:flex-row md:items-end justify-between gap-4">
+          <div className="mt-4 md:mt-5 md:ml-44 flex flex-col md:flex-row md:items-end justify-between gap-4 items-stretch">
             {/* On mobile, mt-20 pushes text closer to the profile image. On desktop, md:mt-5 and md:ml-44 keep original alignment. */}
-            <div>
-              <div className="flex items-center gap-2">
+            <div className="text-center md:text-left">
+              <div className="flex items-center gap-2 justify-center md:justify-start">
                 <h1 className="text-2xl font-bold text-dark-gray">
                   {personalInfo.first_name || ""} {personalInfo.last_name || ""}
                 </h1>
@@ -489,7 +491,7 @@ export default function ProfileHeader({
               <h2 className="text-lg text-gray-600 mt-1">
                 {personalInfo.headline || ""}
               </h2>
-              <div className="flex flex-wrap gap-3 mt-3 text-sm text-gray-500">
+              <div className="flex flex-wrap gap-3 mt-3 text-sm text-gray-500 justify-center md:justify-start">
                 <div className="flex items-center">
                   <MapPin className="h-4 w-4 mr-1" />
                   {personalInfo.location || ""}
@@ -506,13 +508,13 @@ export default function ProfileHeader({
               </div>
             </div>
             
-            <div className="flex flex-col md:flex-row gap-2 md:self-end">
-              <div className="flex gap-2">
+            <div className="flex flex-col md:flex-row gap-2 md:self-end w-full md:w-auto">
+              <div className="flex flex-col md:flex-row gap-2 w-full">
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={handlePreviewResume}
-                  className="flex items-center"
+                  className="flex items-center w-full md:w-auto"
                 >
                   <Eye className="h-4 w-4 mr-1" /> Preview Resume
                 </Button>
@@ -520,7 +522,7 @@ export default function ProfileHeader({
                   variant="outline"
                   size="sm"
                   onClick={() => resumeInputRef.current?.click()}
-                  className="flex items-center"
+                  className="flex items-center w-full md:w-auto"
                 >
                   <Upload className="h-4 w-4 mr-1" /> Update Resume
                 </Button>
@@ -534,8 +536,8 @@ export default function ProfileHeader({
                 />
               </div>
               <Button
-                className="bg-accent hover:bg-accent/90"
-                onClick={() => setIsEditing(true)}
+                className="bg-accent hover:bg-accent/90 w-full md:w-auto"
+                onClick={() => { onStartEdit?.(); setIsEditing(true); }}
                 disabled={isEditing}
               >
                 <Pencil className="h-4 w-4 mr-1" /> Edit Profile

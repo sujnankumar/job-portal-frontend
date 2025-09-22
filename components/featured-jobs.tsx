@@ -1,6 +1,6 @@
 import Image from "next/image"
 import Link from "next/link"
-import { MapPin, IndianRupee, Clock } from "lucide-react"
+import { MapPin, IndianRupee, Clock, Loader2 } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { formatSalaryRange, formatRelativeTime } from "@/lib/utils"
 import { useEffect, useState } from "react" // Import hooks
@@ -45,6 +45,59 @@ export default function FeaturedJobs() {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  function FeaturedJobLogo({ job }: { job: Job }) {
+    const [logoUrl, setLogoUrl] = useState<string | null>(null)
+    const [loading, setLoading] = useState(false)
+
+    useEffect(() => {
+      let objectUrl: string | null = null
+      const fetchLogo = async () => {
+        const logoId = job.logo ?? null
+        const logoUrlStr = job.logo_url ?? null
+        if (!logoId && !logoUrlStr) {
+          setLogoUrl(null)
+          return
+        }
+        setLoading(true)
+        try {
+          let path = ''
+          if (logoId) {
+            path = `/company/logo/${logoId}`
+          } else if (logoUrlStr) {
+            const m = String(logoUrlStr).match(/\/company\/logo\/([^\/?#]+)/)
+            path = m ? `/company/logo/${m[1]}` : logoUrlStr
+          }
+          const res = await api.get(path, { responseType: 'blob' })
+          objectUrl = URL.createObjectURL(res.data)
+          setLogoUrl(objectUrl)
+        } catch (e) {
+          setLogoUrl(null)
+        } finally {
+          setLoading(false)
+        }
+      }
+      fetchLogo()
+      return () => { if (objectUrl) URL.revokeObjectURL(objectUrl) }
+    }, [job.logo, job.logo_url])
+
+    if (loading) {
+      return (
+        <div className="w-full h-full flex items-center justify-center">
+          <Loader2 className="h-4 w-4 animate-spin text-gray-400" />
+        </div>
+      )
+    }
+    return (
+      <Image
+        src={logoUrl || "/company_placeholder.jpeg"}
+        width={48}
+        height={48}
+        alt={`${job.company_name} logo`}
+        className="w-full h-full object-contain"
+      />
+    )
+  }
 
   useEffect(() => {
     setIsLoading(true);
@@ -91,16 +144,7 @@ export default function FeaturedJobs() {
           {/* Top section with logo, title, company */}
           <div className="flex items-start gap-3 mb-3">
             <div className="w-12 h-12 bg-light-gray flex-shrink-0 rounded-md overflow-hidden border border-gray-200">
-              <Image
-                // Use a placeholder if logo is missing
-                src={job.logo_url || "/company_placeholder.jpeg"}
-                width={48}
-                height={48}
-                alt={`${job.company_name} logo`}
-                className="w-full h-full object-contain" // Ensure image fits well
-                // Add error handling for images if needed
-                onError={(e) => { e.currentTarget.src = '/company_placeholder.jpeg'; }}
-              />
+              <FeaturedJobLogo job={job} />
             </div>
             <div className="flex-1 min-w-0">
               <h3 className="font-medium text-dark-gray truncate line-clamp-1">{job.title}</h3>

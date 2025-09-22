@@ -8,6 +8,8 @@ import api from "@/lib/axios"
 import { useAuthStore } from "@/store/authStore"
 import React from "react"
 import OnboardingMiddleware from "@/components/auth/onboarding-middleware";
+import { useRouter } from "next/navigation"
+import { toast } from "sonner"
 
 
 export default function JobDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -18,9 +20,24 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
   const [error, setError] = useState("")
   const user = useAuthStore((state) => state.user)
   const hydrated = useAuthStore((state) => state.hydrated);
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated)
+  const router = useRouter()
+  const [redirected, setRedirected] = useState(false)
 
   useEffect(() => {
     if (!hydrated) return;
+
+    if (!isAuthenticated && !redirected) {
+      setRedirected(true)
+      toast.warning("Login required", {
+        description: "Please sign in to view job details.",
+        duration: 4000,
+      })
+      router.replace(`/auth/login?next=/jobs/${id}`)
+      return
+    }
+
+    if (!isAuthenticated) return;
     const fetchJob = async () => {
       setLoading(true)
       setError("")
@@ -41,7 +58,7 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
     }
     fetchJob()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hydrated,id, user?.token])
+  }, [hydrated, isAuthenticated, redirected, id, user?.token])
 
   if (loading) {
     return <div className="text-center py-8 text-gray-500">Loading job details...</div>
