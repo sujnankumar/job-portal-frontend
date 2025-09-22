@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useEffect, useState } from "react"
+import React, { useEffect, useState, useRef } from "react"
 import Link from "next/link"
 import { MapPin, IndianRupee, Clock, Briefcase, Building, ExternalLink, ChevronDown, ChevronUp, Eye, Bookmark, BookmarkCheck, ChevronLeft, ChevronRight, Loader2 } from "lucide-react"
 import { toast } from "sonner"
@@ -143,6 +143,7 @@ export default function JobListings({ filters, savedJobsOnly = false, showExpire
   const [allJobs, setAllJobs] = useState<any[]>([]) // Store all fetched jobs
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
+  const topRef = useRef<HTMLDivElement | null>(null)
   // Removed inline saveError/saveSuccess display in favor of toasts
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState<number>(10)
@@ -406,6 +407,16 @@ export default function JobListings({ filters, savedJobsOnly = false, showExpire
   const currentPageJobsSource = limitedJobs
   const currentPageJobs = hideControls ? currentPageJobsSource : currentPageJobsSource.slice(startIdx, startIdx + pageSize)
 
+  // Smooth scroll to the very top whenever page changes
+  useEffect(() => {
+    try {
+      window.scrollTo({ top: 0, behavior: 'smooth' })
+    } catch {
+      // Fallback for older browsers
+      try { window.scrollTo(0, 0) } catch {}
+    }
+  }, [page])
+
   const changePageSize = (val: string) => {
     setPageSizeMode(val)
     if (val === 'custom') {
@@ -436,6 +447,7 @@ export default function JobListings({ filters, savedJobsOnly = false, showExpire
 
   return (
     <div className="space-y-4">
+      <div ref={topRef} aria-hidden="true" />
   {/* Toasts handle save/unsave feedback; removed inline messages */}
   {limitedJobs.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-16 bg-white rounded-xl shadow-sm border border-gray-100">
