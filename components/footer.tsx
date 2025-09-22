@@ -10,7 +10,7 @@ export default function Footer() {
           {/* Logo and Description */}
           <div className="lg:col-span-2">
             <Link href="/" className="flex items-center mb-4">
-              <Image src="/abstract-geometric-logo.png" alt="JobPortal Logo" width={40} height={40} className="mr-2" />
+              <Image src="/WOWr1.jpg" alt="JobPortal Logo" width={40} height={40} className="mr-2" />
               <span className="text-xl font-bold text-dark-gray">JobPortal</span>
             </Link>
             <p className="text-gray-600 mb-6">

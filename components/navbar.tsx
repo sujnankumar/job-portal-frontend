@@ -208,7 +208,7 @@ export default function Navbar() {
           {/* Logo */}
           <Link href="/" className="flex items-center">
             <Image
-              src="/abstract-geometric-logo.png"
+              src="/WOWr1.jpg"
               alt="JobPortal Logo"
               width={40}
               height={40}
