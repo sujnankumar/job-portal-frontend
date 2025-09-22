@@ -397,6 +397,15 @@ export default function JobListings({ filters, savedJobsOnly = false, showExpire
     setPage(1)
   }, [JSON.stringify(filters), showExpired])
 
+  // Also scroll to top when filters or showExpired change
+  useEffect(() => {
+    try {
+      window.scrollTo({ top: 0, behavior: 'smooth' })
+    } catch {
+      try { window.scrollTo(0, 0) } catch {}
+    }
+  }, [JSON.stringify(filters), showExpired])
+
   const limitedJobs = typeof limit === 'number' ? filteredJobs.slice(0, limit) : filteredJobs
   const totalJobs = limitedJobs.length
   const totalPages = Math.max(1, Math.ceil(totalJobs / pageSize))
